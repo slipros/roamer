@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -9,14 +9,14 @@ import (
 )
 
 func TestNewXML(t *testing.T) {
-	d := NewXML()
-	require.NotNil(t, d)
-	require.Equal(t, ContentTypeXML, d.ContentType())
+	x := NewXML()
+	require.NotNil(t, x)
+	require.Equal(t, ContentTypeXML, x.ContentType())
 }
 
 func TestXML_Decode(t *testing.T) {
 	type args struct {
-		body io.Reader
+		req  *http.Request
 		ptr  any
 		want any
 	}
@@ -26,7 +26,7 @@ func TestXML_Decode(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Struct",
+			name: "Success fill struct",
 			args: func() args {
 				type Data struct {
 					Field1 string `json:"field_1"`
@@ -38,38 +38,49 @@ func TestXML_Decode(t *testing.T) {
 					Field2: 2,
 				}
 
+				body := toXML(t, &data)
+				req, err := http.NewRequest(http.MethodPost, requestURL, body)
+				require.NoError(t, err)
+
 				return args{
-					body: toXML(t, &data),
+					req:  req,
 					ptr:  &Data{},
 					want: &data,
 				}
 			},
 		},
 		{
-			name: "ErrorNilBody",
+			name: "Error request body is nil",
 			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
 				return args{
-					body: nil,
+					req: req,
 				}
 			},
 			wantErr: true,
 		},
 		{
-			name: "ErrorInvalidBody",
+			name: "Error invalid request body",
 			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader("<></>"))
+				require.NoError(t, err)
+
 				return args{
-					body: strings.NewReader("<></>"),
+					req: req,
 				}
 			},
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			x := NewXML()
 			args := tt.args()
 
-			if err := x.Decode(args.body, args.ptr); !tt.wantErr && err != nil {
+			if err := x.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
