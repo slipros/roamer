@@ -22,17 +22,12 @@ func TestPath(t *testing.T) {
 	pathParam := "user_id"
 
 	pathValueFunc := func(r *http.Request, name string) (string, bool) {
-		_, after, found := strings.Cut(r.URL.Path, pathParam+"/")
+		_, after, found := strings.Cut(r.URL.Path, name+"/")
 		if !found {
 			return "", false
 		}
 
-		before, _, found := strings.Cut(after, "/")
-		if !found {
-			return "", false
-		}
-
-		return before, true
+		return after, true
 	}
 
 	type args struct {
