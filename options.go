@@ -1,15 +1,10 @@
 package roamer
 
-import (
-	"github.com/SLIpros/roamer/decoder"
-	"github.com/SLIpros/roamer/parser"
-)
-
-// OptionsFunc options.
+// OptionsFunc function for setting options.
 type OptionsFunc func(*Roamer)
 
-// SetParsers set parsers.
-func SetParsers(parsers ...parser.Parser) OptionsFunc {
+// WithParsers sets parsers.
+func WithParsers(parsers ...Parser) OptionsFunc {
 	return func(r *Roamer) {
 		for _, p := range parsers {
 			r.parsers[p.Tag()] = p
@@ -17,8 +12,8 @@ func SetParsers(parsers ...parser.Parser) OptionsFunc {
 	}
 }
 
-// SetDecoders set decoders.
-func SetDecoders(decoders ...decoder.Decoder) OptionsFunc {
+// WithDecoders sets decoders.
+func WithDecoders(decoders ...Decoder) OptionsFunc {
 	return func(r *Roamer) {
 		for _, d := range decoders {
 			r.decoders[d.ContentType()] = d
@@ -26,8 +21,8 @@ func SetDecoders(decoders ...decoder.Decoder) OptionsFunc {
 	}
 }
 
-// SetSkipFilled set skip filled.
-func SetSkipFilled(skip bool) OptionsFunc {
+// WithSkipFilled sets skip filled.
+func WithSkipFilled(skip bool) OptionsFunc {
 	return func(r *Roamer) {
 		r.skipFilled = skip
 	}

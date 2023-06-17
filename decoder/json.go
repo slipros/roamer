@@ -23,7 +23,7 @@ func NewJSON() *JSON {
 	return &JSON{}
 }
 
-// Decode decodes request body into ptr based on content-type header.
+// Decode decodes request body into ptr.
 func (j *JSON) Decode(r *http.Request, ptr any) error {
 	if err := json.NewDecoder(r.Body).Decode(ptr); err != nil {
 		if !errors.Is(err, io.EOF) {

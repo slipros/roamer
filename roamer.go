@@ -8,36 +8,31 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/SLIpros/roamer/decoder"
 	roamerError "github.com/SLIpros/roamer/err"
 	"github.com/SLIpros/roamer/parser"
 	"github.com/SLIpros/roamer/value"
 )
 
 // AfterParser will be called after http request parsing.
+//
+//go:generate mockery --name=AfterParser --outpkg=mock --output=./mock
 type AfterParser interface {
 	AfterParse(ctx context.Context) error
 }
 
 // Roamer flexible http request parser.
 type Roamer struct {
+	parsers    Parsers
+	decoders   Decoders
 	skipFilled bool
-	decoders   decoder.Decoders
-	parsers    parser.Parsers
 }
 
 // NewRoamer creates and returns new roamer.
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
+		parsers:    make(Parsers),
+		decoders:   make(Decoders),
 		skipFilled: true,
-		decoders: decoder.Decoders{
-			decoder.ContentTypeJSON:    decoder.NewJSON(),
-			decoder.ContentTypeXML:     decoder.NewXML(),
-			decoder.ContentTypeFormURL: decoder.NewFormURL(),
-		},
-		parsers: parser.Parsers{
-			parser.TagQuery: parser.NewQuery(),
-		},
 	}
 
 	for _, opt := range opts {

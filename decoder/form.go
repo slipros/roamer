@@ -22,14 +22,14 @@ const (
 // FormURLOptionsFunc url form options changer.
 type FormURLOptionsFunc func(*FormURL)
 
-// WithDisabledSplit disable array splitting.
+// WithDisabledSplit disables array splitting.
 func WithDisabledSplit() FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.split = false
 	}
 }
 
-// WithSplitSymbol set array split symbol.
+// WithSplitSymbol sets array split symbol.
 func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.splitSymbol = splitSymbol
@@ -55,7 +55,7 @@ func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 
 // Decode decodes url form value from http request into ptr.
 //
-// Ptr must have a type of either struct or map.
+// ptr must have a type of either struct or map.
 func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	if err := r.ParseForm(); err != nil {
 		return errors.WithMessage(err, "parse http form")

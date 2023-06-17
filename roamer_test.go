@@ -76,7 +76,7 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 	}
 
 	r := NewRoamer(
-		SetParsers(parser.NewHeader(), parser.NewQuery()),
+		WithParsers(parser.NewHeader(), parser.NewQuery()),
 	)
 
 	b.ReportAllocs()
@@ -93,8 +93,8 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 func TestRoamer_Parse(t *testing.T) {
 	type fields struct {
 		skipFilled bool
-		decoders   decoder.Decoders
-		parsers    parser.Parsers
+		decoders   Decoders
+		parsers    Parsers
 	}
 	type args struct {
 		req *http.Request

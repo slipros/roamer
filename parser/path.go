@@ -13,7 +13,7 @@ const (
 // PathValueFunc returns path variable value with name from http request.
 type PathValueFunc = func(r *http.Request, name string) (string, bool)
 
-// Path path parser.
+// Path is a path parser.
 type Path struct {
 	valueFromPath PathValueFunc
 }
@@ -27,7 +27,7 @@ func NewPath(valueFromPath PathValueFunc) *Path {
 	return &Path{valueFromPath: valueFromPath}
 }
 
-// Parse parses path value from http request.
+// Parse parses path value from request.
 func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagPath)
 	if !ok {
