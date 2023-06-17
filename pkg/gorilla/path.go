@@ -7,8 +7,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Path returns new path parser for mux router.
-func Path(name string, r *http.Request) (string, bool) {
+// Path path parser for gorilla router.
+func Path(r *http.Request, name string) (string, bool) {
 	vars := mux.Vars(r)
 	path, exists := vars[name]
 	if !exists {

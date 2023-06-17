@@ -10,9 +10,10 @@ const (
 	TagPath = "path"
 )
 
-// PathValueFunc returns path variable value.
-type PathValueFunc = func(name string, r *http.Request) (string, bool)
+// PathValueFunc returns path variable value with name from http request.
+type PathValueFunc = func(r *http.Request, name string) (string, bool)
 
+// Path path parser.
 type Path struct {
 	valueFromPath PathValueFunc
 }
@@ -20,23 +21,23 @@ type Path struct {
 // NewPath returns new path parser.
 func NewPath(valueFromPath PathValueFunc) *Path {
 	if valueFromPath == nil {
-		valueFromPath = func(_ string, _ *http.Request) (string, bool) { return "", false }
+		valueFromPath = func(_ *http.Request, _ string) (string, bool) { return "", false }
 	}
 
 	return &Path{valueFromPath: valueFromPath}
 }
 
-// Tag returns working tag.
-func (p *Path) Tag() string {
-	return TagPath
-}
-
-// Parse parse path.
+// Parse parses path value from http request.
 func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagPath)
 	if !ok {
 		return "", false
 	}
 
-	return p.valueFromPath(tagValue, r)
+	return p.valueFromPath(r, tagValue)
+}
+
+// Tag returns working tag.
+func (p *Path) Tag() string {
+	return TagPath
 }

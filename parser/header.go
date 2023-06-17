@@ -27,12 +27,12 @@ func (h *Header) Tag() string {
 func (h *Header) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagHeader)
 	if !ok {
-		return nil, false
+		return "", false
 	}
 
 	headerValue := r.Header.Get(tagValue)
 	if len(headerValue) == 0 {
-		return nil, false
+		return "", false
 	}
 
 	return headerValue, true

@@ -458,7 +458,8 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			args := tt.args()
 			f := NewFormURLEncoded(splitSymbol)
 
-			if err := f.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
+			err := f.Decode(args.req, args.ptr)
+			if !tt.wantErr && err != nil {
 				t.Errorf("Decode() error = %v", err)
 			}
 

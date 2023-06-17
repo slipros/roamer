@@ -8,8 +8,8 @@ import (
 )
 
 // NewPath returns new path parser for chi router.
-func NewPath(mux *chi.Mux) func(name string, r *http.Request) (string, bool) {
-	return func(name string, r *http.Request) (string, bool) {
+func NewPath(mux *chi.Mux) func(r *http.Request, name string) (string, bool) {
+	return func(r *http.Request, name string) (string, bool) {
 		if mux == nil {
 			return "", false
 		}
