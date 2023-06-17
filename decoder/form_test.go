@@ -11,10 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const splitSymbol = ","
-
 func TestNewFormURL(t *testing.T) {
-	f := NewFormURL(splitSymbol)
+	f := NewFormURL()
 	require.NotNil(t, f)
 	require.Equal(t, ContentTypeFormURL, f.ContentType())
 }
@@ -456,7 +454,7 @@ func TestFormURL_Decode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := tt.args()
-			f := NewFormURL(splitSymbol)
+			f := NewFormURL()
 
 			err := f.Decode(args.req, args.ptr)
 			if !tt.wantErr && err != nil {

@@ -15,16 +15,42 @@ import (
 const (
 	// ContentTypeFormURL content-type header for url form decoder.
 	ContentTypeFormURL = "application/x-www-form-urlencoded"
+	// SplitSymbol array split symbol.
+	SplitSymbol = ","
 )
+
+// FormURLOptionsFunc url form options changer.
+type FormURLOptionsFunc func(*FormURL)
+
+// WithDisabledSplit disable array splitting.
+func WithDisabledSplit() FormURLOptionsFunc {
+	return func(f *FormURL) {
+		f.split = false
+	}
+}
+
+// WithSplitSymbol set array split symbol.
+func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
+	return func(f *FormURL) {
+		f.splitSymbol = splitSymbol
+	}
+}
 
 // FormURL url form decoder.
 type FormURL struct {
+	split       bool
 	splitSymbol string
 }
 
 // NewFormURL returns new url form decoder.
-func NewFormURL(splitSymbol string) *FormURL {
-	return &FormURL{splitSymbol: splitSymbol}
+func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
+	f := FormURL{split: true, splitSymbol: SplitSymbol}
+
+	for _, opt := range opts {
+		opt(&f)
+	}
+
+	return &f
 }
 
 // Decode decodes url form value from http request into ptr.
@@ -102,7 +128,7 @@ func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) er
 	case reflect.String:
 		m := make(map[string]string, len(form))
 		for k, v := range form {
-			if len(v) == 1 {
+			if len(v) == 1 || !f.split {
 				m[k] = v[0]
 				continue
 			}
