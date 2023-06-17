@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -8,68 +9,84 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const requestURL = "test.com"
+
+func TestNewHeader(t *testing.T) {
+	h := NewHeader()
+	require.NotNil(t, h)
+	require.Equal(t, TagHeader, h.Tag())
+}
+
 func TestHeader(t *testing.T) {
+	header := "User-Agent"
+	headerValue := "test"
+
 	type args struct {
-		header http.Header
-		tag    reflect.StructTag
+		req *http.Request
+		tag reflect.StructTag
 	}
 	tests := []struct {
-		name       string
-		args       args
-		value      any
-		exists     bool
-		emptyCache bool
+		name string
+		args func() args
+		want any
 	}{
 		{
-			name: "Exists",
-			args: args{
-				header: http.Header{
-					"User-Agent": []string{"test agent"},
-				},
-				tag: reflect.StructTag(`header:"User-Agent"`),
+			name: "get want from request header",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				req.Header.Add(header, headerValue)
+
+				return args{
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s""`, TagHeader, header)),
+				}
 			},
-			value:      "test agent",
-			exists:     true,
-			emptyCache: true,
+			want: headerValue,
 		},
 		{
-			name: "NotExists",
-			args: args{
-				tag: reflect.StructTag(`header:"User-Agent"`),
+			name: "empty request header",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				return args{
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s""`, TagHeader, header)),
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
 		},
 		{
-			name: "NoTag",
-			args: args{
-				header: http.Header{
-					"User-Agent": []string{"test agent"},
-				},
+			name: "empty struct tag",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				req.Header.Add(header, headerValue)
+
+				return args{
+					req: req,
+					tag: "",
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := http.Request{Header: tt.args.header}
-			cache := make(Cache)
+			args := tt.args()
 
-			tagName, value, exists := Header(&req, tt.args.tag, cache)
-			if exists && tagName != TagHeader {
-				t.Errorf("Header() tag name = %v, want %v", tagName, TagHeader)
-			}
-			if exists != tt.exists {
-				t.Errorf("Header() exists = %v, want %v", exists, tt.exists)
-			}
-			if !reflect.DeepEqual(value, value) {
-				t.Errorf("Header() value = %v, want %v", value, tt.value)
+			h := NewHeader()
+			value, exists := h.Parse(args.req, args.tag, nil)
+
+			if tt.want == nil && exists {
+				t.Errorf("Parse() does not want want, but it is exists")
 			}
 
-			if tt.emptyCache {
-				require.Empty(t, cache, "Header() not empty cache %v", cache)
-			}
+			require.Equal(t, tt.want, value)
 		})
 	}
 }

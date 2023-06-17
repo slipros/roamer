@@ -1,87 +1,163 @@
 package parser
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewPath(t *testing.T) {
+	h := NewPath(nil)
+	require.NotNil(t, h)
+	require.Equal(t, TagPath, h.Tag())
+}
+
 func TestPath(t *testing.T) {
+	pathParamValue := "1337"
+	pathParam := "user_id"
+
+	pathValueFunc := func(name string, r *http.Request) (string, bool) {
+		_, after, found := strings.Cut(r.URL.Path, pathParam+"/")
+		if !found {
+			return "", false
+		}
+
+		before, _, found := strings.Cut(after, "/")
+		if !found {
+			return "", false
+		}
+
+		return before, true
+	}
+
 	type args struct {
-		valueFunc PathValueFunc
-		tag       reflect.StructTag
+		req           *http.Request
+		pathValueFunc PathValueFunc
+		tag           reflect.StructTag
 	}
 	tests := []struct {
-		name       string
-		args       args
-		value      any
-		exists     bool
-		emptyCache bool
+		name string
+		args func() args
+		want any
 	}{
 		{
-			name: "Exists",
-			args: args{
-				valueFunc: func(name string, r *http.Request) (string, bool) {
-					return "1337", true
-				},
-				tag: reflect.StructTag(`path:"user_id"`),
+			name: "get path variable from request",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				pathValueFunc := func(name string, r *http.Request) (string, bool) {
+					_, after, found := strings.Cut(r.URL.Path, pathParam)
+					if !found {
+						return "", false
+					}
+
+					_, after, found = strings.Cut(after, "/")
+					if !found {
+						return "", false
+					}
+
+					return after, true
+				}
+
+				return args{
+					req:           req,
+					pathValueFunc: pathValueFunc,
+					tag:           reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagPath, pathParam)),
+				}
 			},
-			value:      "1337",
-			exists:     true,
-			emptyCache: true,
+			want: pathParamValue,
 		},
 		{
-			name: "NotExists",
-			args: args{
-				valueFunc: func(name string, r *http.Request) (string, bool) {
-					return "", false
-				},
-				tag: reflect.StructTag(`path:"user_id"`),
+			name: "get path variable from request - nil pathValueFunc",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:           req,
+					pathValueFunc: nil,
+					tag:           reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagPath, pathParam)),
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
 		},
 		{
-			name: "NoTag",
-			args: args{
-				valueFunc: func(name string, r *http.Request) (string, bool) {
-					return "", false
-				},
+			name: "get path variable from request - no path variable",
+			args: func() args {
+				rawURL, err := url.Parse(requestURL)
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:           req,
+					pathValueFunc: pathValueFunc,
+					tag:           reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagPath, pathParam)),
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
 		},
 		{
-			name: "NilValueFunc",
-			args: args{
-				tag: reflect.StructTag(`path:"user_id"`),
+			name: "get path variable from request - wrong tag path",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:           req,
+					pathValueFunc: pathValueFunc,
+					tag:           reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagPath+"1", pathParam)),
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
+		},
+		{
+			name: "get path variable from request - wrong path param",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:           req,
+					pathValueFunc: pathValueFunc,
+					tag:           reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagPath, pathParam+"1")),
+				}
+			},
+			want: "",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := http.Request{}
-			cache := make(Cache)
+			args := tt.args()
 
-			path := NewPath(tt.args.valueFunc)
-			tagName, value, exists := path(&req, tt.args.tag, cache)
-			if exists && tagName != TagPath {
-				t.Errorf("Path() tag name = %v, want %v", tagName, TagPath)
-			}
-			if exists != tt.exists {
-				t.Errorf("Path() exists = %v, want %v", exists, tt.exists)
-			}
-			if !reflect.DeepEqual(value, value) {
-				t.Errorf("Path() value = %v, want %v", value, tt.value)
+			p := NewPath(args.pathValueFunc)
+			value, exists := p.Parse(args.req, args.tag, nil)
+
+			if tt.want == nil && exists {
+				t.Errorf("Parse() does not want want, but it is exists")
 			}
 
-			if tt.emptyCache {
-				require.Empty(t, cache, "Path() not empty cache %v", cache)
-			}
+			require.Equal(t, tt.want, value)
 		})
 	}
 }
