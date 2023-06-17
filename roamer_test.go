@@ -76,7 +76,7 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 	}
 
 	r := NewRoamer(
-		SetParsers(parser.NewHeader(), parser.NewQuery(SplitSymbol)),
+		SetParsers(parser.NewHeader(), parser.NewQuery()),
 	)
 
 	b.ReportAllocs()

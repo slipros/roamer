@@ -14,11 +14,6 @@ import (
 	"github.com/SLIpros/roamer/value"
 )
 
-const (
-	// SplitSymbol array split symbol.
-	SplitSymbol = ","
-)
-
 // AfterParser will be called after http request parsing.
 type AfterParser interface {
 	AfterParse(ctx context.Context) error
@@ -38,10 +33,10 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 		decoders: decoder.Decoders{
 			decoder.ContentTypeJSON:    decoder.NewJSON(),
 			decoder.ContentTypeXML:     decoder.NewXML(),
-			decoder.ContentTypeFormURL: decoder.NewFormURL(SplitSymbol),
+			decoder.ContentTypeFormURL: decoder.NewFormURL(),
 		},
 		parsers: parser.Parsers{
-			parser.TagQuery: parser.NewQuery(SplitSymbol),
+			parser.TagQuery: parser.NewQuery(),
 		},
 	}
 

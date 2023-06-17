@@ -9,18 +9,44 @@ import (
 
 const (
 	// TagQuery query tag.
-	TagQuery      = "query"
+	TagQuery = "query"
+	// SplitSymbol array split symbol.
+	SplitSymbol   = ","
 	cacheKeyQuery = "query"
 )
 
-// Query header parser.
+// QueryOptionsFunc query options changer.
+type QueryOptionsFunc func(*Query)
+
+// WithDisabledSplit disable array splitting.
+func WithDisabledSplit() QueryOptionsFunc {
+	return func(q *Query) {
+		q.split = false
+	}
+}
+
+// WithSplitSymbol set array split symbol.
+func WithSplitSymbol(splitSymbol string) QueryOptionsFunc {
+	return func(q *Query) {
+		q.splitSymbol = splitSymbol
+	}
+}
+
+// Query query parser.
 type Query struct {
+	split       bool
 	splitSymbol string
 }
 
-// NewQuery returns new header parser.
-func NewQuery(splitSymbol string) *Query {
-	return &Query{splitSymbol: splitSymbol}
+// NewQuery returns new query parser.
+func NewQuery(opts ...QueryOptionsFunc) *Query {
+	q := Query{split: true, splitSymbol: SplitSymbol}
+
+	for _, opt := range opts {
+		opt(&q)
+	}
+
+	return &q
 }
 
 // Parse parses query.
@@ -38,19 +64,13 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 		cache[cacheKeyQuery] = query
 	}
 
-	var split bool
-	if before, found := strings.CutSuffix(tagValue, ",split"); found {
-		tagValue = before
-		split = true
-	}
-
 	values, ok := query[tagValue]
 	if !ok {
 		return "", false
 	}
 
 	if len(values) == 1 {
-		if split && strings.Contains(values[0], q.splitSymbol) {
+		if q.split && strings.Contains(values[0], q.splitSymbol) {
 			return strings.Split(values[0], q.splitSymbol), true
 		}
 
