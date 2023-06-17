@@ -16,18 +16,24 @@ const (
 	ContentTypeFormURLEncoded = "application/x-www-form-urlencoded"
 )
 
+// FormURLEncoded url form decoder.
 type FormURLEncoded struct {
 	splitSymbol string
 }
 
+// NewFormURLEncoded returns new url form decoder.
 func NewFormURLEncoded(splitSymbol string) *FormURLEncoded {
 	return &FormURLEncoded{splitSymbol: splitSymbol}
 }
 
+// ContentType returns content type of url form decoder.
 func (f *FormURLEncoded) ContentType() string {
 	return ContentTypeFormURLEncoded
 }
 
+// Decode decodes url form value from http request into ptr.
+//
+// Ptr must have a type of either struct or map
 func (f *FormURLEncoded) Decode(r *http.Request, ptr any) error {
 	if err := r.ParseForm(); err != nil {
 		return errors.WithMessage(err, "parse http form")
