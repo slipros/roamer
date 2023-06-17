@@ -1,3 +1,10 @@
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/SLIpros/roamer)](https://goreportcard.com/report/github.com/SLIpros/roamer)
+[![Build Status](https://github.com/SLIpros/roamer/actions/workflows/test.yml/badge.svg)](https://github.com/SLIpros/roamer/actions)
+[![Coverage Status](https://coveralls.io/repos/github/SLIpros/roamer/badge.svg?branch=main)](https://coveralls.io/github/SLIpros/roamer?branch=main)
+[![Go Reference](https://pkg.go.dev/badge/github.com/SLIpros/roamer.svg)](https://pkg.go.dev/github.com/SLIpros/roamer)
+[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/SLIpros/roamer/releases)
+
 # roamer
 Flexible http request parser
 
