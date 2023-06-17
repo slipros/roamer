@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -9,68 +10,127 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewQuery(t *testing.T) {
+	q := NewQuery(",")
+	require.NotNil(t, q)
+	require.Equal(t, TagQuery, q.Tag())
+}
+
 func TestQuery(t *testing.T) {
+	queryName := "user_id"
+	queryValue := "1337"
+
 	type args struct {
-		query url.Values
+		req   *http.Request
 		tag   reflect.StructTag
+		cache Cache
 	}
 	tests := []struct {
-		name       string
-		args       args
-		value      any
-		exists     bool
-		emptyCache bool
+		name string
+		args func() args
+		want any
 	}{
 		{
-			name: "Exists",
-			args: args{
-				query: url.Values{
-					"agent": []string{"test"},
-				},
-				tag: reflect.StructTag(`query:"agent"`),
+			name: "Get value from query",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
+				require.NoError(t, err)
+
+				q := rawURL.Query()
+				q.Add(queryName, queryValue)
+
+				rawURL.RawQuery = q.Encode()
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:   req,
+					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
+					cache: make(map[string]any),
+				}
 			},
-			value:  "test agent",
-			exists: true,
+			want: queryValue,
 		},
 		{
-			name: "NotExists",
-			args: args{
-				tag: reflect.StructTag(`query:"agent"`),
+			name: "Get value from cached query",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
+				require.NoError(t, err)
+
+				q := rawURL.Query()
+				q.Add(queryName, queryValue)
+
+				rawURL.RawQuery = q.Encode()
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				cache := make(map[string]any, 1)
+				cache[cacheKeyQuery] = q
+
+				return args{
+					req:   req,
+					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
+					cache: cache,
+				}
 			},
-			exists: false,
+			want: queryValue,
 		},
 		{
-			name: "NoTag",
-			args: args{
-				query: url.Values{
-					"agent": []string{"test"},
-				},
+			name: "Get value from query - no query",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
+				require.NoError(t, err)
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:   req,
+					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
+					cache: make(map[string]any),
+				}
 			},
-			exists:     false,
-			emptyCache: true,
+			want: "",
+		},
+		{
+			name: "Get value from query - wrong query",
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
+				require.NoError(t, err)
+
+				q := rawURL.Query()
+				q.Add(queryName+"1", queryValue)
+
+				rawURL.RawQuery = q.Encode()
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:   req,
+					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
+					cache: make(map[string]any),
+				}
+			},
+			want: "",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := http.Request{URL: &url.URL{RawQuery: tt.args.query.Encode()}}
-			cache := make(Cache)
+			args := tt.args()
 
-			parse := NewQuery(",")
-			tagName, value, exists := parse(&req, tt.args.tag, cache)
-			if exists && tagName != TagQuery {
-				t.Errorf("Query() tag name = %v, want %v", tagName, TagQuery)
-			}
-			if exists != tt.exists {
-				t.Errorf("Query() exists = %v, want %v", exists, tt.exists)
-			}
-			if !reflect.DeepEqual(value, value) {
-				t.Errorf("Query() value = %v, want %v", value, tt.value)
+			q := NewQuery(",")
+
+			value, exists := q.Parse(args.req, args.tag, args.cache)
+
+			if tt.want == nil && exists {
+				t.Errorf("Parse() want is nil, but value exists")
 			}
 
-			if !tt.emptyCache {
-				_, ok := cache[cacheKeyQuery]
-				require.True(t, ok, "Query() empty cache")
-			}
+			require.Equal(t, tt.want, value)
 		})
 	}
 }

@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -9,14 +9,14 @@ import (
 )
 
 func TestNewJSON(t *testing.T) {
-	d := NewJSON()
-	require.NotNil(t, d)
-	require.Equal(t, ContentTypeJSON, d.ContentType())
+	j := NewJSON()
+	require.NotNil(t, j)
+	require.Equal(t, ContentTypeJSON, j.ContentType())
 }
 
 func TestJSON_Decode(t *testing.T) {
 	type args struct {
-		body io.Reader
+		req  *http.Request
 		ptr  any
 		want any
 	}
@@ -26,19 +26,7 @@ func TestJSON_Decode(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "SliceOfStrings",
-			args: func() args {
-				data := []string{"1", "2"}
-
-				return args{
-					body: toJSON(t, &data),
-					ptr:  &[]string{},
-					want: &data,
-				}
-			},
-		},
-		{
-			name: "Struct",
+			name: "Success fill struct",
 			args: func() args {
 				type Data struct {
 					Field1 string `json:"field_1"`
@@ -50,38 +38,65 @@ func TestJSON_Decode(t *testing.T) {
 					Field2: 2,
 				}
 
+				body := toJSON(t, &data)
+				req, err := http.NewRequest(http.MethodPost, requestURL, body)
+				require.NoError(t, err)
+
 				return args{
-					body: toJSON(t, &data),
+					req:  req,
 					ptr:  &Data{},
 					want: &data,
 				}
 			},
 		},
 		{
-			name: "ErrorNilBody",
+			name: "Fill slice of strings",
 			args: func() args {
+				data := []string{"1", "2"}
+
+				body := toJSON(t, &data)
+				req, err := http.NewRequest(http.MethodPost, requestURL, body)
+				require.NoError(t, err)
+
 				return args{
-					body: nil,
+					req:  req,
+					ptr:  &[]string{},
+					want: &data,
+				}
+			},
+		},
+		{
+			name: "Error nil request body",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				return args{
+					req: req,
 				}
 			},
 			wantErr: true,
 		},
 		{
-			name: "ErrorInvalidBody",
+			name: "Error invalid request body",
 			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader("{]"))
+				require.NoError(t, err)
+
 				return args{
-					body: strings.NewReader("{]"),
+					req: req,
 				}
 			},
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			j := NewJSON()
 			args := tt.args()
 
-			if err := j.Decode(args.body, args.ptr); !tt.wantErr && err != nil {
+			if err := j.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 

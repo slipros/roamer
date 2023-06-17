@@ -6,11 +6,10 @@ import (
 	"io"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
-var errBigBad = errors.New("err big bad")
+const requestURL = "test.com"
 
 func toJSON(t *testing.T, v any) io.Reader {
 	var buffer bytes.Buffer

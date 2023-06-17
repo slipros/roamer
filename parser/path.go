@@ -35,7 +35,7 @@ func (p *Path) Tag() string {
 func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagPath)
 	if !ok {
-		return nil, false
+		return "", false
 	}
 
 	return p.valueFromPath(tagValue, r)

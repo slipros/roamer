@@ -28,11 +28,13 @@ func (q *Query) Tag() string {
 	return TagQuery
 }
 
-// Parse parse query.
+// Parse parses query.
+//
+// If query is not found in cache it will be parsed from request url and cached.
 func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagQuery)
 	if !ok {
-		return nil, false
+		return "", false
 	}
 
 	query, ok := cache[cacheKeyQuery].(url.Values)
@@ -49,7 +51,7 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 
 	values, ok := query[tagValue]
 	if !ok {
-		return nil, false
+		return "", false
 	}
 
 	if len(values) == 1 {
