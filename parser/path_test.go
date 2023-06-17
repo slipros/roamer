@@ -54,20 +54,6 @@ func TestPath(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
 				require.NoError(t, err)
 
-				pathValueFunc := func(name string, r *http.Request) (string, bool) {
-					_, after, found := strings.Cut(r.URL.Path, pathParam)
-					if !found {
-						return "", false
-					}
-
-					_, after, found = strings.Cut(after, "/")
-					if !found {
-						return "", false
-					}
-
-					return after, true
-				}
-
 				return args{
 					req:           req,
 					pathValueFunc: pathValueFunc,
