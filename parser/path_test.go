@@ -21,7 +21,7 @@ func TestPath(t *testing.T) {
 	pathParamValue := "1337"
 	pathParam := "user_id"
 
-	pathValueFunc := func(name string, r *http.Request) (string, bool) {
+	pathValueFunc := func(r *http.Request, name string) (string, bool) {
 		_, after, found := strings.Cut(r.URL.Path, pathParam+"/")
 		if !found {
 			return "", false
