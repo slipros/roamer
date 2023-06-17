@@ -30,6 +30,8 @@ type Roamer struct {
 // NewRoamer creates and returns new roamer.
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
+		parsers:    make(Parsers),
+		decoders:   make(Decoders),
 		skipFilled: true,
 	}
 
