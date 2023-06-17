@@ -70,9 +70,10 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 		name         string
 		args         func() args
 		wantNotEqual bool
+		wantErr      bool
 	}{
 		{
-			name: "fill struct fields",
+			name: "Fill struct fields",
 			args: func() args {
 				type Data struct {
 					String        string      `form:"string"`
@@ -133,7 +134,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill map any fields",
+			name: "Fill map any fields",
 			args: func() args {
 				data := map[string]any{
 					"string":          str,
@@ -173,7 +174,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill string map fields",
+			name: "Fill string map fields",
 			args: func() args {
 				data := map[string]string{
 					"string":          str,
@@ -213,7 +214,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill empty struct",
+			name: "Fill empty struct",
 			args: func() args {
 				type Data struct{}
 				data := Data{}
@@ -231,7 +232,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill struct fields - empty form",
+			name: "Fill struct fields - empty form",
 			args: func() args {
 				type Data struct {
 					String        string      `form:"string"`
@@ -273,7 +274,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill map fields - empty form",
+			name: "Fill map fields - empty form",
 			args: func() args {
 				data := map[string]any{}
 
@@ -294,7 +295,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name:         "fill struct fields - wrong form value",
+			name:         "Fill struct fields - wrong form value",
 			wantNotEqual: true,
 			args: func() args {
 				type Data struct {
@@ -385,7 +386,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name:         "fill map fields - wrong form value",
+			name:         "Fill map fields - wrong form value",
 			wantNotEqual: true,
 			args: func() args {
 				var (
@@ -432,6 +433,24 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:    "Unsupported ptr",
+			wantErr: true,
+			args: func() args {
+				var data []string
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+
+				return args{
+					req:  req,
+					ptr:  data,
+					want: &data,
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -439,8 +458,13 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			args := tt.args()
 			f := NewFormURLEncoded(splitSymbol)
 
-			if err := f.Decode(args.req, args.ptr); err != nil {
+			if err := f.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
 				t.Errorf("Decode() error = %v", err)
+			}
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
 			}
 
 			if tt.wantNotEqual {

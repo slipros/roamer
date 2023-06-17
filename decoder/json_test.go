@@ -50,7 +50,7 @@ func TestJSON_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "Success fill slice of strings",
+			name: "Fill slice of strings",
 			args: func() args {
 				data := []string{"1", "2"}
 

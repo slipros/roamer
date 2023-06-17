@@ -26,7 +26,7 @@ func TestXML_Decode(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Success fill struct",
+			name: "Fill struct",
 			args: func() args {
 				type Data struct {
 					Field1 string `xml:"field_1"`
