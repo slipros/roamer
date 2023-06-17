@@ -31,7 +31,7 @@ func TestQuery(t *testing.T) {
 		want any
 	}{
 		{
-			name: "get value from query",
+			name: "Get value from query",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
 				require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestQuery(t *testing.T) {
 			want: queryValue,
 		},
 		{
-			name: "get value from cached query",
+			name: "Get value from cached query",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
 				require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestQuery(t *testing.T) {
 			want: queryValue,
 		},
 		{
-			name: "get value from query - no query",
+			name: "Get value from query - no query",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
 				require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestQuery(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "get value from query - wrong query",
+			name: "Get value from query - wrong query",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
 				require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestQuery(t *testing.T) {
 			value, exists := q.Parse(args.req, args.tag, args.cache)
 
 			if tt.want == nil && exists {
-				t.Errorf("Parse() does not want want, but it is exists")
+				t.Errorf("Parse() want is nil, but value exists")
 			}
 
 			require.Equal(t, tt.want, value)

@@ -46,7 +46,7 @@ func TestPath(t *testing.T) {
 		want any
 	}{
 		{
-			name: "get path variable from request",
+			name: "Get path variable from request",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
 				require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestPath(t *testing.T) {
 			want: pathParamValue,
 		},
 		{
-			name: "get path variable from request - nil pathValueFunc",
+			name: "Get path variable from request - nil pathValueFunc",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
 				require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestPath(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "get path variable from request - no path variable",
+			name: "Get path variable from request - no path variable",
 			args: func() args {
 				rawURL, err := url.Parse(requestURL)
 				require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestPath(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "get path variable from request - wrong tag path",
+			name: "Get path variable from request - wrong tag path",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
 				require.NoError(t, err)
@@ -128,7 +128,7 @@ func TestPath(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "get path variable from request - wrong path param",
+			name: "Get path variable from request - wrong path param",
 			args: func() args {
 				rawURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", requestURL, pathParam, pathParamValue))
 				require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestPath(t *testing.T) {
 			value, exists := p.Parse(args.req, args.tag, nil)
 
 			if tt.want == nil && exists {
-				t.Errorf("Parse() does not want want, but it is exists")
+				t.Errorf("Parse() want is nil, but value exists")
 			}
 
 			require.Equal(t, tt.want, value)

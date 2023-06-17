@@ -31,7 +31,7 @@ func TestHeader(t *testing.T) {
 		want any
 	}{
 		{
-			name: "get want from request header",
+			name: "Get header value from request header",
 			args: func() args {
 				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
 				require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestHeader(t *testing.T) {
 			want: headerValue,
 		},
 		{
-			name: "empty request header",
+			name: "Get header value from request header - empty request header",
 			args: func() args {
 				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
 				require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestHeader(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "empty struct tag",
+			name: "Get header value from request header - empty struct tag",
 			args: func() args {
 				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
 				require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestHeader(t *testing.T) {
 			value, exists := h.Parse(args.req, args.tag, nil)
 
 			if tt.want == nil && exists {
-				t.Errorf("Parse() does not want want, but it is exists")
+				t.Errorf("Parse() want is nil, but value exists")
 			}
 
 			require.Equal(t, tt.want, value)
