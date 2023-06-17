@@ -133,9 +133,8 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 			},
 		},
 		{
-			name: "fill map fields",
+			name: "fill map any fields",
 			args: func() args {
-
 				data := map[string]any{
 					"string":          str,
 					"string_ptr":      str,
@@ -165,6 +164,46 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
 
 				emptyMap := make(map[string]any, len(data))
+
+				return args{
+					req:  req,
+					ptr:  &emptyMap,
+					want: &data,
+				}
+			},
+		},
+		{
+			name: "fill string map fields",
+			args: func() args {
+				data := map[string]string{
+					"string":          str,
+					"string_ptr":      str,
+					"int":             integerString,
+					"int_ptr":         integerString,
+					"int_8":           integerString,
+					"int_8_ptr":       integerString,
+					"int_16":          integerString,
+					"int_16_ptr":      integerString,
+					"int_32":          integerString,
+					"int_32_ptr":      integerString,
+					"int_64":          integerString,
+					"int_64_ptr":      integerString,
+					"float_32":        floatString,
+					"float_32_ptr":    floatString,
+					"float_64":        floatString,
+					"float_64_ptr":    floatString,
+					"complex_64":      complexString,
+					"complex_64_ptr":  complexString,
+					"complex_128":     complexString,
+					"complex_128_ptr": complexString,
+				}
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+
+				emptyMap := make(map[string]string, len(data))
 
 				return args{
 					req:  req,

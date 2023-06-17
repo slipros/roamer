@@ -29,8 +29,8 @@ func TestXML_Decode(t *testing.T) {
 			name: "Success fill struct",
 			args: func() args {
 				type Data struct {
-					Field1 string `json:"field_1"`
-					Field2 int    `json:"field_2"`
+					Field1 string `xml:"field_1"`
+					Field2 int    `xml:"field_2"`
 				}
 
 				data := Data{
