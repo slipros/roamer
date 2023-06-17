@@ -1,10 +1,10 @@
 package roamer
 
-// OptionsFunc options func.
+// OptionsFunc function for setting options.
 type OptionsFunc func(*Roamer)
 
-// SetParsers sets parsers.
-func SetParsers(parsers ...Parser) OptionsFunc {
+// WithParsers sets parsers.
+func WithParsers(parsers ...Parser) OptionsFunc {
 	return func(r *Roamer) {
 		for _, p := range parsers {
 			r.parsers[p.Tag()] = p
@@ -12,8 +12,8 @@ func SetParsers(parsers ...Parser) OptionsFunc {
 	}
 }
 
-// SetDecoders sets decoders.
-func SetDecoders(decoders ...Decoder) OptionsFunc {
+// WithDecoders sets decoders.
+func WithDecoders(decoders ...Decoder) OptionsFunc {
 	return func(r *Roamer) {
 		for _, d := range decoders {
 			r.decoders[d.ContentType()] = d
@@ -21,8 +21,8 @@ func SetDecoders(decoders ...Decoder) OptionsFunc {
 	}
 }
 
-// SetSkipFilled sets skip filled.
-func SetSkipFilled(skip bool) OptionsFunc {
+// WithSkipFilled sets skip filled.
+func WithSkipFilled(skip bool) OptionsFunc {
 	return func(r *Roamer) {
 		r.skipFilled = skip
 	}

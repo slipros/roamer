@@ -22,14 +22,14 @@ const (
 // FormURLOptionsFunc url form options changer.
 type FormURLOptionsFunc func(*FormURL)
 
-// WithDisabledSplit disable array splitting.
+// WithDisabledSplit disables array splitting.
 func WithDisabledSplit() FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.split = false
 	}
 }
 
-// WithSplitSymbol set array split symbol.
+// WithSplitSymbol sets array split symbol.
 func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.splitSymbol = splitSymbol

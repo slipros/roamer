@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/SLIpros/roamer/decoder"
 	roamerError "github.com/SLIpros/roamer/err"
 	"github.com/SLIpros/roamer/parser"
 	"github.com/SLIpros/roamer/value"
@@ -30,14 +29,6 @@ type Roamer struct {
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
 		skipFilled: true,
-		decoders: Decoders{
-			decoder.ContentTypeJSON:    decoder.NewJSON(),
-			decoder.ContentTypeXML:     decoder.NewXML(),
-			decoder.ContentTypeFormURL: decoder.NewFormURL(SplitSymbol),
-		},
-		parsers: Parsers{
-			parser.TagQuery: parser.NewQuery(SplitSymbol),
-		},
 	}
 
 	for _, opt := range opts {

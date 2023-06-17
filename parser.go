@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-// Parser parser.
+// Parser is a parser.
 //
 //go:generate mockery --name=Parser --outpkg=mock --output=./mock
 type Parser interface {
