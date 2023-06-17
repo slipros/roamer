@@ -42,6 +42,9 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - depguard
+    - gci
+    - gofumpt
 
 issues:
   exclude-use-default: false

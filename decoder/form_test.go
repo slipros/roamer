@@ -13,13 +13,13 @@ import (
 
 const splitSymbol = ","
 
-func TestNewFormURLEncoded(t *testing.T) {
-	f := NewFormURLEncoded(splitSymbol)
+func TestNewFormURL(t *testing.T) {
+	f := NewFormURL(splitSymbol)
 	require.NotNil(t, f)
-	require.Equal(t, ContentTypeFormURLEncoded, f.ContentType())
+	require.Equal(t, ContentTypeFormURL, f.ContentType())
 }
 
-func TestFormURLEncoded_Decode(t *testing.T) {
+func TestFormURL_Decode(t *testing.T) {
 	var (
 		str           = "string"
 		integerString = fmt.Sprintf("%d", 1)
@@ -124,7 +124,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				return args{
 					req:  req,
@@ -162,7 +162,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				emptyMap := make(map[string]any, len(data))
 
@@ -202,7 +202,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				emptyMap := make(map[string]string, len(data))
 
@@ -222,7 +222,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				return args{
 					req:  req,
@@ -264,7 +264,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				return args{
 					req:  req,
@@ -283,7 +283,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				emptyMap := make(map[string]any, len(data))
 
@@ -376,7 +376,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				return args{
 					req:  req,
@@ -422,7 +422,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				emptyMap := make(map[string]any, len(data))
 
@@ -442,7 +442,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
-				req.Header.Add("Content-Type", ContentTypeFormURLEncoded)
+				req.Header.Add("Content-Type", ContentTypeFormURL)
 
 				return args{
 					req:  req,
@@ -456,7 +456,7 @@ func TestFormURLEncoded_Decode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := tt.args()
-			f := NewFormURLEncoded(splitSymbol)
+			f := NewFormURL(splitSymbol)
 
 			err := f.Decode(args.req, args.ptr)
 			if !tt.wantErr && err != nil {

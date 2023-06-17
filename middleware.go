@@ -13,12 +13,12 @@ func Middleware[T any](roamer *Roamer) func(next http.Handler) http.Handler {
 
 			var v T
 			if err := roamer.Parse(r, &v); err != nil {
-				ctxWithError := setError(r.Context(), err)
+				ctxWithError := contextWithParsingError(r.Context(), err)
 				next.ServeHTTP(w, r.WithContext(ctxWithError))
 				return
 			}
 
-			ctxWithData := SetData(r.Context(), &v)
+			ctxWithData := ContextWithParsedData(r.Context(), &v)
 			next.ServeHTTP(w, r.WithContext(ctxWithData))
 		})
 	}

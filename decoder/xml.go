@@ -9,19 +9,19 @@ import (
 )
 
 const (
+	// ContentTypeXML content-type header for xml decoder.
 	ContentTypeXML = "application/xml"
 )
 
+// XML xml decoder.
 type XML struct{}
 
+// NewXML returns new xml decoder.
 func NewXML() *XML {
 	return &XML{}
 }
 
-func (x *XML) ContentType() string {
-	return ContentTypeXML
-}
-
+// Decode decodes request body into ptr based on content-type header.
 func (x *XML) Decode(r *http.Request, ptr any) error {
 	if err := xml.NewDecoder(r.Body).Decode(ptr); err != nil {
 		if !errors.Is(err, io.EOF) {
@@ -30,4 +30,9 @@ func (x *XML) Decode(r *http.Request, ptr any) error {
 	}
 
 	return nil
+}
+
+// ContentType returns content-type header value.
+func (x *XML) ContentType() string {
+	return ContentTypeXML
 }

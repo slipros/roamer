@@ -5,44 +5,44 @@ import (
 
 	"github.com/pkg/errors"
 
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 )
 
 // ContextKey context key.
 type ContextKey uint8
 
 const (
-	// ContextKeyData parsed data.
-	ContextKeyData ContextKey = iota + 1
-	// ContextKeyError parsing error.
-	ContextKeyError
+	// ContextKeyParsedData  is a parsed data.
+	ContextKeyParsedData ContextKey = iota + 1
+	// ContextKeyParsingError is a parsing error.
+	ContextKeyParsingError
 )
 
-// Data return parsed data.
-func Data[T any](ctx context.Context, ptr *T) error {
+// ParsedDataFromContext return parsed data from context.
+func ParsedDataFromContext[T any](ctx context.Context, ptr *T) error {
 	if ptr == nil {
-		return errors.WithMessage(roamerError.ErrNil, "context")
+		return errors.WithMessage(roamerError.NilValue, "context")
 	}
 
-	if err, ok := ctx.Value(ContextKeyError).(error); ok {
-		return err
+	if err, ok := ctx.Value(ContextKeyParsingError).(error); ok {
+		return errors.WithStack(err)
 	}
 
-	v, ok := ctx.Value(ContextKeyData).(*T)
+	v, ok := ctx.Value(ContextKeyParsedData).(*T)
 	if !ok {
-		return roamerError.ErrNoData
+		return errors.WithStack(roamerError.NoData)
 	}
 
 	*ptr = *v
 	return nil
 }
 
-// SetData set parsed data to context.
-func SetData(ctx context.Context, value any) context.Context {
-	return context.WithValue(ctx, ContextKeyData, value)
+// ContextWithParsedData returns a context with parsed data.
+func ContextWithParsedData(ctx context.Context, data any) context.Context {
+	return context.WithValue(ctx, ContextKeyParsedData, data)
 }
 
-// setError set parsing error to context.
-func setError(ctx context.Context, err error) context.Context {
-	return context.WithValue(ctx, ContextKeyError, err)
+// contextWithParsingError returns a context with parsing error.
+func contextWithParsingError(ctx context.Context, err error) context.Context {
+	return context.WithValue(ctx, ContextKeyParsingError, err)
 }
