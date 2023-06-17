@@ -14,7 +14,7 @@ type Parser interface {
 	Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool)
 }
 
-// Parsers parsers.
+// Parsers is a map of parsers where keys are tags for given parsers.
 type Parsers map[string]Parser
 
 // Cache cache.

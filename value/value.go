@@ -1,9 +1,10 @@
+// Package value converts one value type to another.
 package value
 
 import (
 	"reflect"
 
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 )
 
 // Set set value to field.
@@ -81,5 +82,5 @@ func Set(field *reflect.Value, value any) error {
 		field.Set(reflect.Indirect(reflect.ValueOf(value)))
 	}
 
-	return roamerError.ErrNotSupported
+	return roamerError.NotSupported
 }

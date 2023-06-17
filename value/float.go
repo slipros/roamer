@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 )
 
 // SetFloat set float number to field.
@@ -32,5 +32,5 @@ func SetFloat[F constraints.Float](field *reflect.Value, number F) error {
 		return nil
 	}
 
-	return roamerError.ErrNotSupported
+	return roamerError.NotSupported
 }

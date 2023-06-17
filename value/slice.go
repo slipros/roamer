@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 )
 
 // SetSliceString set slice of strings to field.
@@ -33,5 +33,5 @@ func SetSliceString(field *reflect.Value, arr []string) error {
 		return nil
 	}
 
-	return roamerError.ErrNotSupported
+	return roamerError.NotSupported
 }

@@ -9,21 +9,19 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/SLIpros/roamer/decoder"
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 	"github.com/SLIpros/roamer/parser"
 	"github.com/SLIpros/roamer/value"
 )
 
-// TODO: Сохранять остаток json
-// TODO: Попробовать стандартный router
-// TODO: Поддержка файлов
-
 const (
+	// SplitSymbol array split symbol.
 	SplitSymbol = ","
 )
 
-type Prepare interface {
-	Prepare(ctx context.Context) error
+// AfterParser will be called after http request parsing.
+type AfterParser interface {
+	AfterParse(ctx context.Context) error
 }
 
 // Roamer flexible http request parser.
@@ -38,9 +36,9 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
 		skipFilled: true,
 		decoders: decoder.Decoders{
-			decoder.ContentTypeJSON:           decoder.NewJSON(),
-			decoder.ContentTypeXML:            decoder.NewXML(),
-			decoder.ContentTypeFormURLEncoded: decoder.NewFormURLEncoded(SplitSymbol),
+			decoder.ContentTypeJSON:    decoder.NewJSON(),
+			decoder.ContentTypeXML:     decoder.NewXML(),
+			decoder.ContentTypeFormURL: decoder.NewFormURL(SplitSymbol),
 		},
 		parsers: parser.Parsers{
 			parser.TagQuery: parser.NewQuery(SplitSymbol),
@@ -54,15 +52,17 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	return &r
 }
 
-// Parse parse http request to ptr.
+// Parse parses http request into ptr.
+//
+// ptr can implement AfterParser to execute some logic after parsing.
 func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	if ptr == nil {
-		return errors.WithMessage(roamerError.ErrNil, "ptr")
+		return errors.WithMessage(roamerError.NilValue, "ptr")
 	}
 
 	t := reflect.TypeOf(ptr)
 	if t.Kind() != reflect.Pointer {
-		return errors.WithMessagef(roamerError.ErrNotPtr, "`%T`", ptr)
+		return errors.WithMessagef(roamerError.NotPtr, "`%T`", ptr)
 	}
 
 	switch t.Elem().Kind() {
@@ -75,11 +75,11 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 			return err
 		}
 	default:
-		return errors.WithMessagef(roamerError.ErrNotSupported, "`%T`", ptr)
+		return errors.WithMessagef(roamerError.NotSupported, "`%T`", ptr)
 	}
 
-	if prepare, ok := ptr.(Prepare); ok {
-		return prepare.Prepare(req.Context())
+	if p, ok := ptr.(AfterParser); ok {
+		return p.AfterParse(req.Context())
 	}
 
 	return nil

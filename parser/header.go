@@ -18,11 +18,6 @@ func NewHeader() *Header {
 	return &Header{}
 }
 
-// Tag returns working tag.
-func (h *Header) Tag() string {
-	return TagHeader
-}
-
 // Parse parse header.
 func (h *Header) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagHeader)
@@ -36,4 +31,9 @@ func (h *Header) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bo
 	}
 
 	return headerValue, true
+}
+
+// Tag returns working tag.
+func (h *Header) Tag() string {
+	return TagHeader
 }

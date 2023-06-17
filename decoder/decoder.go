@@ -1,3 +1,4 @@
+// Package decoder decode content-type header and return it's values.
 package decoder
 
 import (
@@ -12,5 +13,5 @@ type Decoder interface {
 	Decode(r *http.Request, ptr any) error
 }
 
-// Decoders decoders.
+// Decoders is a map of decoders where keys are content types for given decoders.
 type Decoders map[string]Decoder

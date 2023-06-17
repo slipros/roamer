@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strconv"
 
-	roamerError "github.com/SLIpros/roamer/error"
+	roamerError "github.com/SLIpros/roamer/err"
 )
 
 // SetString set string to field.
@@ -150,12 +150,12 @@ func SetString(field *reflect.Value, str string) error {
 	}
 
 	if !field.CanAddr() {
-		return roamerError.ErrNotSupported
+		return roamerError.NotSupported
 	}
 
 	ptr := field.Addr()
 	if !ptr.CanInterface() {
-		return roamerError.ErrNotSupported
+		return roamerError.NotSupported
 	}
 
 	return implementsBytesUnmarshaler(ptr.Interface(), str)
@@ -170,5 +170,5 @@ func implementsBytesUnmarshaler(ptr any, str string) error {
 		return i.UnmarshalBinary([]byte(str))
 	}
 
-	return roamerError.ErrNotSupported
+	return roamerError.NotSupported
 }
