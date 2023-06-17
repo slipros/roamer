@@ -14,6 +14,8 @@ import (
 )
 
 // AfterParser will be called after http request parsing.
+//
+//go:generate mockery --name=AfterParser --outpkg=mock --output=./mock
 type AfterParser interface {
 	AfterParse(ctx context.Context) error
 }
