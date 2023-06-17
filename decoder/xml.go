@@ -21,7 +21,7 @@ func NewXML() *XML {
 	return &XML{}
 }
 
-// Decode decodes request body into ptr based on content-type header.
+// Decode decodes request body into ptr.
 func (x *XML) Decode(r *http.Request, ptr any) error {
 	if err := xml.NewDecoder(r.Body).Decode(ptr); err != nil {
 		if !errors.Is(err, io.EOF) {

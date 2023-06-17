@@ -10,7 +10,7 @@ const (
 	TagHeader = "header"
 )
 
-// Header header parser.
+// Header is a header parser.
 type Header struct{}
 
 // NewHeader returns new header parser.

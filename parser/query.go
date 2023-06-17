@@ -49,7 +49,7 @@ func NewQuery(opts ...QueryOptionsFunc) *Query {
 	return &q
 }
 
-// Parse parses query.
+// Parse parses query from request.
 //
 // If query is not found in cache it will be parsed from request url and cached.
 func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool) {

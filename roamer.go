@@ -21,22 +21,22 @@ type AfterParser interface {
 
 // Roamer flexible http request parser.
 type Roamer struct {
+	parsers    Parsers
+	decoders   Decoders
 	skipFilled bool
-	decoders   decoder.Decoders
-	parsers    parser.Parsers
 }
 
 // NewRoamer creates and returns new roamer.
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
 		skipFilled: true,
-		decoders: decoder.Decoders{
+		decoders: Decoders{
 			decoder.ContentTypeJSON:    decoder.NewJSON(),
 			decoder.ContentTypeXML:     decoder.NewXML(),
-			decoder.ContentTypeFormURL: decoder.NewFormURL(),
+			decoder.ContentTypeFormURL: decoder.NewFormURL(SplitSymbol),
 		},
-		parsers: parser.Parsers{
-			parser.TagQuery: parser.NewQuery(),
+		parsers: Parsers{
+			parser.TagQuery: parser.NewQuery(SplitSymbol),
 		},
 	}
 

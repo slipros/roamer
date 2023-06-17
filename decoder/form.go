@@ -55,7 +55,7 @@ func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 
 // Decode decodes url form value from http request into ptr.
 //
-// Ptr must have a type of either struct or map.
+// ptr must have a type of either struct or map.
 func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	if err := r.ParseForm(); err != nil {
 		return errors.WithMessage(err, "parse http form")
