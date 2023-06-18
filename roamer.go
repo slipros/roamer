@@ -1,4 +1,4 @@
-// Package roamer flexible http request parser.
+// Package roamer provides flexible http request parser.
 package roamer
 
 import (
@@ -75,7 +75,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	return nil
 }
 
-// parseStruct parser structure from http request to pointer.
+// parseStruct parses structure from http request into a ptr.
 func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	if err := r.parseBody(req, ptr); err != nil {
 		return err
@@ -116,7 +116,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	return nil
 }
 
-// parseStruct parser body from http request to pointer.
+// parseStruct parses body from http request into a ptr.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	if req.Method == http.MethodGet || req.ContentLength == 0 {
 		return nil
