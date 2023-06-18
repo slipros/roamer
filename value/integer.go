@@ -9,7 +9,7 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
-// SetInteger set integer number to field.
+// SetInteger sets integer number into a field.
 func SetInteger[I constraints.Integer](field *reflect.Value, number I) error {
 	switch field.Kind() {
 	case reflect.String:

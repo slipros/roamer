@@ -9,7 +9,7 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
-// SetFloat set float number to field.
+// SetFloat sets float number into a field.
 func SetFloat[F constraints.Float](field *reflect.Value, number F) error {
 	switch field.Kind() {
 	case reflect.String:

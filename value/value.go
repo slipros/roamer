@@ -7,7 +7,7 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
-// Set set value to field.
+// Set sets value into a field.
 func Set(field *reflect.Value, value any) error {
 	if field.Kind() == reflect.Pointer && field.IsNil() {
 		// init ptr
