@@ -23,7 +23,7 @@ func TestSet(t *testing.T) {
 		}
 
 		var testStructP struct {
-			SP *string
+			S *string
 		}
 
 		v = reflect.Indirect(reflect.ValueOf(&testStructP))
@@ -32,7 +32,7 @@ func TestSet(t *testing.T) {
 			fieldValue := v.Field(i)
 			err := Set(&fieldValue, str)
 			require.NoError(t, err)
-			require.Equal(t, str, testStruct.S)
+			require.Equal(t, str, *testStructP.S)
 		}
 	})
 
