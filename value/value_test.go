@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/constraints"
 )
 
 func TestSet(t *testing.T) {
@@ -37,363 +38,30 @@ func TestSet(t *testing.T) {
 	})
 
 	t.Run("Int", func(t *testing.T) {
-		var testStruct struct {
-			I int
-		}
+		t.Parallel()
 
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, num)
-			require.NoError(t, err)
-			require.Equal(t, num, testStruct.I)
-		}
-
-		var testStructP struct {
-			I *int
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := num
-			err := Set(&fieldValue, &n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Int8", func(t *testing.T) {
-		var testStruct struct {
-			I int8
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, int8(num))
-			require.NoError(t, err)
-			require.Equal(t, int8(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *int8
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := int8(num)
-			err := Set(&fieldValue, &n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Int16", func(t *testing.T) {
-		var testStruct struct {
-			I int16
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, int16(num))
-			require.NoError(t, err)
-			require.Equal(t, int16(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *int16
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := int16(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Int32", func(t *testing.T) {
-		var testStruct struct {
-			I int32
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, int32(num))
-			require.NoError(t, err)
-			require.Equal(t, int32(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *int32
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := int32(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Int64", func(t *testing.T) {
-		var testStruct struct {
-			I int64
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, int64(num))
-			require.NoError(t, err)
-			require.Equal(t, int64(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *int64
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := int64(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
+		testSetInt(t, num)
+		testSetInt(t, int8(num))
+		testSetInt(t, int16(num))
+		testSetInt(t, int32(num))
+		testSetInt(t, int64(num))
 	})
 
 	t.Run("Uint", func(t *testing.T) {
-		var testStruct struct {
-			I uint
-		}
+		t.Parallel()
 
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, num)
-			require.NoError(t, err)
-			require.Equal(t, uint(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *uint
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := uint(num)
-			err := Set(&fieldValue, &n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
+		testSetUint(t, uint(num))
+		testSetUint(t, uint8(num))
+		testSetUint(t, uint16(num))
+		testSetUint(t, uint32(num))
+		testSetUint(t, uint64(num))
 	})
 
-	t.Run("Uint8", func(t *testing.T) {
-		var testStruct struct {
-			I uint8
-		}
+	t.Run("Float", func(t *testing.T) {
+		t.Parallel()
 
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, uint8(num))
-			require.NoError(t, err)
-			require.Equal(t, uint8(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *uint8
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := uint8(num)
-			err := Set(&fieldValue, &n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Uint16", func(t *testing.T) {
-		var testStruct struct {
-			I uint16
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, uint16(num))
-			require.NoError(t, err)
-			require.Equal(t, uint16(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *uint16
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := uint16(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Uint32", func(t *testing.T) {
-		var testStruct struct {
-			I uint32
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, uint32(num))
-			require.NoError(t, err)
-			require.Equal(t, uint32(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *uint32
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := uint32(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Uint64", func(t *testing.T) {
-		var testStruct struct {
-			I uint64
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, uint64(num))
-			require.NoError(t, err)
-			require.Equal(t, uint64(num), testStruct.I)
-		}
-
-		var testStructP struct {
-			I *uint64
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := uint64(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.I)
-		}
-	})
-
-	t.Run("Float32", func(t *testing.T) {
-		var testStruct struct {
-			F float32
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, float32(num))
-			require.NoError(t, err)
-			require.Equal(t, float32(num), testStruct.F)
-		}
-
-		var testStructP struct {
-			F *float32
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := float32(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.F)
-		}
-	})
-
-	t.Run("Float64", func(t *testing.T) {
-		var testStruct struct {
-			F float64
-		}
-
-		v := reflect.Indirect(reflect.ValueOf(&testStruct))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-			err := Set(&fieldValue, float64(num))
-			require.NoError(t, err)
-			require.Equal(t, float64(num), testStruct.F)
-		}
-
-		var testStructP struct {
-			F *float64
-		}
-
-		v = reflect.Indirect(reflect.ValueOf(&testStructP))
-
-		for i := 0; i < v.NumField(); i++ {
-			fieldValue := v.Field(i)
-
-			n := float64(num)
-			err := Set(&fieldValue, n)
-			require.NoError(t, err)
-			require.Equal(t, n, *testStructP.F)
-		}
+		testSetFloat(t, float32(num))
+		testSetFloat(t, float64(num))
 	})
 
 	t.Run("Slice string", func(t *testing.T) {
@@ -430,4 +98,91 @@ func TestSet(t *testing.T) {
 			require.Error(t, err)
 		}
 	})
+}
+
+func testSetInt[T constraints.Integer](t *testing.T, integer T) {
+	var testStruct struct {
+		I T
+	}
+
+	v := reflect.Indirect(reflect.ValueOf(&testStruct))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		err := Set(&fieldValue, integer)
+		require.NoError(t, err)
+		require.Equal(t, integer, testStruct.I)
+	}
+
+	var testStructP struct {
+		I *T
+	}
+
+	v = reflect.Indirect(reflect.ValueOf(&testStructP))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+
+		err := Set(&fieldValue, &integer)
+		require.NoError(t, err)
+		require.Equal(t, integer, *testStructP.I)
+	}
+}
+
+func testSetUint[T constraints.Unsigned](t *testing.T, integer T) {
+	var testStruct struct {
+		I T
+	}
+
+	v := reflect.Indirect(reflect.ValueOf(&testStruct))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		err := Set(&fieldValue, integer)
+		require.NoError(t, err)
+		require.Equal(t, integer, testStruct.I)
+	}
+
+	var testStructP struct {
+		I *T
+	}
+
+	v = reflect.Indirect(reflect.ValueOf(&testStructP))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+
+		err := Set(&fieldValue, &integer)
+		require.NoError(t, err)
+		require.Equal(t, integer, *testStructP.I)
+	}
+}
+
+func testSetFloat[T constraints.Float](t *testing.T, float T) {
+	var testStruct struct {
+		F T
+	}
+
+	v := reflect.Indirect(reflect.ValueOf(&testStruct))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+		err := Set(&fieldValue, float)
+		require.NoError(t, err)
+		require.Equal(t, float, testStruct.F)
+	}
+
+	var testStructP struct {
+		F *T
+	}
+
+	v = reflect.Indirect(reflect.ValueOf(&testStructP))
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldValue := v.Field(i)
+
+		err := Set(&fieldValue, float)
+		require.NoError(t, err)
+		require.Equal(t, float, *testStructP.F)
+	}
 }
