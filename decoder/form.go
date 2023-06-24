@@ -19,7 +19,7 @@ const (
 	SplitSymbol = ","
 )
 
-// FormURLOptionsFunc url form options changer.
+// FormURLOptionsFunc function for setting options.
 type FormURLOptionsFunc func(*FormURL)
 
 // WithDisabledSplit disables array splitting.
@@ -66,7 +66,7 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return f.parseStructure(&v, t, r.PostForm)
+		return f.parseStruct(&v, t, r.PostForm)
 	case reflect.Map:
 		return f.parseMap(&v, t, r.PostForm)
 	default:
@@ -97,7 +97,7 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 	return values, true
 }
 
-func (f *FormURL) parseStructure(v *reflect.Value, t reflect.Type, form url.Values) error {
+func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) error {
 	for i := 0; i < v.NumField(); i++ {
 		fieldType := t.Field(i)
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {

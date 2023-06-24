@@ -7,7 +7,7 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
-// SetSliceString set slice of strings to field.
+// SetSliceString sets slice of strings into a field.
 func SetSliceString(field *reflect.Value, arr []string) error {
 	switch field.Kind() {
 	case reflect.String:

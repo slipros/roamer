@@ -8,7 +8,7 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
-// SetString set string to field.
+// SetString sets string into a field.
 func SetString(field *reflect.Value, str string) error {
 	switch field.Kind() {
 	case reflect.String:
