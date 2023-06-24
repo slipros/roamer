@@ -1,0 +1,57 @@
+run:
+  tests: false
+  deadline: 5m
+
+linters-settings:
+  gofumpt:
+    extra-rules: true
+
+linters:
+  enable-all: true
+  disable:
+    - interfacebloat
+    - sqlclosecheck # not relevant (SQL)
+    - rowserrcheck # not relevant (SQL)
+    - execinquery # not relevant (SQL)
+    - interfacer # deprecated
+    - scopelint # deprecated
+    - maligned # deprecated
+    - golint # deprecated
+    - deadcode # deprecated
+    - exhaustivestruct # deprecated
+    - ifshort # deprecated
+    - nosnakecase # deprecated
+    - structcheck # deprecated
+    - varcheck # deprecated
+    - cyclop # duplicate of gocyclo
+    - exhaustive
+    - exhaustruct
+    - forcetypeassert
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - gocyclo
+    - goerr113
+    - gomnd
+    - ireturn
+    - nestif
+    - nlreturn
+    - nonamedreturns
+    - tagliatelle
+    - varnamelen
+    - wrapcheck
+    - wsl
+    - depguard
+    - gci
+    - gofumpt
+
+issues:
+  exclude-use-default: false
+  exclude:
+    - 'package-comments: should have a package comment'
+    - 'G103: Use of unsafe calls should be audited'
+  exclude-rules:
+    - path: (schema|protocol)\.go
+      linters:
+        - gosec
