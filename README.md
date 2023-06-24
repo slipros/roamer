@@ -13,8 +13,29 @@ Flexible http request parser
 go get -u github.com/SLIpros/roamer@latest
 ```
 
+## Decoder
+
+Decode body of http request based on `Content-Type` header.
+
+| Type     | Content-Type                      |
+|----------|-----------------------------------|
+| json     | application/json                  |
+| xml      | application/xml                   |
+| form     | application/x-www-form-urlencoded |
+| `custom` | `any`                             |
+
+# Parser
+Parsing data from source.
+
+| Type     | Source      |
+|----------|-------------|
+| header   | http header |
+| query    | http query  |
+| path     | router path |
+| `custom` | `any`       |
+
+
 ## Examples
-### Default
 
 ```go
 package main
@@ -25,6 +46,8 @@ import (
 	"time"
 
 	"github.com/SLIpros/roamer"
+	"github.com/SLIpros/roamer/decoder"
+	"github.com/SLIpros/roamer/parser"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -49,71 +72,26 @@ type Body struct {
 }
 
 func main() {
-	r := roamer.NewRoamer()
-	
+	r := roamer.NewRoamer(
+		roamer.WithDecoders(decoder.NewJSON()),
+		roamer.WithParsers(parser.NewQuery()),
+	)
+
 	router := chi.NewRouter()
 	router.Use(middleware.Logger, roamer.Middleware[Body](r))
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		var body Body
-		if err := roamer.Data(r.Context(), &body); err != nil {
+		if err := roamer.ParsedDataFromContext(r.Context(), &body); err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(&data); err != nil {
+		if err := json.NewEncoder(w).Encode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	})
 	http.ListenAndServe(":3000", router)
-}
-```
-### With specified parsers
-
-```go
-package main
-
-import (
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/parser"
-)
-
-type Body struct {
-	UserAgent string  `header:"User-Agent"`
-	Int       int     `query:"int"`
-}
-
-func main() {
-	r := roamer.NewRoamer(
-		roamer.SetParsers(
-			parser.Header, // parse http headers
-			parser.Query, // parse http query params
-		),
-	)
-}
-```
-### With specified decoders
-
-```go
-package main
-
-import (
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/decoder"
-)
-
-type Body struct {
-	UserAgent string  `json:"agent"`
-	Action    string  `xml:"action"`
-}
-
-func main() {
-	r := roamer.NewRoamer(
-		roamer.SetDecoders(
-			decoder.NewJSON(), // parse json body relying on http request content-type header
-			decoder.NewXML(), // parse xml body relying on http request content-type header
-		),
-	)
 }
 ```
 
@@ -123,6 +101,9 @@ func main() {
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/SLIpros/roamer"
 	"github.com/SLIpros/roamer/parser"
 	roamerChi "github.com/SLIpros/roamer/pkg/chi"
@@ -131,18 +112,18 @@ import (
 )
 
 type Body struct {
-	Path      string  `path:"path"`
-	UserAgent string  `header:"User-Agent"`
-	Int       int     `query:"int"`
+	Path      string `path:"path"`
+	UserAgent string `header:"User-Agent"`
+	Int       int    `query:"int"`
 }
 
 func main() {
 	router := chi.NewRouter()
-	
+
 	r := roamer.NewRoamer(
-		roamer.SetParsers(
-			parser.Header, // parse http headers
-			parser.Query, // parse http query params
+		roamer.WithParsers(
+			parser.NewHeader(),                        // parse http headers
+			parser.NewQuery(),                         // parse http query params
 			parser.NewPath(roamerChi.NewPath(router)), // parse http path params
 		),
 	)
@@ -150,12 +131,12 @@ func main() {
 	router.Use(middleware.Logger, roamer.Middleware[Body](r))
 	router.Post("/test/{path}", func(w http.ResponseWriter, r *http.Request) {
 		var body Body
-		if err := roamer.Data(r.Context(), &body); err != nil {
+		if err := roamer.ParsedDataFromContext(r.Context(), &body); err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(&data); err != nil {
+		if err := json.NewEncoder(w).Encode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -176,7 +157,6 @@ import (
 	"reflect"
 
 	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/parser"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gofrs/uuid"
@@ -198,15 +178,17 @@ const (
 	TagProfile = "profile"
 )
 
-func ParserProfile(r *http.Request, tag reflect.StructTag, _ parser.Cache) (string, any, bool) {
+type ProfileParser struct{}
+
+func (p *ProfileParser) Parse(r *http.Request, tag reflect.StructTag, _ roamer.Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagProfile)
 	if !ok {
-		return "", nil, false
+		return nil, false
 	}
 
 	profile, ok := r.Context().Value(ContextKeyProfile).(*Profile)
 	if !ok {
-		return "", nil, false
+		return nil, false
 	}
 
 	var v any
@@ -220,10 +202,14 @@ func ParserProfile(r *http.Request, tag reflect.StructTag, _ parser.Cache) (stri
 	case "profile":
 		v = profile
 	default:
-		return "", nil, false
+		return nil, false
 	}
 
-	return TagProfile, v, true
+	return v, true
+}
+
+func (p *ProfileParser) Tag() string {
+	return TagProfile
 }
 
 type Body struct {
@@ -235,11 +221,11 @@ type Body struct {
 
 func main() {
 	r := roamer.NewRoamer(
-		roamer.SetParsers(
-			ParserProfile, // parse profile
+		roamer.WithParsers(
+			&ProfileParser{}, // parse profile from context
 		),
 	)
-	
+
 	router := chi.NewRouter()
 
 	profileMiddleware := func(next http.Handler) http.Handler {
@@ -258,16 +244,17 @@ func main() {
 	router.Use(middleware.Logger, profileMiddleware, roamer.Middleware[Body](r))
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		var body Body
-		if err := roamer.Data(r.Context(), &body); err != nil {
+		if err := roamer.ParsedDataFromContext(r.Context(), &body); err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(&data); err != nil {
+		if err := json.NewEncoder(w).Encode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	})
 	http.ListenAndServe(":3000", router)
 }
+
 ```
