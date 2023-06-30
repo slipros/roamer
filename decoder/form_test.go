@@ -12,9 +12,20 @@ import (
 )
 
 func TestNewFormURL(t *testing.T) {
-	f := NewFormURL()
-	require.NotNil(t, f)
-	require.Equal(t, ContentTypeFormURL, f.ContentType())
+	formURLDecoder := NewFormURL()
+	require.NotNil(t, formURLDecoder)
+	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
+	require.Equal(t, formURLDecoder.splitSymbol, SplitSymbol)
+
+	formURLDecoderWithDisabledSplit := NewFormURL(WithDisabledSplit())
+	require.NotNil(t, formURLDecoder)
+	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
+	require.False(t, formURLDecoderWithDisabledSplit.split)
+
+	formURLDecoderWithSplitSymbol := NewFormURL(WithSplitSymbol("="))
+	require.NotNil(t, formURLDecoder)
+	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
+	require.Equal(t, formURLDecoderWithSplitSymbol.splitSymbol, "=")
 }
 
 func TestFormURL_Decode(t *testing.T) {
