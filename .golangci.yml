@@ -51,6 +51,7 @@ issues:
   exclude:
     - 'package-comments: should have a package comment'
     - 'G103: Use of unsafe calls should be audited'
+    - 'Line contains TODO/BUG/FIXME'
   exclude-rules:
     - path: (schema|protocol)\.go
       linters:

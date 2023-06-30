@@ -7,6 +7,8 @@ import (
 	roamerError "github.com/SLIpros/roamer/err"
 )
 
+var typeSliceOfAny = reflect.TypeOf([]any{})
+
 // SetSliceString sets slice of strings into a field.
 func SetSliceString(field *reflect.Value, arr []string) error {
 	switch field.Kind() {
@@ -20,17 +22,24 @@ func SetSliceString(field *reflect.Value, arr []string) error {
 			field.Set(reflect.ValueOf(arr))
 			return nil
 		case reflect.Interface:
-			s := make([]any, 0, len(arr))
-			for _, v := range arr {
-				s = append(s, v)
-			}
+			if field.Type().AssignableTo(typeSliceOfAny) {
+				s := make([]any, 0, len(arr))
+				for _, v := range arr {
+					s = append(s, v)
+				}
 
-			field.Set(reflect.ValueOf(s))
-			return nil
+				field.Set(reflect.ValueOf(s))
+				return nil
+			}
 		}
 	case reflect.Interface:
-		field.Set(reflect.ValueOf(arr))
-		return nil
+		// FIXME: make any assignable
+		//nolint:gocritic // no other way
+		switch field.Interface().(type) {
+		case []string:
+			field.Set(reflect.ValueOf(arr))
+			return nil
+		}
 	}
 
 	return roamerError.NotSupported

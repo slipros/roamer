@@ -12,20 +12,20 @@ import (
 )
 
 func TestNewFormURL(t *testing.T) {
-	formURLDecoder := NewFormURL()
-	require.NotNil(t, formURLDecoder)
-	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
-	require.Equal(t, formURLDecoder.splitSymbol, SplitSymbol)
+	f := NewFormURL()
+	require.NotNil(t, f)
+	require.Equal(t, ContentTypeFormURL, f.ContentType())
+	require.Equal(t, f.splitSymbol, SplitSymbol)
 
-	formURLDecoderWithDisabledSplit := NewFormURL(WithDisabledSplit())
-	require.NotNil(t, formURLDecoder)
-	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
-	require.False(t, formURLDecoderWithDisabledSplit.split)
+	f = NewFormURL(WithDisabledSplit())
+	require.NotNil(t, f)
+	require.Equal(t, ContentTypeFormURL, f.ContentType())
+	require.False(t, f.split)
 
-	formURLDecoderWithSplitSymbol := NewFormURL(WithSplitSymbol("="))
-	require.NotNil(t, formURLDecoder)
-	require.Equal(t, ContentTypeFormURL, formURLDecoder.ContentType())
-	require.Equal(t, formURLDecoderWithSplitSymbol.splitSymbol, "=")
+	f = NewFormURL(WithSplitSymbol("="))
+	require.NotNil(t, f)
+	require.Equal(t, ContentTypeFormURL, f.ContentType())
+	require.Equal(t, "=", f.splitSymbol)
 }
 
 func TestFormURL_Decode(t *testing.T) {
@@ -69,6 +69,9 @@ func TestFormURL_Decode(t *testing.T) {
 	form.Add("complex_64_ptr", complexString)
 	form.Add("complex_128", complexString)
 	form.Add("complex_128_ptr", complexString)
+	form.Add("slice_string", str)
+	form.Add("slice_string", str)
+	form.Add("slice_string", str)
 
 	type args struct {
 		req  *http.Request
@@ -82,7 +85,7 @@ func TestFormURL_Decode(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "Fill struct fields",
+			name: "Fill struct",
 			args: func() args {
 				type Data struct {
 					String        string      `form:"string"`
@@ -107,7 +110,7 @@ func TestFormURL_Decode(t *testing.T) {
 					Complex128Ptr *complex128 `form:"complex_128_ptr"`
 				}
 
-				data := Data{
+				want := Data{
 					String:        str,
 					StringPtr:     &str,
 					Integer:       integer,
@@ -138,95 +141,25 @@ func TestFormURL_Decode(t *testing.T) {
 				return args{
 					req:  req,
 					ptr:  &Data{},
-					want: &data,
+					want: &want,
 				}
 			},
 		},
 		{
-			name: "Fill map any fields",
+			name: "Fill struct slice field",
 			args: func() args {
-				data := map[string]any{
-					"string":          str,
-					"string_ptr":      str,
-					"int":             integerString,
-					"int_ptr":         integerString,
-					"int_8":           integerString,
-					"int_8_ptr":       integerString,
-					"int_16":          integerString,
-					"int_16_ptr":      integerString,
-					"int_32":          integerString,
-					"int_32_ptr":      integerString,
-					"int_64":          integerString,
-					"int_64_ptr":      integerString,
-					"float_32":        floatString,
-					"float_32_ptr":    floatString,
-					"float_64":        floatString,
-					"float_64_ptr":    floatString,
-					"complex_64":      complexString,
-					"complex_64_ptr":  complexString,
-					"complex_128":     complexString,
-					"complex_128_ptr": complexString,
+				type Data struct {
+					SliceStr []string `form:"slice_string"`
 				}
 
-				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
-				require.NoError(t, err)
+				form := make(url.Values, 3)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
 
-				req.Header.Add("Content-Type", ContentTypeFormURL)
-
-				emptyMap := make(map[string]any, len(data))
-
-				return args{
-					req:  req,
-					ptr:  &emptyMap,
-					want: &data,
+				want := Data{
+					SliceStr: []string{str, str, str},
 				}
-			},
-		},
-		{
-			name: "Fill string map fields",
-			args: func() args {
-				data := map[string]string{
-					"string":          str,
-					"string_ptr":      str,
-					"int":             integerString,
-					"int_ptr":         integerString,
-					"int_8":           integerString,
-					"int_8_ptr":       integerString,
-					"int_16":          integerString,
-					"int_16_ptr":      integerString,
-					"int_32":          integerString,
-					"int_32_ptr":      integerString,
-					"int_64":          integerString,
-					"int_64_ptr":      integerString,
-					"float_32":        floatString,
-					"float_32_ptr":    floatString,
-					"float_64":        floatString,
-					"float_64_ptr":    floatString,
-					"complex_64":      complexString,
-					"complex_64_ptr":  complexString,
-					"complex_128":     complexString,
-					"complex_128_ptr": complexString,
-				}
-
-				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
-				require.NoError(t, err)
-
-				req.Header.Add("Content-Type", ContentTypeFormURL)
-
-				emptyMap := make(map[string]string, len(data))
-
-				return args{
-					req:  req,
-					ptr:  &emptyMap,
-					want: &data,
-				}
-			},
-		},
-		{
-			name: "Fill empty struct",
-			args: func() args {
-				type Data struct{}
-				data := Data{}
 
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
@@ -236,12 +169,278 @@ func TestFormURL_Decode(t *testing.T) {
 				return args{
 					req:  req,
 					ptr:  &Data{},
-					want: &data,
+					want: &want,
 				}
 			},
 		},
 		{
-			name: "Fill struct fields - empty form",
+			name: "Fill map[string]any ",
+			args: func() args {
+				want := map[string]any{
+					"string":          str,
+					"string_ptr":      str,
+					"int":             integerString,
+					"int_ptr":         integerString,
+					"int_8":           integerString,
+					"int_8_ptr":       integerString,
+					"int_16":          integerString,
+					"int_16_ptr":      integerString,
+					"int_32":          integerString,
+					"int_32_ptr":      integerString,
+					"int_64":          integerString,
+					"int_64_ptr":      integerString,
+					"float_32":        floatString,
+					"float_32_ptr":    floatString,
+					"float_64":        floatString,
+					"float_64_ptr":    floatString,
+					"complex_64":      complexString,
+					"complex_64_ptr":  complexString,
+					"complex_128":     complexString,
+					"complex_128_ptr": complexString,
+					"slice_string":    []string{str, str, str},
+				}
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				emptyMap := make(map[string]any, len(want))
+
+				return args{
+					req:  req,
+					ptr:  &emptyMap,
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill map[string]string",
+			args: func() args {
+				want := map[string]string{
+					"string":          str,
+					"string_ptr":      str,
+					"int":             integerString,
+					"int_ptr":         integerString,
+					"int_8":           integerString,
+					"int_8_ptr":       integerString,
+					"int_16":          integerString,
+					"int_16_ptr":      integerString,
+					"int_32":          integerString,
+					"int_32_ptr":      integerString,
+					"int_64":          integerString,
+					"int_64_ptr":      integerString,
+					"float_32":        floatString,
+					"float_32_ptr":    floatString,
+					"float_64":        floatString,
+					"float_64_ptr":    floatString,
+					"complex_64":      complexString,
+					"complex_64_ptr":  complexString,
+					"complex_128":     complexString,
+					"complex_128_ptr": complexString,
+					"slice_string":    strings.Join([]string{str, str, str}, SplitSymbol),
+				}
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				emptyMap := make(map[string]string, len(want))
+
+				return args{
+					req:  req,
+					ptr:  &emptyMap,
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill map[string][]string",
+			args: func() args {
+				form := make(url.Values, 3)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
+
+				want := map[string][]string{
+					"slice_string": {str, str, str},
+				}
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				emptyMap := make(map[string][]string, len(want))
+
+				return args{
+					req:  req,
+					ptr:  &emptyMap,
+					want: &want,
+				}
+			},
+		},
+		{
+			name:    "Fill map[int]any",
+			wantErr: true,
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				emptyMap := make(map[int]any)
+
+				return args{
+					req: req,
+					ptr: &emptyMap,
+				}
+			},
+		},
+		{
+			name:    "Fill map[string]int",
+			wantErr: true,
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				emptyMap := make(map[string]int)
+
+				return args{
+					req: req,
+					ptr: &emptyMap,
+				}
+			},
+		},
+		{
+			name:    "Fill struct inside struct",
+			wantErr: true,
+			args: func() args {
+				type Data struct {
+					S struct {
+						Str string
+					} `form:"string"`
+				}
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req: req,
+					ptr: &Data{},
+				}
+			},
+		},
+		{
+			name:    "Invalid value in request url query",
+			wantErr: true,
+			args: func() args {
+				type Data struct {
+					SliceStr []string `form:"slice_string"`
+				}
+
+				form := make(url.Values, 3)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
+				form.Add("slice_string", str)
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+				req.URL.RawQuery = "test;test;test"
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req: req,
+					ptr: &Data{},
+				}
+			},
+		},
+		{
+			name: "Fill empty struct",
+			args: func() args {
+				type Data struct{}
+				var want Data
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req:  req,
+					ptr:  &Data{},
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill struct without form tag",
+			args: func() args {
+				type Data struct {
+					S string `json:"s"`
+				}
+				var want Data
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req:  req,
+					ptr:  &Data{},
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill struct with non exported field",
+			args: func() args {
+				type Data struct {
+					data string
+				}
+				var want Data
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req:  req,
+					ptr:  &Data{},
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill struct without tag",
+			args: func() args {
+				type Data struct {
+					Data string
+				}
+				var want Data
+
+				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
+				require.NoError(t, err)
+
+				req.Header.Add("Content-Type", ContentTypeFormURL)
+
+				return args{
+					req:  req,
+					ptr:  &Data{},
+					want: &want,
+				}
+			},
+		},
+		{
+			name: "Fill struct - empty form",
 			args: func() args {
 				type Data struct {
 					String        string      `form:"string"`
@@ -266,10 +465,9 @@ func TestFormURL_Decode(t *testing.T) {
 					Complex128Ptr *complex128 `form:"complex_128_ptr"`
 				}
 
-				data := Data{}
+				var want Data
 
 				form := make(url.Values)
-
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
@@ -278,33 +476,32 @@ func TestFormURL_Decode(t *testing.T) {
 				return args{
 					req:  req,
 					ptr:  &Data{},
-					want: &data,
+					want: &want,
 				}
 			},
 		},
 		{
-			name: "Fill map fields - empty form",
+			name: "Fill map[string]any - empty form",
 			args: func() args {
-				data := map[string]any{}
+				want := make(map[string]any)
 
 				form := make(url.Values)
-
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
 				req.Header.Add("Content-Type", ContentTypeFormURL)
 
-				emptyMap := make(map[string]any, len(data))
+				emptyMap := make(map[string]any, len(want))
 
 				return args{
 					req:  req,
 					ptr:  &emptyMap,
-					want: &data,
+					want: &want,
 				}
 			},
 		},
 		{
-			name:         "Fill struct fields - wrong form value",
+			name:         "Fill struct - wrong form value",
 			wantNotEqual: true,
 			args: func() args {
 				type Data struct {
@@ -330,7 +527,7 @@ func TestFormURL_Decode(t *testing.T) {
 					Complex128Ptr *complex128 `form:"complex_128_ptr"`
 				}
 
-				data := Data{
+				want := Data{
 					String:        str,
 					StringPtr:     &str,
 					Integer:       integer,
@@ -390,12 +587,12 @@ func TestFormURL_Decode(t *testing.T) {
 				return args{
 					req:  req,
 					ptr:  &Data{},
-					want: &data,
+					want: &want,
 				}
 			},
 		},
 		{
-			name:         "Fill map fields - wrong form value",
+			name:         "Fill map[string]any - wrong form value",
 			wantNotEqual: true,
 			args: func() args {
 				var (
@@ -405,7 +602,7 @@ func TestFormURL_Decode(t *testing.T) {
 					complexString = fmt.Sprintf("%f", complex(2, 0))
 				)
 
-				data := map[string]any{
+				want := map[string]any{
 					"string":          str,
 					"string_ptr":      str,
 					"int":             integerString,
@@ -433,12 +630,11 @@ func TestFormURL_Decode(t *testing.T) {
 
 				req.Header.Add("Content-Type", ContentTypeFormURL)
 
-				emptyMap := make(map[string]any, len(data))
+				emptyMap := make(map[string]any, len(want))
 
 				return args{
-					req:  req,
-					ptr:  &emptyMap,
-					want: &data,
+					req: req,
+					ptr: &emptyMap,
 				}
 			},
 		},
@@ -446,17 +642,17 @@ func TestFormURL_Decode(t *testing.T) {
 			name:    "Unsupported ptr",
 			wantErr: true,
 			args: func() args {
-				var data []string
 
 				req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
 				require.NoError(t, err)
 
 				req.Header.Add("Content-Type", ContentTypeFormURL)
 
+				var sl []string
+
 				return args{
-					req:  req,
-					ptr:  data,
-					want: &data,
+					req: req,
+					ptr: &sl,
 				}
 			},
 		},
@@ -469,14 +665,13 @@ func TestFormURL_Decode(t *testing.T) {
 
 			err := f.Decode(args.req, args.ptr)
 			if !tt.wantErr && err != nil {
-				t.Errorf("Decode() error = %v", err)
+				require.NoError(t, err)
 			}
 
 			if tt.wantErr {
 				require.Error(t, err)
 				return
 			}
-
 			if tt.wantNotEqual {
 				require.NotEqualValues(t, args.want, args.ptr)
 				return
