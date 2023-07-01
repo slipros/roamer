@@ -14,6 +14,14 @@ func TestNewQuery(t *testing.T) {
 	q := NewQuery()
 	require.NotNil(t, q)
 	require.Equal(t, TagQuery, q.Tag())
+
+	q = NewQuery(WithDisabledSplit())
+	require.NotNil(t, q)
+	require.False(t, q.split)
+
+	q = NewQuery(WithSplitSymbol(";"))
+	require.NotNil(t, q)
+	require.Equal(t, ";", q.splitSymbol)
 }
 
 func TestQuery(t *testing.T) {
@@ -26,9 +34,10 @@ func TestQuery(t *testing.T) {
 		cache Cache
 	}
 	tests := []struct {
-		name string
-		args func() args
-		want any
+		name      string
+		args      func() args
+		want      any
+		notExists bool
 	}{
 		{
 			name: "Get value from query",
@@ -161,6 +170,28 @@ func TestQuery(t *testing.T) {
 			},
 			want: []string{queryValue, queryValue},
 		},
+		{
+			name:      "Wrong tag",
+			notExists: true,
+			args: func() args {
+				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
+				require.NoError(t, err)
+
+				q := rawURL.Query()
+				q.Add(queryName, queryValue+","+queryValue)
+
+				rawURL.RawQuery = q.Encode()
+
+				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
+				require.NoError(t, err)
+
+				return args{
+					req:   req,
+					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagHeader, queryName)),
+					cache: make(map[string]any),
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -170,12 +201,17 @@ func TestQuery(t *testing.T) {
 			q := NewQuery()
 
 			value, exists := q.Parse(args.req, args.tag, args.cache)
+			if tt.notExists && exists {
+				t.Errorf("Parse() want not exists, but value exists")
+			}
 
 			if tt.want == nil && exists {
 				t.Errorf("Parse() want is nil, but value exists")
 			}
 
-			require.Equal(t, tt.want, value)
+			if !tt.notExists {
+				require.Equal(t, tt.want, value)
+			}
 		})
 	}
 }
