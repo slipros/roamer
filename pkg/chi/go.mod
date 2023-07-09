@@ -2,7 +2,7 @@ module github.com/SLIpros/roamer/pkg/chi
 
 go 1.20
 
-require github.com/go-chi/chi/v5 v5.0.8
+require github.com/go-chi/chi/v5 v5.0.10
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
