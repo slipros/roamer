@@ -81,9 +81,28 @@ func TestSet(t *testing.T) {
 		}
 	})
 
-	t.Run("Unsupported", func(t *testing.T) {
+	t.Run("Same type", func(t *testing.T) {
 		var testStruct struct {
 			M map[string]string
+		}
+
+		v := reflect.Indirect(reflect.ValueOf(&testStruct))
+
+		m := map[string]string{
+			str: str,
+		}
+
+		for i := 0; i < v.NumField(); i++ {
+			fieldValue := v.Field(i)
+			err := Set(&fieldValue, m)
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("Unsupported", func(t *testing.T) {
+		var testStruct struct {
+			M struct {
+			}
 		}
 
 		v := reflect.Indirect(reflect.ValueOf(&testStruct))
