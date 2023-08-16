@@ -80,6 +80,7 @@ func Set(field *reflect.Value, value any) error {
 
 	if field.Type().AssignableTo(valueType) {
 		field.Set(reflect.Indirect(reflect.ValueOf(value)))
+		return nil
 	}
 
 	return roamerError.NotSupported
