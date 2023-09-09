@@ -1,4 +1,0 @@
-version: "1.0"
-linter: jetbrains/qodana-go:2023.2-eap
-include:
-  - name: CheckDependencyLicenses

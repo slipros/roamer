@@ -8,6 +8,13 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+type implementsStringer struct {
+}
+
+func (i *implementsStringer) String() string {
+	return "hello"
+}
+
 func TestSet(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		var testStruct struct {
@@ -91,6 +98,22 @@ func TestSet(t *testing.T) {
 		m := map[string]string{
 			str: str,
 		}
+
+		for i := 0; i < v.NumField(); i++ {
+			fieldValue := v.Field(i)
+			err := Set(&fieldValue, m)
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("Stringer", func(t *testing.T) {
+		var testStruct struct {
+			M string
+		}
+
+		v := reflect.Indirect(reflect.ValueOf(&testStruct))
+
+		m := &implementsStringer{}
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)

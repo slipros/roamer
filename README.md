@@ -3,7 +3,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/SLIpros/roamer/badge.svg?branch=main)](https://coveralls.io/github/SLIpros/roamer?branch=main)
 [![Go Reference](https://pkg.go.dev/badge/github.com/SLIpros/roamer.svg)](https://pkg.go.dev/github.com/SLIpros/roamer)
 [![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/SLIpros/roamer/releases)
-[![Qodana](https://github.com/SLIpros/roamer/actions/workflows/code_quality.yml/badge.svg?branch=main)](https://github.com/SLIpros/roamer/actions/workflows/code_quality.yml)
 
 # roamer
 Flexible http request parser
