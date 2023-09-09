@@ -2,6 +2,7 @@
 package value
 
 import (
+	"fmt"
 	"reflect"
 
 	roamerError "github.com/SLIpros/roamer/err"
@@ -81,6 +82,10 @@ func Set(field *reflect.Value, value any) error {
 	if field.Type().AssignableTo(valueType) {
 		field.Set(reflect.Indirect(reflect.ValueOf(value)))
 		return nil
+	}
+
+	if i, ok := value.(fmt.Stringer); ok {
+		return SetString(field, i.String())
 	}
 
 	return roamerError.NotSupported
