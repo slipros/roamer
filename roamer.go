@@ -129,8 +129,9 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	if err := d.Decode(req, ptr); err != nil {
-		return errors.WithMessagef(err, "decode `%s` request body in `%T`",
-			contentType, ptr)
+		return &roamerError.DecodeError{
+			Err: errors.WithMessagef(err, "decode `%s` request body in `%T`", contentType, ptr),
+		}
 	}
 
 	return nil
