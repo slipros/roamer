@@ -18,3 +18,13 @@ var (
 	// NotSupported type is not supported.
 	NotSupported = errors.New("not supported type")
 )
+
+// DecodeError decode error.
+type DecodeError struct {
+	Err error
+}
+
+// Error returns string.
+func (d *DecodeError) Error() string {
+	return d.Err.Error()
+}
