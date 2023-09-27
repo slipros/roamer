@@ -4,10 +4,11 @@ package roamer
 import (
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 	"github.com/SLIpros/roamer/parser"
 	"github.com/SLIpros/roamer/value"
 )
@@ -46,12 +47,12 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 // ptr can implement AfterParser to execute some logic after parsing.
 func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	if ptr == nil {
-		return errors.WithMessage(roamerError.NilValue, "ptr")
+		return errors.WithMessage(rerr.NilValue, "ptr")
 	}
 
 	t := reflect.TypeOf(ptr)
 	if t.Kind() != reflect.Pointer {
-		return errors.WithMessagef(roamerError.NotPtr, "`%T`", ptr)
+		return errors.WithMessagef(rerr.NotPtr, "`%T`", ptr)
 	}
 
 	switch t.Elem().Kind() {
@@ -64,7 +65,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 			return err
 		}
 	default:
-		return errors.WithMessagef(roamerError.NotSupported, "`%T`", ptr)
+		return errors.WithMessagef(rerr.NotSupported, "`%T`", ptr)
 	}
 
 	if p, ok := ptr.(AfterParser); ok {
@@ -122,13 +123,17 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	contentType := req.Header.Get("Content-Type")
+	if base, _, found := strings.Cut(contentType, ";"); found {
+		contentType = base
+	}
+
 	d, ok := r.decoders[contentType]
 	if !ok {
 		return nil
 	}
 
 	if err := d.Decode(req, ptr); err != nil {
-		return &roamerError.DecodeError{
+		return &rerr.DecodeError{
 			Err: errors.WithMessagef(err, "decode `%s` request body in `%T`", contentType, ptr),
 		}
 	}

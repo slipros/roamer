@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 )
 
 // ContextKey context key.
@@ -21,7 +21,7 @@ const (
 // ParsedDataFromContext return parsed data from context.
 func ParsedDataFromContext[T any](ctx context.Context, ptr *T) error {
 	if ptr == nil {
-		return errors.WithMessage(roamerError.NilValue, "context")
+		return errors.WithMessage(rerr.NilValue, "context")
 	}
 
 	if err, ok := ctx.Value(ContextKeyParsingError).(error); ok {
@@ -30,7 +30,7 @@ func ParsedDataFromContext[T any](ctx context.Context, ptr *T) error {
 
 	v, ok := ctx.Value(ContextKeyParsedData).(*T)
 	if !ok {
-		return errors.WithStack(roamerError.NoData)
+		return errors.WithStack(rerr.NoData)
 	}
 
 	*ptr = *v

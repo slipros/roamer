@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 )
 
 // SetInteger sets integer number into a field.
@@ -32,5 +32,5 @@ func SetInteger[I constraints.Integer](field *reflect.Value, number I) error {
 		return nil
 	}
 
-	return roamerError.NotSupported
+	return rerr.NotSupported
 }

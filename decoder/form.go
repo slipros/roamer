@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 	"github.com/SLIpros/roamer/value"
 )
 
@@ -16,7 +16,8 @@ const (
 	// ContentTypeFormURL content-type header for url form decoder.
 	ContentTypeFormURL = "application/x-www-form-urlencoded"
 	// SplitSymbol array split symbol.
-	SplitSymbol = ","
+	SplitSymbol     = ","
+	tagValueFormURL = "form"
 )
 
 // FormURLOptionsFunc function for setting options.
@@ -70,7 +71,7 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	case reflect.Map:
 		return f.parseMap(&v, t, r.PostForm)
 	default:
-		return roamerError.NotSupported
+		return rerr.NotSupported
 	}
 }
 
@@ -80,7 +81,7 @@ func (f *FormURL) ContentType() string {
 }
 
 func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, bool) {
-	tagValue, ok := tag.Lookup("form")
+	tagValue, ok := tag.Lookup(tagValueFormURL)
 	if !ok {
 		return nil, false
 	}
@@ -120,7 +121,7 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 
 func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) error {
 	if t.Key().Kind() != reflect.String {
-		return roamerError.NotSupported
+		return rerr.NotSupported
 	}
 
 	mValue := t.Elem()
@@ -159,5 +160,5 @@ func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) er
 		}
 	}
 
-	return roamerError.NotSupported
+	return rerr.NotSupported
 }
