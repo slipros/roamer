@@ -2,7 +2,6 @@
 package roamer
 
 import (
-	"context"
 	"net/http"
 	"reflect"
 
@@ -17,7 +16,7 @@ import (
 //
 //go:generate mockery --name=AfterParser --outpkg=mock --output=./mock
 type AfterParser interface {
-	AfterParse(ctx context.Context) error
+	AfterParse(r *http.Request) error
 }
 
 // Roamer flexible http request parser.
@@ -69,7 +68,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	}
 
 	if p, ok := ptr.(AfterParser); ok {
-		return p.AfterParse(req.Context())
+		return p.AfterParse(req)
 	}
 
 	return nil
