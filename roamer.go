@@ -4,6 +4,7 @@ package roamer
 import (
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -122,6 +123,10 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	contentType := req.Header.Get("Content-Type")
+	if base, _, found := strings.Cut(contentType, ";"); found {
+		contentType = base
+	}
+
 	d, ok := r.decoders[contentType]
 	if !ok {
 		return nil

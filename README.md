@@ -16,12 +16,13 @@ go get -u github.com/SLIpros/roamer@latest
 
 Decode body of http request based on `Content-Type` header.
 
-| Type     | Content-Type                      |
-|----------|-----------------------------------|
-| json     | application/json                  |
-| xml      | application/xml                   |
-| form     | application/x-www-form-urlencoded |
-| `custom` | `any`                             |
+| Type      | Content-Type                      |
+|-----------|-----------------------------------|
+| json      | application/json                  |
+| xml       | application/xml                   |
+| form      | application/x-www-form-urlencoded |
+| multipart | multipart/form-data               |
+| `custom`  | `any`                             |
 
 # Parser
 Parsing data from source.
@@ -255,5 +256,52 @@ func main() {
 	})
 	http.ListenAndServe(":3000", router)
 }
+```
 
+### With multipart/form-data decoder
+![HTTP POST multipart/form-data request](images/form-data.png)
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/SLIpros/roamer"
+	"github.com/SLIpros/roamer/decoder"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+type UploadDevicesFile struct {
+	CampaignID string                 `multipart:"campaignId"` // parse multipart/form-data value = campaign
+	FileID     int                    `multipart:"fileId"`     // parse multipart/form-data value = 1337
+	File       *decoder.MultipartFile `multipart:"file"`       // parse multipart/form-data file
+	Files      decoder.MultipartFiles `multipart:",allfiles"`  // parse all multipart/form-data files = [file, file2]
+}
+
+func main() {
+	r := roamer.NewRoamer(
+		roamer.WithDecoders(
+			decoder.NewMultipartFormData(),
+		),
+	)
+
+	router := chi.NewRouter()
+	router.Use(middleware.Logger, roamer.Middleware[UploadDevicesFile](r))
+	router.Post("/", func(w http.ResponseWriter, r *http.Request) {
+		var body UploadDevicesFile
+		if err := roamer.ParsedDataFromContext(r.Context(), &body); err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+	http.ListenAndServe(":3000", router)
+}
 ```
