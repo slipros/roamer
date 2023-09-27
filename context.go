@@ -12,9 +12,9 @@ import (
 type ContextKey uint8
 
 const (
-	// ContextKeyParsedData  is a parsed data.
+	// ContextKeyParsedData is a key for parsed data.
 	ContextKeyParsedData ContextKey = iota + 1
-	// ContextKeyParsingError is a parsing error.
+	// ContextKeyParsingError is a key for parsing error.
 	ContextKeyParsingError
 )
 

@@ -3,7 +3,7 @@
 package mock
 
 import (
-	context "context"
+	http "net/http"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -21,13 +21,13 @@ func (_m *AfterParser) EXPECT() *AfterParser_Expecter {
 	return &AfterParser_Expecter{mock: &_m.Mock}
 }
 
-// AfterParse provides a mock function with given fields: ctx
-func (_m *AfterParser) AfterParse(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// AfterParse provides a mock function with given fields: r
+func (_m *AfterParser) AfterParse(r *http.Request) error {
+	ret := _m.Called(r)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(*http.Request) error); ok {
+		r0 = rf(r)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -41,14 +41,14 @@ type AfterParser_AfterParse_Call struct {
 }
 
 // AfterParse is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *AfterParser_Expecter) AfterParse(ctx interface{}) *AfterParser_AfterParse_Call {
-	return &AfterParser_AfterParse_Call{Call: _e.mock.On("AfterParse", ctx)}
+//   - r *http.Request
+func (_e *AfterParser_Expecter) AfterParse(r interface{}) *AfterParser_AfterParse_Call {
+	return &AfterParser_AfterParse_Call{Call: _e.mock.On("AfterParse", r)}
 }
 
-func (_c *AfterParser_AfterParse_Call) Run(run func(ctx context.Context)) *AfterParser_AfterParse_Call {
+func (_c *AfterParser_AfterParse_Call) Run(run func(r *http.Request)) *AfterParser_AfterParse_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(*http.Request))
 	})
 	return _c
 }
@@ -58,18 +58,17 @@ func (_c *AfterParser_AfterParse_Call) Return(_a0 error) *AfterParser_AfterParse
 	return _c
 }
 
-func (_c *AfterParser_AfterParse_Call) RunAndReturn(run func(context.Context) error) *AfterParser_AfterParse_Call {
+func (_c *AfterParser_AfterParse_Call) RunAndReturn(run func(*http.Request) error) *AfterParser_AfterParse_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-type mockConstructorTestingTNewAfterParser interface {
+// NewAfterParser creates a new instance of AfterParser. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewAfterParser(t interface {
 	mock.TestingT
 	Cleanup(func())
-}
-
-// NewAfterParser creates a new instance of AfterParser. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-func NewAfterParser(t mockConstructorTestingTNewAfterParser) *AfterParser {
+}) *AfterParser {
 	mock := &AfterParser{}
 	mock.Mock.Test(t)
 
