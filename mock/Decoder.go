@@ -105,13 +105,12 @@ func (_c *Decoder_Decode_Call) RunAndReturn(run func(*http.Request, interface{})
 	return _c
 }
 
-type mockConstructorTestingTNewDecoder interface {
+// NewDecoder creates a new instance of Decoder. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewDecoder(t interface {
 	mock.TestingT
 	Cleanup(func())
-}
-
-// NewDecoder creates a new instance of Decoder. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-func NewDecoder(t mockConstructorTestingTNewDecoder) *Decoder {
+}) *Decoder {
 	mock := &Decoder{}
 	mock.Mock.Test(t)
 

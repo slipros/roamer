@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 )
 
 var typeSliceOfAny = reflect.TypeOf([]any{})
@@ -42,5 +42,5 @@ func SetSliceString(field *reflect.Value, arr []string) error {
 		}
 	}
 
-	return roamerError.NotSupported
+	return rerr.NotSupported
 }

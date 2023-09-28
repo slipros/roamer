@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	roamerError "github.com/SLIpros/roamer/err"
+	rerr "github.com/SLIpros/roamer/err"
 )
 
 // Set sets value into a field.
@@ -88,5 +88,5 @@ func Set(field *reflect.Value, value any) error {
 		return SetString(field, i.String())
 	}
 
-	return roamerError.NotSupported
+	return rerr.NotSupported
 }

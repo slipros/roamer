@@ -6,7 +6,10 @@
 //nolint:revive,errname,stylecheck
 package err
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	// NoData unable to find parsed data.
@@ -27,4 +30,15 @@ type DecodeError struct {
 // Error returns string.
 func (d *DecodeError) Error() string {
 	return d.Err.Error()
+}
+
+// SliceIterationError slice iteration error.
+type SliceIterationError struct {
+	Err   error
+	Index int
+}
+
+// Error returns string.
+func (s *SliceIterationError) Error() string {
+	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
 }

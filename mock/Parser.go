@@ -119,13 +119,12 @@ func (_c *Parser_Tag_Call) RunAndReturn(run func() string) *Parser_Tag_Call {
 	return _c
 }
 
-type mockConstructorTestingTNewParser interface {
+// NewParser creates a new instance of Parser. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewParser(t interface {
 	mock.TestingT
 	Cleanup(func())
-}
-
-// NewParser creates a new instance of Parser. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-func NewParser(t mockConstructorTestingTNewParser) *Parser {
+}) *Parser {
 	mock := &Parser{}
 	mock.Mock.Test(t)
 
