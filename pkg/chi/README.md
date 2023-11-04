@@ -15,7 +15,7 @@ import (
 
 	"github.com/SLIpros/roamer"
 	"github.com/SLIpros/roamer/parser"
-	roamerChi "github.com/SLIpros/roamer/pkg/chi"
+	rchi "github.com/SLIpros/roamer/pkg/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -29,7 +29,7 @@ func main() {
 
 	r := roamer.NewRoamer(
 		roamer.WithParsers(
-			parser.NewPath(roamerChi.NewPath(router)),
+			parser.NewPath(rchi.NewPath(router)),
 		),
 	)
 
