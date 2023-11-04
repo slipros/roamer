@@ -36,6 +36,14 @@ Parsing data from source.
 
 
 ## Examples
+```
+curl --location 'http://127.0.0.1:3000?int=1&int8=2&int16=3&int32=4&int64=5&time=2021-01-01T02%3A07%3A14Z&custom_type=value' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "string": "Hello",
+    "email": "test@test.com"
+}'
+```
 
 ```go
 package main
@@ -91,11 +99,18 @@ func main() {
 			return
 		}
 	})
-	http.ListenAndServe(":3000", router)
+	
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		panic(err)
+	}
 }
 ```
 
 ### With path parser
+```
+curl --location --request POST 'http://127.0.0.1:3000/test/some_value?int=1' \
+--header 'User-Agent: PostmanRuntime/7.33.0'
+```
 
 ```go
 package main
@@ -106,15 +121,15 @@ import (
 
 	"github.com/SLIpros/roamer"
 	"github.com/SLIpros/roamer/parser"
-	roamerChi "github.com/SLIpros/roamer/pkg/chi"
+	rchi "github.com/SLIpros/roamer/pkg/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Body struct {
-	Path      string `path:"path"`
-	UserAgent string `header:"User-Agent"`
-	Int       int    `query:"int"`
+	Path      string `path:"path"` // after parse value will be = some_value
+	UserAgent string `header:"User-Agent"` // after parse value will be = PostmanRuntime/7.33.0
+	Int       int    `query:"int"` // after parse value will be = 1
 }
 
 func main() {
@@ -124,7 +139,7 @@ func main() {
 		roamer.WithParsers(
 			parser.NewHeader(),                        // parse http headers
 			parser.NewQuery(),                         // parse http query params
-			parser.NewPath(roamerChi.NewPath(router)), // parse http path params
+			parser.NewPath(rchi.NewPath(router)), // parse http path params
 		),
 	)
 
@@ -141,7 +156,10 @@ func main() {
 			return
 		}
 	})
-	http.ListenAndServe(":3000", router)
+	
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		panic(err)
+	}
 }
 ```
 
@@ -254,12 +272,23 @@ func main() {
 			return
 		}
 	})
-	http.ListenAndServe(":3000", router)
+	
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		panic(err)
+	}
 }
 ```
 
 ### With multipart/form-data decoder
-![HTTP POST multipart/form-data request](images/form-data.png)
+```
+curl --location 'http://127.0.0.1:3000' \
+--header 'X-Referer: http://localhost:3000' \
+--header 'Authorization: Bearer 018ad70c-6c98-789c-ac0e-b8e51931e628' \
+--form 'campaignId="campaign"' \
+--form 'fileId="1337"' \
+--form 'file=@"/C:/Users/slipros/Downloads/devices.csv"' \
+--form 'file2=@"/C:/Users/slipros/Downloads/devices.csv"'
+```
 
 ```go
 package main
@@ -275,9 +304,9 @@ import (
 )
 
 type UploadDevicesFile struct {
-	CampaignID string                 `multipart:"campaignId"` // parse multipart/form-data value = campaign
-	FileID     int                    `multipart:"fileId"`     // parse multipart/form-data value = 1337
-	File       *decoder.MultipartFile `multipart:"file"`       // parse multipart/form-data file
+	CampaignID string                 `multipart:"campaignId"` // after parse multipart/form-data key campaignId = campaign
+	FileID     int                    `multipart:"fileId"`     // parse multipart/form-data key fileId = 1337
+	File       *decoder.MultipartFile `multipart:"file"`       // parse multipart/form-data key file
 	Files      decoder.MultipartFiles `multipart:",allfiles"`  // parse all multipart/form-data files = [file, file2]
 }
 
@@ -302,6 +331,9 @@ func main() {
 			return
 		}
 	})
-	http.ListenAndServe(":3000", router)
+	
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		panic(err)
+    }
 }
 ```
