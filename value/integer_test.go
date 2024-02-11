@@ -86,7 +86,7 @@ func testSetIntegerString[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, strconv.Itoa(int(integer)), testStruct.S)
 	}
@@ -101,7 +101,7 @@ func testSetIntegerBoolean[T constraints.Integer](t *testing.T, integer T, want 
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.NoError(t, err)
 
 		require.Equal(t, want, testStruct.B)
@@ -121,7 +121,7 @@ func testSetIntegerInt[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, int64(integer), fieldValue.Int())
 	}
@@ -140,7 +140,7 @@ func testSetIntegerUint[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, uint64(integer), fieldValue.Uint())
 	}
@@ -156,7 +156,7 @@ func testSetIntegerFloat[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, float64(num), fieldValue.Float())
 	}
@@ -171,7 +171,7 @@ func testSetIntegerUnsupported[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetInteger(&fieldValue, integer)
+		err := SetInteger(fieldValue, integer)
 		require.Error(t, err)
 	}
 }

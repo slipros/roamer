@@ -12,6 +12,10 @@ func TestNewJSON(t *testing.T) {
 	j := NewJSON()
 	require.NotNil(t, j)
 	require.Equal(t, ContentTypeJSON, j.ContentType())
+
+	j = NewJSON(WithContentType[*JSON]("test"))
+	require.NotNil(t, j)
+	require.Equal(t, "test", j.ContentType())
 }
 
 func TestJSON_Decode(t *testing.T) {

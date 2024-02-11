@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SLIpros/roamer/decoder"
-	"github.com/SLIpros/roamer/parser"
+	"github.com/slipros/roamer/decoder"
+	"github.com/slipros/roamer/parser"
 )
 
 var errBigBad = errors.New("big bad error")
@@ -27,7 +27,7 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 		return buffer.Len(), &buffer, nil
 	}
 
-	query := make(url.Values, 0)
+	query := make(url.Values)
 	query.Add("int", "9223372036854775807")
 	query.Add("int8", "127")
 	query.Add("int16", "32767")
@@ -36,7 +36,7 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 	query.Add("time", "2002-10-02T15:00:00.05Z")
 	query.Add("url", "http://google.com")
 
-	header := make(http.Header, 0)
+	header := make(http.Header)
 	header.Add("User-Agent", "agent 1337")
 
 	bodyLen, body, err := toJSON(

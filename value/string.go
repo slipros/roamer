@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"strconv"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 // SetString sets string into a field.
-func SetString(field *reflect.Value, str string) error {
+func SetString(field reflect.Value, str string) error {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(str)
@@ -141,7 +141,7 @@ func SetString(field *reflect.Value, str string) error {
 			field.SetBytes([]byte(str))
 			return nil
 		case reflect.String:
-			field.Set(reflect.Append(*field, reflect.ValueOf(str)))
+			field.Set(reflect.Append(field, reflect.ValueOf(str)))
 			return nil
 		}
 	case reflect.Interface:

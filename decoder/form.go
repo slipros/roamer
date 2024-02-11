@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	rerr "github.com/SLIpros/roamer/err"
-	"github.com/SLIpros/roamer/value"
+	rerr "github.com/slipros/roamer/err"
+	"github.com/slipros/roamer/value"
 )
 
 const (
@@ -39,13 +39,14 @@ func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 
 // FormURL url form decoder.
 type FormURL struct {
+	contentType string
 	split       bool
 	splitSymbol string
 }
 
 // NewFormURL returns new url form decoder.
 func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
-	f := FormURL{split: true, splitSymbol: SplitSymbol}
+	f := FormURL{contentType: ContentTypeFormURL, split: true, splitSymbol: SplitSymbol}
 
 	for _, opt := range opts {
 		opt(&f)
@@ -75,9 +76,14 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	}
 }
 
-// ContentType returns content type of url form decoder.
+// ContentType returns content-type header value.
 func (f *FormURL) ContentType() string {
-	return ContentTypeFormURL
+	return f.contentType
+}
+
+// setContentType set content-type value.
+func (f *FormURL) setContentType(contentType string) {
+	f.contentType = contentType
 }
 
 func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, bool) {
@@ -110,8 +116,7 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 			continue
 		}
 
-		fieldValue := v.Field(i)
-		if err := value.Set(&fieldValue, formValue); err != nil {
+		if err := value.Set(v.Field(i), formValue); err != nil {
 			return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldType.Name)
 		}
 	}

@@ -38,7 +38,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 			require.Equal(t, str, testStruct.S)
 		}
@@ -55,7 +55,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			b, err := strconv.ParseBool(str)
@@ -75,7 +75,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseInt(str, 10, 0)
@@ -96,7 +96,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseInt(str, 10, 8)
@@ -116,7 +116,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseInt(str, 10, 16)
@@ -136,7 +136,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseInt(str, 10, 32)
@@ -156,7 +156,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseInt(str, 10, 64)
@@ -176,7 +176,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseUint(str, 10, 0)
@@ -197,7 +197,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseUint(str, 10, 8)
@@ -217,7 +217,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseUint(str, 10, 16)
@@ -237,7 +237,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseUint(str, 10, 32)
@@ -257,7 +257,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseUint(str, 10, 64)
@@ -277,7 +277,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseFloat(str, 32)
@@ -298,7 +298,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseFloat(str, 64)
@@ -319,7 +319,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseComplex(str, 64)
@@ -340,7 +340,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			parsed, err := strconv.ParseComplex(str, 128)
@@ -359,7 +359,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			require.Equal(t, str, testStruct.SL[0])
@@ -375,7 +375,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			require.Equal(t, []byte(str), testStruct.SL)
@@ -391,7 +391,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			require.Equal(t, str, testStruct.U.S)
@@ -407,7 +407,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.NoError(t, err)
 
 			require.Equal(t, str, testStruct.U.S)
@@ -423,7 +423,7 @@ func TestSetString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetString(&fieldValue, str)
+			err := SetString(fieldValue, str)
 			require.Error(t, err)
 		}
 	})

@@ -8,9 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	rerr "github.com/SLIpros/roamer/err"
-	"github.com/SLIpros/roamer/parser"
-	"github.com/SLIpros/roamer/value"
+	rerr "github.com/slipros/roamer/err"
+	"github.com/slipros/roamer/parser"
+	"github.com/slipros/roamer/value"
 )
 
 // AfterParser will be called after http request parsing.
@@ -22,9 +22,11 @@ type AfterParser interface {
 
 // Roamer flexible http request parser.
 type Roamer struct {
-	parsers    Parsers
-	decoders   Decoders
-	skipFilled bool
+	parsers     Parsers
+	decoders    Decoders
+	skipFilled  bool
+	hasParsers  bool
+	hasDecoders bool
 }
 
 // NewRoamer creates and returns new roamer.
@@ -38,6 +40,9 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	for _, opt := range opts {
 		opt(&r)
 	}
+
+	r.hasParsers = len(r.parsers) > 0
+	r.hasDecoders = len(r.decoders) > 0
 
 	return &r
 }
@@ -81,7 +86,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		return err
 	}
 
-	if len(r.parsers) == 0 {
+	if !r.hasParsers {
 		return nil
 	}
 
@@ -106,7 +111,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 				continue
 			}
 
-			if err := value.Set(&fieldValue, parsedValue); err != nil {
+			if err := value.Set(fieldValue, parsedValue); err != nil {
 				return errors.WithMessagef(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
 					parsedValue, fieldType.Name, tag, ptr)
 			}
@@ -118,7 +123,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 
 // parseStruct parses body from http request into a ptr.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
-	if req.Method == http.MethodGet || req.ContentLength == 0 {
+	if !r.hasDecoders || req.ContentLength == 0 || req.Method == http.MethodGet {
 		return nil
 	}
 
@@ -133,7 +138,7 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	if err := d.Decode(req, ptr); err != nil {
-		return &rerr.DecodeError{
+		return rerr.DecodeError{
 			Err: errors.WithMessagef(err, "decode `%s` request body in `%T`", contentType, ptr),
 		}
 	}

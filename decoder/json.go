@@ -15,12 +15,25 @@ const (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+// JSONOptionsFunc function for setting xml options.
+type JSONOptionsFunc = func(*JSON)
+
 // JSON json decoder.
-type JSON struct{}
+type JSON struct {
+	contentType string
+}
 
 // NewJSON returns new json decoder.
-func NewJSON() *JSON {
-	return &JSON{}
+func NewJSON(opts ...JSONOptionsFunc) *JSON {
+	j := JSON{
+		contentType: ContentTypeJSON,
+	}
+
+	for _, opt := range opts {
+		opt(&j)
+	}
+
+	return &j
 }
 
 // Decode decodes request body into ptr.
@@ -36,5 +49,10 @@ func (j *JSON) Decode(r *http.Request, ptr any) error {
 
 // ContentType returns content-type header value.
 func (j *JSON) ContentType() string {
-	return ContentTypeJSON
+	return j.contentType
+}
+
+// setContentType set content-type value.
+func (j *JSON) setContentType(contentType string) {
+	j.contentType = contentType
 }

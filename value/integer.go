@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 // SetInteger sets integer number into a field.
-func SetInteger[I constraints.Integer](field *reflect.Value, number I) error {
+func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(strconv.Itoa(int(number)))

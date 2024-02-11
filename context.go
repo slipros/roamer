@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 // ContextKey context key.

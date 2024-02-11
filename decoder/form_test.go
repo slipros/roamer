@@ -26,6 +26,10 @@ func TestNewFormURL(t *testing.T) {
 	require.NotNil(t, f)
 	require.Equal(t, ContentTypeFormURL, f.ContentType())
 	require.Equal(t, "=", f.splitSymbol)
+
+	f = NewFormURL(WithContentType[*FormURL]("test"))
+	require.NotNil(t, f)
+	require.Equal(t, "test", f.ContentType())
 }
 
 func TestFormURL_Decode(t *testing.T) {
