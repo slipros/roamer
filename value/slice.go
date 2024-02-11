@@ -4,13 +4,13 @@ import (
 	"reflect"
 	"strings"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 var typeSliceOfAny = reflect.TypeOf([]any{})
 
 // SetSliceString sets slice of strings into a field.
-func SetSliceString(field *reflect.Value, arr []string) error {
+func SetSliceString(field reflect.Value, arr []string) error {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(strings.Join(arr, ","))

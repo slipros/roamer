@@ -2,7 +2,7 @@
 
 ## Install
 ```go
-go get -u github.com/SLIpros/roamer/pkg/chi@latest
+go get -u github.com/slipros/roamer/pkg/chi@latest
 ```
 
 ## Example
@@ -13,9 +13,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/parser"
-	rchi "github.com/SLIpros/roamer/pkg/chi"
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/parser"
+	rchi "github.com/slipros/roamer/pkg/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )

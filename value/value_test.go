@@ -25,7 +25,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, str)
+			err := Set(fieldValue, str)
 			require.NoError(t, err)
 			require.Equal(t, str, testStruct.S)
 		}
@@ -38,7 +38,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, str)
+			err := Set(fieldValue, str)
 			require.NoError(t, err)
 			require.Equal(t, str, *testStructP.S)
 		}
@@ -82,7 +82,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, sl)
+			err := Set(fieldValue, sl)
 			require.NoError(t, err)
 			require.Equal(t, sl, testStruct.SL)
 		}
@@ -101,7 +101,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, m)
+			err := Set(fieldValue, m)
 			require.NoError(t, err)
 		}
 	})
@@ -117,7 +117,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, m)
+			err := Set(fieldValue, m)
 			require.NoError(t, err)
 		}
 	})
@@ -136,7 +136,7 @@ func TestSet(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := Set(&fieldValue, m)
+			err := Set(fieldValue, m)
 			require.Error(t, err)
 		}
 	})
@@ -151,7 +151,7 @@ func testSetInt[T constraints.Integer](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := Set(&fieldValue, integer)
+		err := Set(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, integer, testStruct.I)
 	}
@@ -165,7 +165,7 @@ func testSetInt[T constraints.Integer](t *testing.T, integer T) {
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
 
-		err := Set(&fieldValue, &integer)
+		err := Set(fieldValue, &integer)
 		require.NoError(t, err)
 		require.Equal(t, integer, *testStructP.I)
 	}
@@ -180,7 +180,7 @@ func testSetUint[T constraints.Unsigned](t *testing.T, integer T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := Set(&fieldValue, integer)
+		err := Set(fieldValue, integer)
 		require.NoError(t, err)
 		require.Equal(t, integer, testStruct.I)
 	}
@@ -194,7 +194,7 @@ func testSetUint[T constraints.Unsigned](t *testing.T, integer T) {
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
 
-		err := Set(&fieldValue, &integer)
+		err := Set(fieldValue, &integer)
 		require.NoError(t, err)
 		require.Equal(t, integer, *testStructP.I)
 	}
@@ -209,7 +209,7 @@ func testSetFloat[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := Set(&fieldValue, float)
+		err := Set(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, float, testStruct.F)
 	}
@@ -223,7 +223,7 @@ func testSetFloat[T constraints.Float](t *testing.T, float T) {
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
 
-		err := Set(&fieldValue, float)
+		err := Set(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, float, *testStructP.F)
 	}

@@ -28,7 +28,7 @@ type DecodeError struct {
 }
 
 // Error returns string.
-func (d *DecodeError) Error() string {
+func (d DecodeError) Error() string {
 	return d.Err.Error()
 }
 
@@ -39,6 +39,6 @@ type SliceIterationError struct {
 }
 
 // Error returns string.
-func (s *SliceIterationError) Error() string {
+func (s SliceIterationError) Error() string {
 	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
 }

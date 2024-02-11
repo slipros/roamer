@@ -1,15 +1,15 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/SLIpros/roamer)](https://goreportcard.com/report/github.com/SLIpros/roamer)
-[![Build Status](https://github.com/SLIpros/roamer/actions/workflows/test.yml/badge.svg)](https://github.com/SLIpros/roamer/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/slipros/roamer)](https://goreportcard.com/report/github.com/slipros/roamer)
+[![Build Status](https://github.com/slipros/roamer/actions/workflows/test.yml/badge.svg)](https://github.com/slipros/roamer/actions)
 [![Coverage Status](https://coveralls.io/repos/github/SLIpros/roamer/badge.svg?branch=main)](https://coveralls.io/github/SLIpros/roamer?branch=main)
-[![Go Reference](https://pkg.go.dev/badge/github.com/SLIpros/roamer.svg)](https://pkg.go.dev/github.com/SLIpros/roamer)
-[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/SLIpros/roamer/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
+[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 # roamer
 Flexible http request parser
 
 ## Install
 ```go
-go get -u github.com/SLIpros/roamer@latest
+go get -u github.com/slipros/roamer@latest
 ```
 
 ## Decoder
@@ -23,6 +23,25 @@ Decode body of http request based on `Content-Type` header.
 | form      | application/x-www-form-urlencoded |
 | multipart | multipart/form-data               |
 | `custom`  | `any`                             |
+
+### Json decoder with custom content type
+
+```go
+package main
+
+import (
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/decoder"
+)
+
+func main() {
+	_ = roamer.NewRoamer(
+		roamer.WithDecoders(
+			decoder.NewJSON(decoder.WithContentType[*decoder.JSON]("my content type")),
+		),
+	)
+}
+```
 
 # Parser
 Parsing data from source.
@@ -53,9 +72,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/decoder"
-	"github.com/SLIpros/roamer/parser"
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/decoder"
+	"github.com/slipros/roamer/parser"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -105,7 +124,6 @@ func main() {
 	}
 }
 ```
-
 ### With path parser
 ```
 curl --location --request POST 'http://127.0.0.1:3000/test/some_value?int=1' \
@@ -119,9 +137,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/parser"
-	rchi "github.com/SLIpros/roamer/pkg/chi"
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/parser"
+	rchi "github.com/slipros/roamer/pkg/chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -174,7 +192,7 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/SLIpros/roamer"
+	"github.com/slipros/roamer"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gofrs/uuid"
@@ -297,8 +315,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SLIpros/roamer"
-	"github.com/SLIpros/roamer/decoder"
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/decoder"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )

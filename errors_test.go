@@ -3,8 +3,8 @@ package roamer
 import (
 	"testing"
 
-	rerr "github.com/SLIpros/roamer/err"
 	"github.com/pkg/errors"
+	rerr "github.com/slipros/roamer/err"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,15 +15,15 @@ func TestIsDecodeError(t *testing.T) {
 	tests := []struct {
 		name   string
 		args   args
-		want   *rerr.DecodeError
+		want   rerr.DecodeError
 		wantOK bool
 	}{
 		{
 			name: "is decode error",
 			args: args{
-				err: &rerr.DecodeError{},
+				err: rerr.DecodeError{},
 			},
-			want:   &rerr.DecodeError{},
+			want:   rerr.DecodeError{},
 			wantOK: true,
 		},
 		{
@@ -31,7 +31,7 @@ func TestIsDecodeError(t *testing.T) {
 			args: args{
 				err: errors.New("big bad"),
 			},
-			want:   nil,
+			want:   rerr.DecodeError{},
 			wantOK: false,
 		},
 	}
@@ -54,15 +54,15 @@ func TestIsSliceIterationError(t *testing.T) {
 	tests := []struct {
 		name   string
 		args   args
-		want   *rerr.SliceIterationError
+		want   rerr.SliceIterationError
 		wantOK bool
 	}{
 		{
 			name: "is slice iteration error",
 			args: args{
-				err: &rerr.SliceIterationError{},
+				err: rerr.SliceIterationError{},
 			},
-			want:   &rerr.SliceIterationError{},
+			want:   rerr.SliceIterationError{},
 			wantOK: true,
 		},
 		{
@@ -70,7 +70,7 @@ func TestIsSliceIterationError(t *testing.T) {
 			args: args{
 				err: errors.New("big bad"),
 			},
-			want:   nil,
+			want:   rerr.SliceIterationError{},
 			wantOK: false,
 		},
 	}
@@ -78,7 +78,7 @@ func TestIsSliceIterationError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, ok := IsSliceIterationError(tt.args.err)
 			if ok != tt.wantOK {
-				t.Errorf("IsDecodeError() got1 = %v, want %v", ok, tt.wantOK)
+				t.Errorf("IsSliceIterationError() got1 = %v, want %v", ok, tt.wantOK)
 			}
 
 			require.Equal(t, tt.want, got)

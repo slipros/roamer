@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"reflect"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 // Set sets value into a field.
-func Set(field *reflect.Value, value any) error {
+func Set(field reflect.Value, value any) error {
 	if field.Kind() == reflect.Pointer && field.IsNil() {
 		// init ptr
 		field.Set(reflect.New(field.Type().Elem()))
-		*field = reflect.Indirect(*field)
+		field = reflect.Indirect(field)
 	}
 
 	switch t := value.(type) {

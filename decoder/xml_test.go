@@ -12,6 +12,10 @@ func TestNewXML(t *testing.T) {
 	x := NewXML()
 	require.NotNil(t, x)
 	require.Equal(t, ContentTypeXML, x.ContentType())
+
+	x = NewXML(WithContentType[*XML]("test"))
+	require.NotNil(t, x)
+	require.Equal(t, "test", x.ContentType())
 }
 
 func TestXML_Decode(t *testing.T) {

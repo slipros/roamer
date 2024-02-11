@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	rerr "github.com/SLIpros/roamer/err"
+	rerr "github.com/slipros/roamer/err"
 )
 
 // SetFloat sets float number into a field.
-func SetFloat[F constraints.Float](field *reflect.Value, number F) error {
+func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(strconv.FormatFloat(float64(number), 'E', -1, 64))

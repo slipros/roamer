@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"reflect"
 
-	rerr "github.com/SLIpros/roamer/err"
-	"github.com/SLIpros/roamer/value"
 	"github.com/pkg/errors"
+	rerr "github.com/slipros/roamer/err"
+	"github.com/slipros/roamer/value"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 )
 
 // MultipartFormDataOptionsFunc function for setting options.
-type MultipartFormDataOptionsFunc func(*MultipartFormData)
+type MultipartFormDataOptionsFunc = func(*MultipartFormData)
 
 // WithMaxMemory sets max memory.
 func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
@@ -31,13 +31,15 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 
 // MultipartFormData multipart form-data decoder.
 type MultipartFormData struct {
-	maxMemory int64
+	contentType string
+	maxMemory   int64
 }
 
 // NewMultipartFormData returns new multipart form-data decoder.
 func NewMultipartFormData(opts ...MultipartFormDataOptionsFunc) *MultipartFormData {
 	m := MultipartFormData{
-		maxMemory: defaultMultipartFormDataMaxMemory,
+		contentType: ContentTypeMultipartFormData,
+		maxMemory:   defaultMultipartFormDataMaxMemory,
 	}
 
 	for _, opt := range opts {
@@ -56,11 +58,10 @@ func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
 	}
 
 	v := reflect.Indirect(reflect.ValueOf(ptr))
-	t := v.Type()
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return m.parseStruct(r, &v, t)
+		return m.parseStruct(r, v)
 	default:
 		return rerr.NotSupported
 	}
@@ -68,10 +69,17 @@ func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
 
 // ContentType returns content type of url form decoder.
 func (m *MultipartFormData) ContentType() string {
-	return ContentTypeMultipartFormData
+	return m.contentType
 }
 
-func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value, t reflect.Type) error {
+// setContentType set content-type value.
+func (m *MultipartFormData) setContentType(contentType string) {
+	m.contentType = contentType
+}
+
+func (m *MultipartFormData) parseStruct(r *http.Request, v reflect.Value) error {
+	t := v.Type()
+
 	for i := 0; i < v.NumField(); i++ {
 		fieldType := t.Field(i)
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
@@ -85,8 +93,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value, t ref
 
 		if len(r.Form) > 0 {
 			if formValue, ok := m.parseFormValue(r.Form, tagValue); ok {
-				fieldValue := v.Field(i)
-				if err := value.Set(&fieldValue, formValue); err != nil {
+				if err := value.Set(v.Field(i), formValue); err != nil {
 					return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldType.Name)
 				}
 
@@ -103,15 +110,14 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value, t ref
 					return errors.WithMessagef(err, "parse form file for key %q", k)
 				}
 
-				files = append(files, &MultipartFile{
+				files = append(files, MultipartFile{
 					Key:    k,
 					File:   file,
 					Header: header,
 				})
 			}
 
-			fieldValue := v.Field(i)
-			if err := m.setFileValue(&fieldValue, files); err != nil {
+			if err := m.setFileValue(v.Field(i), files); err != nil {
 				return errors.WithMessagef(err, "set `%s` multipart value to field `%s`",
 					tagValue, fieldType.Name)
 			}
@@ -132,8 +138,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value, t ref
 				Header: header,
 			}
 
-			fieldValue := v.Field(i)
-			if err := m.setFileValue(&fieldValue, &multipartFile); err != nil {
+			if err := m.setFileValue(v.Field(i), &multipartFile); err != nil {
 				return errors.WithMessagef(err, "set `%s` multipart value to field `%s`",
 					tagValue, fieldType.Name)
 			}
@@ -156,11 +161,11 @@ func (m *MultipartFormData) parseFormValue(form url.Values, tagValue string) (an
 	return values, true
 }
 
-func (m *MultipartFormData) setFileValue(field *reflect.Value, value any) error {
+func (m *MultipartFormData) setFileValue(field reflect.Value, value any) error {
 	if field.Kind() == reflect.Pointer && field.IsNil() {
 		// init ptr
 		field.Set(reflect.New(field.Type().Elem()))
-		*field = reflect.Indirect(*field)
+		field = reflect.Indirect(field)
 	}
 
 	valueType := reflect.TypeOf(value)

@@ -21,7 +21,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.NoError(t, err)
 			require.Equal(t, strings.Join(sl, ","), testStruct.S)
 		}
@@ -38,7 +38,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.NoError(t, err)
 			require.Equal(t, sl, testStruct.SL)
 		}
@@ -55,7 +55,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.NoError(t, err)
 			require.Equal(t, []any{str, str}, testStruct.SL)
 		}
@@ -73,7 +73,7 @@ func TestSetSliceString(t *testing.T) {
 
 			for i := 0; i < v.NumField(); i++ {
 				fieldValue := v.Field(i)
-				err := SetSliceString(&fieldValue, sl)
+				err := SetSliceString(fieldValue, sl)
 				require.NoError(t, err)
 				require.Equal(t, sl, testStruct.Str)
 			}
@@ -91,7 +91,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.Error(t, err)
 		}
 	})
@@ -109,7 +109,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.Error(t, err)
 		}
 	})
@@ -125,7 +125,7 @@ func TestSetSliceString(t *testing.T) {
 
 		for i := 0; i < v.NumField(); i++ {
 			fieldValue := v.Field(i)
-			err := SetSliceString(&fieldValue, sl)
+			err := SetSliceString(fieldValue, sl)
 			require.Error(t, err)
 		}
 	})

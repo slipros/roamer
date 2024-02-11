@@ -66,7 +66,7 @@ func testSetFloatString[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, strconv.FormatFloat(float64(num), 'E', -1, 64), testStruct.S)
 	}
@@ -81,7 +81,7 @@ func testSetFloatBoolean[T constraints.Float](t *testing.T, float T, want bool) 
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.NoError(t, err)
 
 		require.Equal(t, want, testStruct.B)
@@ -101,7 +101,7 @@ func testSetFloatInt[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, int64(float), fieldValue.Int())
 	}
@@ -120,7 +120,7 @@ func testSetFloatUint[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, uint64(float), fieldValue.Uint())
 	}
@@ -136,7 +136,7 @@ func testSetFloatFloat[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.NoError(t, err)
 		require.Equal(t, float64(num), fieldValue.Float())
 	}
@@ -151,7 +151,7 @@ func testSetFloatUnsupported[T constraints.Float](t *testing.T, float T) {
 
 	for i := 0; i < v.NumField(); i++ {
 		fieldValue := v.Field(i)
-		err := SetFloat(&fieldValue, float)
+		err := SetFloat(fieldValue, float)
 		require.Error(t, err)
 	}
 }

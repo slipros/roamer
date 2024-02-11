@@ -16,6 +16,10 @@ func TestNewMultipartFormData(t *testing.T) {
 	require.NotNil(t, m)
 	require.Equal(t, ContentTypeMultipartFormData, m.ContentType())
 	require.Equal(t, int64(1000), m.maxMemory)
+
+	m = NewMultipartFormData(WithContentType[*MultipartFormData]("test"))
+	require.NotNil(t, m)
+	require.Equal(t, "test", m.ContentType())
 }
 
 func TestMultipartFormData_Decode(t *testing.T) {
