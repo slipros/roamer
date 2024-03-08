@@ -25,6 +25,10 @@ func (_m *Decoder) EXPECT() *Decoder_Expecter {
 func (_m *Decoder) ContentType() string {
 	ret := _m.Called()
 
+	if len(ret) == 0 {
+		panic("no return value specified for ContentType")
+	}
+
 	var r0 string
 	if rf, ok := ret.Get(0).(func() string); ok {
 		r0 = rf()
@@ -65,6 +69,10 @@ func (_c *Decoder_ContentType_Call) RunAndReturn(run func() string) *Decoder_Con
 // Decode provides a mock function with given fields: r, ptr
 func (_m *Decoder) Decode(r *http.Request, ptr interface{}) error {
 	ret := _m.Called(r, ptr)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Decode")
+	}
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*http.Request, interface{}) error); ok {

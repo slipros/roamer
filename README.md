@@ -43,7 +43,7 @@ func main() {
 }
 ```
 
-# Parser
+## Parser
 Parsing data from source.
 
 | Type     | Source      |
@@ -52,7 +52,6 @@ Parsing data from source.
 | query    | http query  |
 | path     | router path |
 | `custom` | `any`       |
-
 
 ## Examples
 ```
@@ -354,4 +353,37 @@ func main() {
 		panic(err)
     }
 }
+```
+
+## Experimental
+
+### FastStructFieldParser
+
+Significantly reduces the number of heap memory allocations.
+
+```go
+package main
+
+import (
+	"github.com/slipros/roamer"
+)
+
+r := NewRoamer(
+	WithParsers(parser.NewHeader(), parser.NewQuery()), 
+	WithExperimentalFastStructFieldParser(), // enables experimental fast struct field parser
+)
+```
+
+```text
+goos: windows
+goarch: amd64
+pkg: github.com/slipros/roamer
+cpu: 12th Gen Intel(R) Core(TM) i9-12900K
+BenchmarkParse_With_Body_Header_Query
+BenchmarkParse_With_Body_Header_Query-16                                 4182058
+               279.5 ns/op            64 B/op          8 allocs/op
+BenchmarkParse_With_Body_Header_Query_FastStructFieldParser
+BenchmarkParse_With_Body_Header_Query_FastStructFieldParser-16           5059383
+               241.2 ns/op             0 B/op          0 allocs/op
+PASS
 ```

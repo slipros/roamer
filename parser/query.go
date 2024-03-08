@@ -2,7 +2,6 @@ package parser
 
 import (
 	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 )
@@ -52,18 +51,13 @@ func NewQuery(opts ...QueryOptionsFunc) *Query {
 // Parse parses query from request.
 //
 // If query is not found in cache it will be parsed from request url and cached.
-func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool) {
+func (q *Query) Parse(r *http.Request, tag reflect.StructTag) (any, bool) {
 	tagValue, ok := tag.Lookup(TagQuery)
 	if !ok {
 		return "", false
 	}
 
-	query, ok := cache[cacheKeyQuery].(url.Values)
-	if !ok {
-		query = r.URL.Query()
-		cache[cacheKeyQuery] = query
-	}
-
+	query := r.URL.Query()
 	values, ok := query[tagValue]
 	if !ok {
 		return "", false
