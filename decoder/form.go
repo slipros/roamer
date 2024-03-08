@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
+	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/value"
 )
@@ -39,9 +39,10 @@ func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 
 // FormURL url form decoder.
 type FormURL struct {
-	contentType string
-	split       bool
-	splitSymbol string
+	contentType                 string
+	split                       bool
+	splitSymbol                 string
+	experimentalFastStructField bool
 }
 
 // NewFormURL returns new url form decoder.
@@ -76,6 +77,11 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	}
 }
 
+// EnableExperimentalFastStructFieldParser enables the use of experimental fast struct field parser.
+func (f *FormURL) EnableExperimentalFastStructFieldParser() {
+	f.experimentalFastStructField = true
+}
+
 // ContentType returns content-type header value.
 func (f *FormURL) ContentType() string {
 	return f.contentType
@@ -104,9 +110,18 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 	return values, true
 }
 
-func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) error {
+func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) (err error) {
+	var fieldType reflect.StructField
 	for i := 0; i < v.NumField(); i++ {
-		fieldType := t.Field(i)
+		if f.experimentalFastStructField {
+			fieldType, err = exp.FastStructField(v, i)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		} else {
+			fieldType = t.Field(i)
+		}
+
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
 			continue
 		}

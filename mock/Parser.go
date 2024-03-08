@@ -22,25 +22,29 @@ func (_m *Parser) EXPECT() *Parser_Expecter {
 	return &Parser_Expecter{mock: &_m.Mock}
 }
 
-// Parse provides a mock function with given fields: r, tag, cache
-func (_m *Parser) Parse(r *http.Request, tag reflect.StructTag, cache map[string]interface{}) (interface{}, bool) {
-	ret := _m.Called(r, tag, cache)
+// Parse provides a mock function with given fields: r, tag
+func (_m *Parser) Parse(r *http.Request, tag reflect.StructTag) (interface{}, bool) {
+	ret := _m.Called(r, tag)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Parse")
+	}
 
 	var r0 interface{}
 	var r1 bool
-	if rf, ok := ret.Get(0).(func(*http.Request, reflect.StructTag, map[string]interface{}) (interface{}, bool)); ok {
-		return rf(r, tag, cache)
+	if rf, ok := ret.Get(0).(func(*http.Request, reflect.StructTag) (interface{}, bool)); ok {
+		return rf(r, tag)
 	}
-	if rf, ok := ret.Get(0).(func(*http.Request, reflect.StructTag, map[string]interface{}) interface{}); ok {
-		r0 = rf(r, tag, cache)
+	if rf, ok := ret.Get(0).(func(*http.Request, reflect.StructTag) interface{}); ok {
+		r0 = rf(r, tag)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(interface{})
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*http.Request, reflect.StructTag, map[string]interface{}) bool); ok {
-		r1 = rf(r, tag, cache)
+	if rf, ok := ret.Get(1).(func(*http.Request, reflect.StructTag) bool); ok {
+		r1 = rf(r, tag)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
@@ -56,14 +60,13 @@ type Parser_Parse_Call struct {
 // Parse is a helper method to define mock.On call
 //   - r *http.Request
 //   - tag reflect.StructTag
-//   - cache map[string]interface{}
-func (_e *Parser_Expecter) Parse(r interface{}, tag interface{}, cache interface{}) *Parser_Parse_Call {
-	return &Parser_Parse_Call{Call: _e.mock.On("Parse", r, tag, cache)}
+func (_e *Parser_Expecter) Parse(r interface{}, tag interface{}) *Parser_Parse_Call {
+	return &Parser_Parse_Call{Call: _e.mock.On("Parse", r, tag)}
 }
 
-func (_c *Parser_Parse_Call) Run(run func(r *http.Request, tag reflect.StructTag, cache map[string]interface{})) *Parser_Parse_Call {
+func (_c *Parser_Parse_Call) Run(run func(r *http.Request, tag reflect.StructTag)) *Parser_Parse_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*http.Request), args[1].(reflect.StructTag), args[2].(map[string]interface{}))
+		run(args[0].(*http.Request), args[1].(reflect.StructTag))
 	})
 	return _c
 }
@@ -73,7 +76,7 @@ func (_c *Parser_Parse_Call) Return(_a0 interface{}, _a1 bool) *Parser_Parse_Cal
 	return _c
 }
 
-func (_c *Parser_Parse_Call) RunAndReturn(run func(*http.Request, reflect.StructTag, map[string]interface{}) (interface{}, bool)) *Parser_Parse_Call {
+func (_c *Parser_Parse_Call) RunAndReturn(run func(*http.Request, reflect.StructTag) (interface{}, bool)) *Parser_Parse_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -81,6 +84,10 @@ func (_c *Parser_Parse_Call) RunAndReturn(run func(*http.Request, reflect.Struct
 // Tag provides a mock function with given fields:
 func (_m *Parser) Tag() string {
 	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Tag")
+	}
 
 	var r0 string
 	if rf, ok := ret.Get(0).(func() string); ok {

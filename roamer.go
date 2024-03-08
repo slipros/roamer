@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
+	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
-	"github.com/slipros/roamer/parser"
+	rexp "github.com/slipros/roamer/internal/experiment"
 	"github.com/slipros/roamer/value"
 )
 
@@ -22,11 +22,12 @@ type AfterParser interface {
 
 // Roamer flexible http request parser.
 type Roamer struct {
-	parsers     Parsers
-	decoders    Decoders
-	skipFilled  bool
-	hasParsers  bool
-	hasDecoders bool
+	parsers                     Parsers
+	decoders                    Decoders
+	skipFilled                  bool
+	hasParsers                  bool
+	hasDecoders                 bool
+	experimentalFastStructField bool
 }
 
 // NewRoamer creates and returns new roamer.
@@ -43,6 +44,10 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 
 	r.hasParsers = len(r.parsers) > 0
 	r.hasDecoders = len(r.decoders) > 0
+
+	if r.experimentalFastStructField {
+		r.enableExperimentalFeatures()
+	}
 
 	return &r
 }
@@ -81,7 +86,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 }
 
 // parseStruct parses structure from http request into a ptr.
-func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
+func (r *Roamer) parseStruct(req *http.Request, ptr any) (err error) {
 	if err := r.parseBody(req, ptr); err != nil {
 		return err
 	}
@@ -93,9 +98,18 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	v := reflect.Indirect(reflect.ValueOf(ptr))
 	t := v.Type()
 
-	cache := make(parser.Cache)
+	var fieldType reflect.StructField
+
 	for i := 0; i < v.NumField(); i++ {
-		fieldType := t.Field(i)
+		if r.experimentalFastStructField {
+			fieldType, err = exp.FastStructField(&v, i)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		} else {
+			fieldType = t.Field(i)
+		}
+
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
 			continue
 		}
@@ -106,7 +120,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		}
 
 		for tag, p := range r.parsers {
-			parsedValue, ok := p.Parse(req, fieldType.Tag, cache)
+			parsedValue, ok := p.Parse(req, fieldType.Tag)
 			if !ok {
 				continue
 			}
@@ -144,4 +158,16 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	return nil
+}
+
+// enableExperimentalFeatures enables experimental features.
+func (r *Roamer) enableExperimentalFeatures() {
+	for _, d := range r.decoders {
+		e, ok := d.(rexp.Experiment)
+		if !ok {
+			continue
+		}
+
+		e.EnableExperimentalFastStructFieldParser()
+	}
 }

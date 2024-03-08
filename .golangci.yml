@@ -53,6 +53,18 @@ issues:
     - 'G103: Use of unsafe calls should be audited'
     - 'Line contains TODO/BUG/FIXME'
   exclude-rules:
+    - path: internal/abi
+      linters:
+        - revive
+        - unused
+        - stylecheck
+        - godot
+        - unparam
+    - path: internal/experiment
+      linters:
+        - revive
+        - govet
+        - staticcheck
     - path: (schema|protocol)\.go
       linters:
         - gosec

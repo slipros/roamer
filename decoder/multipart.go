@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/value"
 )
@@ -31,8 +32,9 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 
 // MultipartFormData multipart form-data decoder.
 type MultipartFormData struct {
-	contentType string
-	maxMemory   int64
+	contentType                 string
+	maxMemory                   int64
+	experimentalFastStructField bool
 }
 
 // NewMultipartFormData returns new multipart form-data decoder.
@@ -61,10 +63,15 @@ func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return m.parseStruct(r, v)
+		return m.parseStruct(r, &v)
 	default:
 		return rerr.NotSupported
 	}
+}
+
+// EnableExperimentalFastStructFieldParser enables the use of experimental fast struct field parser.
+func (m *MultipartFormData) EnableExperimentalFastStructFieldParser() {
+	m.experimentalFastStructField = true
 }
 
 // ContentType returns content type of url form decoder.
@@ -77,11 +84,21 @@ func (m *MultipartFormData) setContentType(contentType string) {
 	m.contentType = contentType
 }
 
-func (m *MultipartFormData) parseStruct(r *http.Request, v reflect.Value) error {
+// parseStruct parses structure from http request into a ptr.
+func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err error) {
 	t := v.Type()
+	var fieldType reflect.StructField
 
 	for i := 0; i < v.NumField(); i++ {
-		fieldType := t.Field(i)
+		if m.experimentalFastStructField {
+			fieldType, err = exp.FastStructField(v, i)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		} else {
+			fieldType = t.Field(i)
+		}
+
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
 			continue
 		}

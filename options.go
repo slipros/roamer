@@ -27,3 +27,10 @@ func WithSkipFilled(skip bool) OptionsFunc {
 		r.skipFilled = skip
 	}
 }
+
+// WithExperimentalFastStructFieldParser enables the use of experimental fast struct field parser.
+func WithExperimentalFastStructFieldParser() OptionsFunc {
+	return func(r *Roamer) {
+		r.experimentalFastStructField = true
+	}
+}

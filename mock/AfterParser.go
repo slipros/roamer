@@ -25,6 +25,10 @@ func (_m *AfterParser) EXPECT() *AfterParser_Expecter {
 func (_m *AfterParser) AfterParse(r *http.Request) error {
 	ret := _m.Called(r)
 
+	if len(ret) == 0 {
+		panic("no return value specified for AfterParse")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*http.Request) error); ok {
 		r0 = rf(r)

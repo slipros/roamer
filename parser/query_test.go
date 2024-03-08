@@ -29,9 +29,8 @@ func TestQuery(t *testing.T) {
 	queryValue := "1337"
 
 	type args struct {
-		req   *http.Request
-		tag   reflect.StructTag
-		cache Cache
+		req *http.Request
+		tag reflect.StructTag
 	}
 	tests := []struct {
 		name      string
@@ -54,34 +53,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: make(map[string]any),
-				}
-			},
-			want: queryValue,
-		},
-		{
-			name: "Get value from cached query",
-			args: func() args {
-				rawURL, err := url.Parse(fmt.Sprintf("%s", requestURL))
-				require.NoError(t, err)
-
-				q := rawURL.Query()
-				q.Add(queryName, queryValue)
-
-				rawURL.RawQuery = q.Encode()
-
-				req, err := http.NewRequest(http.MethodPost, rawURL.String(), nil)
-				require.NoError(t, err)
-
-				cache := make(map[string]any, 1)
-				cache[cacheKeyQuery] = q
-
-				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: cache,
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
 				}
 			},
 			want: queryValue,
@@ -96,9 +69,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: make(map[string]any),
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
 				}
 			},
 			want: "",
@@ -118,9 +90,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: make(map[string]any),
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
 				}
 			},
 			want: "",
@@ -141,9 +112,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: make(map[string]any),
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
 				}
 			},
 			want: []string{queryValue, queryValue + "2"},
@@ -163,9 +133,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
-					cache: make(map[string]any),
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagQuery, queryName)),
 				}
 			},
 			want: []string{queryValue, queryValue},
@@ -186,9 +155,8 @@ func TestQuery(t *testing.T) {
 				require.NoError(t, err)
 
 				return args{
-					req:   req,
-					tag:   reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagHeader, queryName)),
-					cache: make(map[string]any),
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s"`, TagHeader, queryName)),
 				}
 			},
 		},
@@ -200,7 +168,7 @@ func TestQuery(t *testing.T) {
 
 			q := NewQuery()
 
-			value, exists := q.Parse(args.req, args.tag, args.cache)
+			value, exists := q.Parse(args.req, args.tag)
 			if tt.notExists && exists {
 				t.Errorf("Parse() want not exists, but value exists")
 			}
