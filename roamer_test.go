@@ -17,6 +17,38 @@ import (
 
 var errBigBad = errors.New("big bad error")
 
+func TestRoamer_Parse(t *testing.T) {
+	type fields struct {
+		skipFilled bool
+		decoders   Decoders
+		parsers    Parsers
+	}
+	type args struct {
+		req *http.Request
+		ptr any
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Roamer{
+				skipFilled: tt.fields.skipFilled,
+				decoders:   tt.fields.decoders,
+				parsers:    tt.fields.parsers,
+			}
+			if err := r.Parse(tt.args.req, tt.args.ptr); (err != nil) != tt.wantErr {
+				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 	toJSON := func(v any) (int, io.Reader, error) {
 		var buffer bytes.Buffer
@@ -47,7 +79,7 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 		},
 	)
 	if err != nil {
-		b.Error(err)
+		b.Fatal(err)
 	}
 
 	header.Add("Content-Type", decoder.ContentTypeJSON)
@@ -76,16 +108,18 @@ func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
 	}
 
 	r := NewRoamer(
+		WithSkipFilled(false),
 		WithParsers(parser.NewHeader(), parser.NewQuery()),
 	)
+
+	var d Data
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var d Data
 	for i := 0; i < b.N; i++ {
 		if err := r.Parse(&req, &d); err != nil {
-			b.Error(err)
+			b.Fatal(err)
 		}
 	}
 }
@@ -100,7 +134,7 @@ func BenchmarkParse_With_Body_Header_Query_FastStructFieldParser(b *testing.B) {
 		return buffer.Len(), &buffer, nil
 	}
 
-	query := make(url.Values)
+	query := make(url.Values, 7)
 	query.Add("int", "9223372036854775807")
 	query.Add("int8", "127")
 	query.Add("int16", "32767")
@@ -120,7 +154,7 @@ func BenchmarkParse_With_Body_Header_Query_FastStructFieldParser(b *testing.B) {
 		},
 	)
 	if err != nil {
-		b.Error(err)
+		b.Fatal(err)
 	}
 
 	header.Add("Content-Type", decoder.ContentTypeJSON)
@@ -149,49 +183,19 @@ func BenchmarkParse_With_Body_Header_Query_FastStructFieldParser(b *testing.B) {
 	}
 
 	r := NewRoamer(
+		WithSkipFilled(false),
 		WithParsers(parser.NewHeader(), parser.NewQuery()),
 		WithExperimentalFastStructFieldParser(),
 	)
 
+	var d Data
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var d Data
 	for i := 0; i < b.N; i++ {
 		if err := r.Parse(&req, &d); err != nil {
-			b.Error(err)
+			b.Fatal(err)
 		}
-	}
-}
-
-func TestRoamer_Parse(t *testing.T) {
-	type fields struct {
-		skipFilled bool
-		decoders   Decoders
-		parsers    Parsers
-	}
-	type args struct {
-		req *http.Request
-		ptr any
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &Roamer{
-				skipFilled: tt.fields.skipFilled,
-				decoders:   tt.fields.decoders,
-				parsers:    tt.fields.parsers,
-			}
-			if err := r.Parse(tt.args.req, tt.args.ptr); (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
 	}
 }

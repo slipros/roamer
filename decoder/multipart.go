@@ -33,6 +33,7 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 // MultipartFormData multipart form-data decoder.
 type MultipartFormData struct {
 	contentType                 string
+	skipFilled                  bool
 	maxMemory                   int64
 	experimentalFastStructField bool
 }
@@ -41,6 +42,7 @@ type MultipartFormData struct {
 func NewMultipartFormData(opts ...MultipartFormDataOptionsFunc) *MultipartFormData {
 	m := MultipartFormData{
 		contentType: ContentTypeMultipartFormData,
+		skipFilled:  true,
 		maxMemory:   defaultMultipartFormDataMaxMemory,
 	}
 
@@ -65,7 +67,7 @@ func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
 	case reflect.Struct:
 		return m.parseStruct(r, &v)
 	default:
-		return rerr.NotSupported
+		return errors.WithStack(rerr.NotSupported)
 	}
 }
 
@@ -84,6 +86,11 @@ func (m *MultipartFormData) setContentType(contentType string) {
 	m.contentType = contentType
 }
 
+// setSkipFilled sets skip filled value.
+func (m *MultipartFormData) setSkipFilled(skip bool) {
+	m.skipFilled = skip
+}
+
 // parseStruct parses structure from http request into a ptr.
 func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err error) {
 	t := v.Type()
@@ -91,10 +98,13 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 
 	for i := 0; i < v.NumField(); i++ {
 		if m.experimentalFastStructField {
-			fieldType, err = exp.FastStructField(v, i)
-			if err != nil {
-				return errors.WithStack(err)
+			ft, exists := exp.FastStructField(v, i)
+			if !exists {
+				// should never happen - anomaly.
+				return errors.WithStack(rerr.FieldIndexOutOfBounds)
 			}
+
+			fieldType = ft
 		} else {
 			fieldType = t.Field(i)
 		}
@@ -110,12 +120,21 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 
 		if len(r.Form) > 0 {
 			if formValue, ok := m.parseFormValue(r.Form, tagValue); ok {
-				if err := value.Set(v.Field(i), formValue); err != nil {
+				fieldValue := v.Field(i)
+				if m.skipFilled && !fieldValue.IsZero() {
+					continue
+				}
+
+				if err := value.Set(fieldValue, formValue); err != nil {
 					return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldType.Name)
 				}
 
 				continue
 			}
+		}
+
+		if r.MultipartForm == nil {
+			continue
 		}
 
 		switch tagValue {
@@ -139,8 +158,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 					tagValue, fieldType.Name)
 			}
 		default:
-			files := r.MultipartForm.File[tagValue]
-			if len(files) == 0 {
+			if files := r.MultipartForm.File[tagValue]; len(files) == 0 {
 				continue
 			}
 
@@ -149,13 +167,18 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 				return errors.WithMessagef(err, "parse form file for key %q", tagValue)
 			}
 
+			fieldValue := v.Field(i)
+			if m.skipFilled && !fieldValue.IsZero() {
+				continue
+			}
+
 			multipartFile := MultipartFile{
 				Key:    tagValue,
 				File:   file,
 				Header: header,
 			}
 
-			if err := m.setFileValue(v.Field(i), &multipartFile); err != nil {
+			if err := m.setFileValue(fieldValue, &multipartFile); err != nil {
 				return errors.WithMessagef(err, "set `%s` multipart value to field `%s`",
 					tagValue, fieldType.Name)
 			}
@@ -186,15 +209,20 @@ func (m *MultipartFormData) setFileValue(field reflect.Value, value any) error {
 	}
 
 	valueType := reflect.TypeOf(value)
-	if valueType.Kind() == reflect.Pointer {
-		// deref ptr
-		valueType = valueType.Elem()
-	}
+	fieldType := field.Type()
 
-	if field.Type().AssignableTo(valueType) {
-		field.Set(reflect.Indirect(reflect.ValueOf(value)))
+	if fieldType.AssignableTo(valueType) {
+		field.Set(reflect.ValueOf(value))
+
 		return nil
 	}
 
-	return rerr.NotSupported
+	if valueType.Kind() == reflect.Pointer && fieldType.AssignableTo(valueType.Elem()) {
+		// deref ptr
+		field.Set(reflect.Indirect(reflect.ValueOf(value)))
+
+		return nil
+	}
+
+	return errors.WithStack(rerr.NotSupported)
 }

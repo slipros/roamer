@@ -18,6 +18,11 @@ func (f *MultipartFile) ContentType() string {
 	return f.Header.Header.Get("Content-Type")
 }
 
+// IsValid returns valid state of parsed file.
+func (f *MultipartFile) IsValid() bool {
+	return len(f.Key) == 0 || f.File == nil || f.Header == nil
+}
+
 // Copy returns copy of parsed file.
 func (f *MultipartFile) Copy() (MultipartFile, error) {
 	file, err := f.Header.Open()

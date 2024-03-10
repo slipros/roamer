@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"golang.org/x/exp/constraints"
 
 	rerr "github.com/slipros/roamer/err"
@@ -30,7 +31,9 @@ func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 	case reflect.Interface:
 		field.Set(reflect.ValueOf(number))
 		return nil
+	case reflect.Ptr:
+		return SetFloat(field.Elem(), number)
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }

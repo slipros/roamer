@@ -20,6 +20,8 @@ var (
 	NotPtr = errors.New("not a ptr")
 	// NotSupported type is not supported.
 	NotSupported = errors.New("not supported type")
+	// FieldIndexOutOfBounds field index out of bounds.
+	FieldIndexOutOfBounds = errors.New("field index out of bounds")
 )
 
 // DecodeError decode error.
