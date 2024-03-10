@@ -15,7 +15,7 @@ import (
 
 	"github.com/slipros/roamer"
 	"github.com/slipros/roamer/parser"
-	roamerGorilla "github.com/slipros/roamer/pkg/gorilla"
+	rgorilla "github.com/slipros/roamer/pkg/gorilla"
 	"github.com/gorilla/mux"
 )
 
@@ -28,7 +28,7 @@ func main() {
 
 	r := roamer.NewRoamer(
 		roamer.WithParsers(
-			parser.NewPath(roamerGorilla.Path),
+			parser.NewPath(rgorilla.Path),
 		),
 	)
 

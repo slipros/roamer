@@ -10,6 +10,7 @@ import (
 	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
 	rexp "github.com/slipros/roamer/internal/experiment"
+	"github.com/slipros/roamer/parser"
 	"github.com/slipros/roamer/value"
 )
 
@@ -86,7 +87,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 }
 
 // parseStruct parses structure from http request into a ptr.
-func (r *Roamer) parseStruct(req *http.Request, ptr any) (err error) {
+func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	if err := r.parseBody(req, ptr); err != nil {
 		return err
 	}
@@ -100,12 +101,18 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) (err error) {
 
 	var fieldType reflect.StructField
 
-	for i := 0; i < v.NumField(); i++ {
+	fieldsAmount := v.NumField()
+	cache := make(parser.Cache, fieldsAmount)
+
+	for i := 0; i < fieldsAmount; i++ {
 		if r.experimentalFastStructField {
-			fieldType, err = exp.FastStructField(&v, i)
-			if err != nil {
-				return errors.WithStack(err)
+			ft, exists := exp.FastStructField(&v, i)
+			if !exists {
+				// should never happen - anomaly.
+				return errors.WithStack(rerr.FieldIndexOutOfBounds)
 			}
+
+			fieldType = ft
 		} else {
 			fieldType = t.Field(i)
 		}
@@ -120,7 +127,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) (err error) {
 		}
 
 		for tag, p := range r.parsers {
-			parsedValue, ok := p.Parse(req, fieldType.Tag)
+			parsedValue, ok := p.Parse(req, fieldType.Tag, cache)
 			if !ok {
 				continue
 			}

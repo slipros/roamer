@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"golang.org/x/exp/constraints"
 
 	rerr "github.com/slipros/roamer/err"
@@ -30,7 +31,9 @@ func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
 	case reflect.Interface:
 		field.Set(reflect.ValueOf(number))
 		return nil
+	case reflect.Ptr:
+		return SetInteger(field.Elem(), number)
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }

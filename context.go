@@ -21,7 +21,7 @@ const (
 // ParsedDataFromContext return parsed data from context.
 func ParsedDataFromContext[T any](ctx context.Context, ptr *T) error {
 	if ptr == nil {
-		return errors.WithMessage(rerr.NilValue, "context")
+		return errors.Wrap(rerr.NilValue, "ptr")
 	}
 
 	if err, ok := ctx.Value(ContextKeyParsingError).(error); ok {

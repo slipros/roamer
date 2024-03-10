@@ -132,7 +132,7 @@ func TestPath(t *testing.T) {
 			args := tt.args()
 
 			p := NewPath(args.pathValueFunc)
-			value, exists := p.Parse(args.req, args.tag)
+			value, exists := p.Parse(args.req, args.tag, nil)
 
 			if tt.want == nil && exists {
 				t.Errorf("Parse() want is nil, but value exists")

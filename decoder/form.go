@@ -40,6 +40,7 @@ func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 // FormURL url form decoder.
 type FormURL struct {
 	contentType                 string
+	skipFilled                  bool
 	split                       bool
 	splitSymbol                 string
 	experimentalFastStructField bool
@@ -47,7 +48,12 @@ type FormURL struct {
 
 // NewFormURL returns new url form decoder.
 func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
-	f := FormURL{contentType: ContentTypeFormURL, split: true, splitSymbol: SplitSymbol}
+	f := FormURL{
+		contentType: ContentTypeFormURL,
+		skipFilled:  true,
+		split:       true,
+		splitSymbol: SplitSymbol,
+	}
 
 	for _, opt := range opts {
 		opt(&f)
@@ -73,7 +79,7 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	case reflect.Map:
 		return f.parseMap(&v, t, r.PostForm)
 	default:
-		return rerr.NotSupported
+		return errors.WithStack(rerr.NotSupported)
 	}
 }
 
@@ -90,6 +96,11 @@ func (f *FormURL) ContentType() string {
 // setContentType set content-type value.
 func (f *FormURL) setContentType(contentType string) {
 	f.contentType = contentType
+}
+
+// setSkipFilled sets skip filled value.
+func (f *FormURL) setSkipFilled(skip bool) {
+	f.skipFilled = skip
 }
 
 func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, bool) {
@@ -114,10 +125,13 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 	var fieldType reflect.StructField
 	for i := 0; i < v.NumField(); i++ {
 		if f.experimentalFastStructField {
-			fieldType, err = exp.FastStructField(v, i)
-			if err != nil {
-				return errors.WithStack(err)
+			ft, exists := exp.FastStructField(v, i)
+			if !exists {
+				// should never happen - anomaly.
+				return errors.WithStack(rerr.FieldIndexOutOfBounds)
 			}
+
+			fieldType = ft
 		} else {
 			fieldType = t.Field(i)
 		}
@@ -131,7 +145,12 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 			continue
 		}
 
-		if err := value.Set(v.Field(i), formValue); err != nil {
+		fieldValue := v.Field(i)
+		if f.skipFilled && !fieldValue.IsZero() {
+			continue
+		}
+
+		if err := value.Set(fieldValue, formValue); err != nil {
 			return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldType.Name)
 		}
 	}
@@ -141,7 +160,7 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 
 func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) error {
 	if t.Key().Kind() != reflect.String {
-		return rerr.NotSupported
+		return errors.WithStack(rerr.NotSupported)
 	}
 
 	mValue := t.Elem()
@@ -180,5 +199,5 @@ func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) er
 		}
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }

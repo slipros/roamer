@@ -28,7 +28,7 @@ func NewPath(valueFromPath PathValueFunc) *Path {
 }
 
 // Parse parses path value from request.
-func (p *Path) Parse(r *http.Request, tag reflect.StructTag) (any, bool) {
+func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagPath)
 	if !ok {
 		return "", false

@@ -80,7 +80,7 @@ func TestHeader(t *testing.T) {
 			args := tt.args()
 
 			h := NewHeader()
-			value, exists := h.Parse(args.req, args.tag)
+			value, exists := h.Parse(args.req, args.tag, nil)
 
 			if tt.want == nil && exists {
 				t.Errorf("Parse() want is nil, but value exists")

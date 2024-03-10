@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
 )
 
@@ -42,5 +43,5 @@ func SetSliceString(field reflect.Value, arr []string) error {
 		}
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
 )
 
@@ -147,15 +148,17 @@ func SetString(field reflect.Value, str string) error {
 	case reflect.Interface:
 		field.Set(reflect.ValueOf(str))
 		return nil
+	case reflect.Ptr:
+		return SetString(field.Elem(), str)
 	}
 
 	if !field.CanAddr() {
-		return rerr.NotSupported
+		return errors.WithStack(rerr.NotSupported)
 	}
 
 	ptr := field.Addr()
 	if !ptr.CanInterface() {
-		return rerr.NotSupported
+		return errors.WithStack(rerr.NotSupported)
 	}
 
 	return implementsBytesUnmarshaler(ptr.Interface(), str)
@@ -170,5 +173,5 @@ func implementsBytesUnmarshaler(ptr any, str string) error {
 		return i.UnmarshalBinary([]byte(str))
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }

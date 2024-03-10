@@ -19,7 +19,7 @@ func NewHeader() *Header {
 }
 
 // Parse parse header.
-func (h *Header) Parse(r *http.Request, tag reflect.StructTag) (any, bool) {
+func (h *Header) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagHeader)
 	if !ok {
 		return "", false

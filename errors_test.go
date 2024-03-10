@@ -40,6 +40,7 @@ func TestIsDecodeError(t *testing.T) {
 			got, ok := IsDecodeError(tt.args.err)
 			if ok != tt.wantOK {
 				t.Errorf("IsDecodeError() got1 = %v, want %v", ok, tt.wantOK)
+				return
 			}
 
 			require.Equal(t, tt.want, got)
@@ -79,6 +80,7 @@ func TestIsSliceIterationError(t *testing.T) {
 			got, ok := IsSliceIterationError(tt.args.err)
 			if ok != tt.wantOK {
 				t.Errorf("IsSliceIterationError() got1 = %v, want %v", ok, tt.wantOK)
+				return
 			}
 
 			require.Equal(t, tt.want, got)

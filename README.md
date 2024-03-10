@@ -359,7 +359,7 @@ func main() {
 
 ### FastStructFieldParser
 
-Significantly reduces the number of heap memory allocations.
+Reduces the number of heap memory allocations.
 
 ```go
 package main
@@ -380,10 +380,24 @@ goarch: amd64
 pkg: github.com/slipros/roamer
 cpu: 12th Gen Intel(R) Core(TM) i9-12900K
 BenchmarkParse_With_Body_Header_Query
-BenchmarkParse_With_Body_Header_Query-16                                 4182058
-               279.5 ns/op            64 B/op          8 allocs/op
+BenchmarkParse_With_Body_Header_Query-16                                  
+469662              2528 ns/op            1288 B/op         32 allocs/op
 BenchmarkParse_With_Body_Header_Query_FastStructFieldParser
-BenchmarkParse_With_Body_Header_Query_FastStructFieldParser-16           5059383
-               241.2 ns/op             0 B/op          0 allocs/op
+BenchmarkParse_With_Body_Header_Query_FastStructFieldParser-16            
+498758              2508 ns/op            1224 B/op         24 allocs/op
+
+BenchmarkFormURL_Decode
+BenchmarkFormURL_Decode-16                                
+516001              2381 ns/op             480 B/op         40 allocs/op
+BenchmarkFormURL_Decode_FastStructFieldParser
+BenchmarkFormURL_Decode_FastStructFieldParser-16          
+524096              2247 ns/op             320 B/op         20 allocs/op
+
+BenchmarkMultipartFormData_Decode
+BenchmarkMultipartFormData_Decode-16                              
+811407              1560 ns/op             984 B/op         32 allocs/op
+BenchmarkMultipartFormData_Decode_FastStructFieldParser
+BenchmarkMultipartFormData_Decode_FastStructFieldParser-16        
+887547              1496 ns/op             904 B/op         22 allocs/op
 PASS
 ```

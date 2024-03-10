@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
 )
 
@@ -88,5 +89,5 @@ func Set(field reflect.Value, value any) error {
 		return SetString(field, i.String())
 	}
 
-	return rerr.NotSupported
+	return errors.WithStack(rerr.NotSupported)
 }
