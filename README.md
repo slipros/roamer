@@ -192,6 +192,7 @@ import (
 	"reflect"
 
 	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/parser"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gofrs/uuid"
@@ -215,7 +216,7 @@ const (
 
 type ProfileParser struct{}
 
-func (p *ProfileParser) Parse(r *http.Request, tag reflect.StructTag, _ roamer.Cache) (any, bool) {
+func (p *ProfileParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagProfile)
 	if !ok {
 		return nil, false
@@ -366,12 +367,15 @@ package main
 
 import (
 	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/parser"
 )
 
-r := NewRoamer(
-	WithParsers(parser.NewHeader(), parser.NewQuery()), 
-	WithExperimentalFastStructFieldParser(), // enables experimental fast struct field parser
-)
+func main() {
+	r := roamer.NewRoamer(
+		roamer.WithParsers(parser.NewHeader(), parser.NewQuery()),
+		roamer.WithExperimentalFastStructFieldParser(), // enables experimental fast struct field parser
+	)
+}
 ```
 
 ```text

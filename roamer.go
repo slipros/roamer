@@ -136,6 +136,8 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 				return errors.WithMessagef(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
 					parsedValue, fieldType.Name, tag, ptr)
 			}
+
+			break
 		}
 	}
 
