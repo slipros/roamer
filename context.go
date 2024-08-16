@@ -42,7 +42,7 @@ func ContextWithParsedData(ctx context.Context, data any) context.Context {
 	return context.WithValue(ctx, ContextKeyParsedData, data)
 }
 
-// contextWithParsingError returns a context with parsing error.
-func contextWithParsingError(ctx context.Context, err error) context.Context {
+// ContextWithParsingError returns a context with parsing error.
+func ContextWithParsingError(ctx context.Context, err error) context.Context {
 	return context.WithValue(ctx, ContextKeyParsingError, err)
 }

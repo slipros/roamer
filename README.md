@@ -8,9 +8,18 @@
 Flexible http request parser
 
 ## Install
-```go
+```
 go get -u github.com/slipros/roamer@latest
 ```
+
+## Formatter
+Format parsed data.
+
+| Type     | Available values |
+|----------|------------------|
+| string   | trim_space       |
+| `custom` | `any`            |
+
 
 ## Decoder
 
@@ -73,6 +82,7 @@ import (
 
 	"github.com/slipros/roamer"
 	"github.com/slipros/roamer/decoder"
+	"github.com/slipros/roamer/formatter"
 	"github.com/slipros/roamer/parser"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -86,7 +96,7 @@ const (
 
 type Body struct {
 	String string  `json:"string"`
-	Email  *string `json:"email"`
+	Email  *string `json:"email" string:"trim_space"`
 
 	Int        int       `query:"int"`
 	Int8       int8      `query:"int8"`
@@ -101,6 +111,7 @@ func main() {
 	r := roamer.NewRoamer(
 		roamer.WithDecoders(decoder.NewJSON()),
 		roamer.WithParsers(parser.NewQuery()),
+		roamer.WithFormatters(formatter.NewString()),
 	)
 
 	router := chi.NewRouter()

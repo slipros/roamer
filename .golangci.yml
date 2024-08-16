@@ -13,16 +13,6 @@ linters:
     - sqlclosecheck # not relevant (SQL)
     - rowserrcheck # not relevant (SQL)
     - execinquery # not relevant (SQL)
-    - interfacer # deprecated
-    - scopelint # deprecated
-    - maligned # deprecated
-    - golint # deprecated
-    - deadcode # deprecated
-    - exhaustivestruct # deprecated
-    - ifshort # deprecated
-    - nosnakecase # deprecated
-    - structcheck # deprecated
-    - varcheck # deprecated
     - cyclop # duplicate of gocyclo
     - exhaustive
     - exhaustruct
@@ -32,7 +22,7 @@ linters:
     - gochecknoinits
     - gocognit
     - gocyclo
-    - goerr113
+    - err113
     - gomnd
     - ireturn
     - nestif

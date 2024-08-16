@@ -21,6 +21,15 @@ func WithDecoders(decoders ...Decoder) OptionsFunc {
 	}
 }
 
+// WithFormatters sets formatters.
+func WithFormatters(formatters ...Formatter) OptionsFunc {
+	return func(r *Roamer) {
+		for _, f := range formatters {
+			r.formatters[f.Tag()] = f
+		}
+	}
+}
+
 // WithSkipFilled sets skip filled.
 func WithSkipFilled(skip bool) OptionsFunc {
 	return func(r *Roamer) {

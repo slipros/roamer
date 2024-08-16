@@ -41,3 +41,13 @@ func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool
 func (p *Path) Tag() string {
 	return TagPath
 }
+
+// ServeMuxValueFromPath path parser for default golang serve mux.
+func ServeMuxValueFromPath(r *http.Request, name string) (string, bool) {
+	value := r.PathValue(name)
+	if len(value) == 0 {
+		return "", false
+	}
+
+	return value, true
+}

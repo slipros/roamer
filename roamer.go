@@ -25,9 +25,11 @@ type AfterParser interface {
 type Roamer struct {
 	parsers                     Parsers
 	decoders                    Decoders
+	formatters                  Formatters
 	skipFilled                  bool
 	hasParsers                  bool
 	hasDecoders                 bool
+	hasFormatters               bool
 	experimentalFastStructField bool
 }
 
@@ -36,6 +38,7 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
 		parsers:    make(Parsers),
 		decoders:   make(Decoders),
+		formatters: make(Formatters),
 		skipFilled: true,
 	}
 
@@ -45,6 +48,7 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 
 	r.hasParsers = len(r.parsers) > 0
 	r.hasDecoders = len(r.decoders) > 0
+	r.hasFormatters = len(r.formatters) > 0
 
 	if r.experimentalFastStructField {
 		r.enableExperimentalFeatures()
@@ -58,12 +62,12 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 // ptr can implement AfterParser to execute some logic after parsing.
 func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	if ptr == nil {
-		return errors.WithMessage(rerr.NilValue, "ptr")
+		return errors.Wrapf(rerr.NilValue, "ptr")
 	}
 
 	t := reflect.TypeOf(ptr)
 	if t.Kind() != reflect.Pointer {
-		return errors.WithMessagef(rerr.NotPtr, "`%T`", ptr)
+		return errors.Wrapf(rerr.NotPtr, "`%T`", ptr)
 	}
 
 	switch t.Elem().Kind() {
@@ -76,7 +80,7 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 			return err
 		}
 	default:
-		return errors.WithMessagef(rerr.NotSupported, "`%T`", ptr)
+		return errors.Wrapf(rerr.NotSupported, "`%T`", ptr)
 	}
 
 	if p, ok := ptr.(AfterParser); ok {
@@ -104,7 +108,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	fieldsAmount := v.NumField()
 	cache := make(parser.Cache, fieldsAmount)
 
-	for i := 0; i < fieldsAmount; i++ {
+	for i := range fieldsAmount {
 		if r.experimentalFastStructField {
 			ft, exists := exp.FastStructField(&v, i)
 			if !exists {
@@ -123,6 +127,12 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 
 		fieldValue := v.Field(i)
 		if r.skipFilled && !fieldValue.IsZero() {
+			if r.hasFormatters {
+				if err := r.formatFieldValue(&fieldType, fieldValue); err != nil {
+					return errors.WithMessagef(err, "format field `%s` in struct `%T`", fieldType.Name, ptr)
+				}
+			}
+
 			continue
 		}
 
@@ -133,11 +143,37 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 			}
 
 			if err := value.Set(fieldValue, parsedValue); err != nil {
-				return errors.WithMessagef(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
+				return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
 					parsedValue, fieldType.Name, tag, ptr)
 			}
 
 			break
+		}
+
+		if r.hasFormatters {
+			if err := r.formatFieldValue(&fieldType, fieldValue); err != nil {
+				return errors.WithMessagef(err, "format field `%s` in struct `%T`", fieldType.Name, ptr)
+			}
+		}
+	}
+
+	return nil
+}
+
+// formatFieldValue format field value.
+func (r *Roamer) formatFieldValue(fieldType *reflect.StructField, fieldValue reflect.Value) error {
+	if !r.formatters.has(fieldType.Tag) {
+		return nil
+	}
+
+	fieldPtrValue, ok := value.Pointer(fieldValue)
+	if !ok {
+		return nil
+	}
+
+	for _, f := range r.formatters {
+		if err := f.Format(fieldType.Tag, fieldPtrValue); err != nil {
+			return err
 		}
 	}
 
@@ -161,9 +197,9 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	if err := d.Decode(req, ptr); err != nil {
-		return rerr.DecodeError{
-			Err: errors.WithMessagef(err, "decode `%s` request body in `%T`", contentType, ptr),
-		}
+		return errors.WithStack(rerr.DecodeError{
+			Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),
+		})
 	}
 
 	return nil

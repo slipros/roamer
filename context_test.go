@@ -8,7 +8,7 @@ import (
 )
 
 func TestContext(t *testing.T) {
-	ctxWithError := contextWithParsingError(context.Background(), errBigBad)
+	ctxWithError := ContextWithParsingError(context.Background(), errBigBad)
 
 	var first []string
 	err := ParsedDataFromContext[[]string](ctxWithError, &first)

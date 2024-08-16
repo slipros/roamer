@@ -44,3 +44,14 @@ type SliceIterationError struct {
 func (s SliceIterationError) Error() string {
 	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
 }
+
+// FormatterNotFound not found formatter error.
+type FormatterNotFound struct {
+	Tag       string
+	Formatter string
+}
+
+// Error returns string.
+func (f FormatterNotFound) Error() string {
+	return "formatter '" + f.Formatter + "' not found for tag '" + f.Tag + "'"
+}
