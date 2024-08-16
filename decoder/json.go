@@ -15,7 +15,7 @@ const (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-// JSONOptionsFunc function for setting xml options.
+// JSONOptionsFunc function for setting json options.
 type JSONOptionsFunc = func(*JSON)
 
 // JSON json decoder.

@@ -20,7 +20,7 @@ const (
 	tagValueMultipartFormData               = "multipart"
 )
 
-// MultipartFormDataOptionsFunc function for setting options.
+// MultipartFormDataOptionsFunc function for setting multipart options.
 type MultipartFormDataOptionsFunc = func(*MultipartFormData)
 
 // WithMaxMemory sets max memory.
@@ -96,7 +96,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 	t := v.Type()
 	var fieldType reflect.StructField
 
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		if m.experimentalFastStructField {
 			ft, exists := exp.FastStructField(v, i)
 			if !exists {

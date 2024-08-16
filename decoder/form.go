@@ -123,7 +123,7 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 
 func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) (err error) {
 	var fieldType reflect.StructField
-	for i := 0; i < v.NumField(); i++ {
+	for i := range v.NumField() {
 		if f.experimentalFastStructField {
 			ft, exists := exp.FastStructField(v, i)
 			if !exists {

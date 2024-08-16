@@ -120,6 +120,7 @@ func SetString(field reflect.Value, str string) error {
 		field.SetFloat(parsed)
 		return nil
 	case reflect.Complex64:
+		//nolint:mnd
 		parsed, err := strconv.ParseComplex(str, 64)
 		if err != nil {
 			return err
@@ -128,6 +129,7 @@ func SetString(field reflect.Value, str string) error {
 		field.SetComplex(parsed)
 		return nil
 	case reflect.Complex128:
+		//nolint:mnd
 		parsed, err := strconv.ParseComplex(str, 128)
 		if err != nil {
 			return err
