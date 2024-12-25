@@ -157,6 +157,7 @@ import (
 type Body struct {
 	Path      string `path:"path"` // after parse value will be = some_value
 	UserAgent string `header:"User-Agent"` // after parse value will be = PostmanRuntime/7.33.0
+	Referer   string `header:"Referer,X-Referer"` // try to parse value from any of available values
 	Int       int    `query:"int"` // after parse value will be = 1
 }
 
