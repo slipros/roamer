@@ -46,6 +46,38 @@ func TestHeader(t *testing.T) {
 			want: headerValue,
 		},
 		{
+			name: "Get header value from first of few request headers",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				req.Header.Add("Referer", "referer")
+				req.Header.Add("X-Referer", "x-referer")
+
+				return args{
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s""`, TagHeader, "Referer,X-Referer")),
+				}
+			},
+			want: "referer",
+		},
+		{
+			name: "Get header value from second of few request headers",
+			args: func() args {
+				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
+				require.NoError(t, err)
+
+				req.Header.Add(header, headerValue)
+				req.Header.Add("X-Referer", "x-referer")
+
+				return args{
+					req: req,
+					tag: reflect.StructTag(fmt.Sprintf(`%s:"%s""`, TagHeader, "Referer,X-Referer")),
+				}
+			},
+			want: "x-referer",
+		},
+		{
 			name: "Get header value from request header - empty request header",
 			args: func() args {
 				req, err := http.NewRequest(http.MethodPost, requestURL, nil)
