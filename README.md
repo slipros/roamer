@@ -58,6 +58,7 @@ Parsing data from source.
 | Type     | Source      |
 |----------|-------------|
 | header   | http header |
+| cookie   | http cookie |
 | query    | http query  |
 | path     | router path |
 | `custom` | `any`       |
