@@ -9,11 +9,14 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
+var stringType = reflect.TypeOf("")
+
 // SetString sets string into a field.
 func SetString(field reflect.Value, str string) error {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(str)
+
 		return nil
 	case reflect.Bool:
 		parsed, err := strconv.ParseBool(str)
@@ -22,6 +25,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetBool(parsed)
+
 		return nil
 	case reflect.Int8:
 		parsed, err := strconv.ParseInt(str, 10, 8)
@@ -30,6 +34,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetInt(parsed)
+
 		return nil
 	case reflect.Int16:
 		parsed, err := strconv.ParseInt(str, 10, 16)
@@ -38,6 +43,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetInt(parsed)
+
 		return nil
 	case reflect.Int32:
 		parsed, err := strconv.ParseInt(str, 10, 32)
@@ -46,6 +52,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetInt(parsed)
+
 		return nil
 	case reflect.Int64:
 		parsed, err := strconv.ParseInt(str, 10, 64)
@@ -54,6 +61,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetInt(parsed)
+
 		return nil
 	case reflect.Int:
 		parsed, err := strconv.ParseInt(str, 10, 0)
@@ -62,6 +70,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetInt(parsed)
+
 		return nil
 	case reflect.Uint8:
 		parsed, err := strconv.ParseUint(str, 10, 8)
@@ -70,6 +79,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetUint(parsed)
+
 		return nil
 	case reflect.Uint16:
 		parsed, err := strconv.ParseUint(str, 10, 16)
@@ -78,6 +88,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetUint(parsed)
+
 		return nil
 	case reflect.Uint32:
 		parsed, err := strconv.ParseUint(str, 10, 32)
@@ -86,6 +97,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetUint(parsed)
+
 		return nil
 	case reflect.Uint64:
 		parsed, err := strconv.ParseUint(str, 10, 64)
@@ -94,6 +106,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetUint(parsed)
+
 		return nil
 	case reflect.Uint:
 		parsed, err := strconv.ParseUint(str, 10, 0)
@@ -102,6 +115,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetUint(parsed)
+
 		return nil
 	case reflect.Float32:
 		parsed, err := strconv.ParseFloat(str, 32)
@@ -110,6 +124,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetFloat(parsed)
+
 		return nil
 	case reflect.Float64:
 		parsed, err := strconv.ParseFloat(str, 64)
@@ -118,6 +133,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetFloat(parsed)
+
 		return nil
 	case reflect.Complex64:
 		//nolint:mnd
@@ -127,6 +143,7 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetComplex(parsed)
+
 		return nil
 	case reflect.Complex128:
 		//nolint:mnd
@@ -136,19 +153,28 @@ func SetString(field reflect.Value, str string) error {
 		}
 
 		field.SetComplex(parsed)
+
 		return nil
 	case reflect.Slice:
-		elemKind := field.Type().Elem().Kind()
-		switch elemKind {
+		elemType := field.Type().Elem()
+		switch elemType.Kind() {
 		case reflect.Uint8:
 			field.SetBytes([]byte(str))
+
 			return nil
 		case reflect.String:
-			field.Set(reflect.Append(field, reflect.ValueOf(str)))
+			strValue := reflect.ValueOf(str)
+			if elemType != stringType && strValue.Type().ConvertibleTo(elemType) {
+				strValue = strValue.Convert(elemType)
+			}
+
+			field.Set(reflect.Append(field, strValue))
+
 			return nil
 		}
 	case reflect.Interface:
 		field.Set(reflect.ValueOf(str))
+
 		return nil
 	case reflect.Ptr:
 		return SetString(field.Elem(), str)
