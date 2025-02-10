@@ -9,7 +9,7 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
-var stringType = reflect.TypeOf("")
+var typeString = reflect.TypeOf("")
 
 // SetString sets string into a field.
 func SetString(field reflect.Value, str string) error {
@@ -164,7 +164,7 @@ func SetString(field reflect.Value, str string) error {
 			return nil
 		case reflect.String:
 			strValue := reflect.ValueOf(str)
-			if elemType != stringType && strValue.Type().ConvertibleTo(elemType) {
+			if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
 				strValue = strValue.Convert(elemType)
 			}
 
