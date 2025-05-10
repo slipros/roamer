@@ -464,153 +464,334 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 	}
 }
 
-func BenchmarkParse_With_Body_Header_Query(b *testing.B) {
-	toJSON := func(v any) (int, io.Reader, error) {
-		var buffer bytes.Buffer
-		if err := json.NewEncoder(&buffer).Encode(&v); err != nil {
-			return 0, nil, err
+// Benchmark helper types and functions
+// RequestPayload represents a standard payload for benchmark requests
+type RequestPayload struct {
+	Strings []string               `json:"strings"`
+	Numbers []int                  `json:"numbers"`
+	Map     map[string]interface{} `json:"map"`
+}
+
+// SmallStruct for small payload benchmarks
+type SmallStruct struct {
+	String string `json:"string" header:"X-String" query:"string"`
+	Int    int    `json:"int" header:"X-Int" query:"int"`
+}
+
+// MediumStruct for medium payload benchmarks
+type MediumStruct struct {
+	Int       int       `query:"int"`
+	Int8      int8      `query:"int8"`
+	Int32     int32     `query:"int32"`
+	Int64     int64     `query:"int64"`
+	Time      time.Time `query:"time"`
+	Url       url.URL   `query:"url"`
+	UserAgent string    `header:"User-Agent"`
+	Strings   []string  `json:"strings"`
+}
+
+// LargeStruct for large payload benchmarks
+type LargeStruct struct {
+	String        string                 `json:"string" header:"X-String" query:"string" string:"trim_space"`
+	Int           int                    `json:"int" header:"X-Int" query:"int"`
+	Int8          int8                   `query:"int8"`
+	Int16         int16                  `query:"int16"`
+	Int32         int32                  `query:"int32"`
+	Int64         int64                  `query:"int64"`
+	Uint          uint                   `query:"uint"`
+	Uint8         uint8                  `query:"uint8"`
+	Uint16        uint16                 `query:"uint16"`
+	Uint32        uint32                 `query:"uint32"`
+	Uint64        uint64                 `query:"uint64"`
+	Float32       float32                `query:"float32"`
+	Float64       float64                `query:"float64"`
+	Bool          bool                   `query:"bool"`
+	Time          time.Time              `query:"time"`
+	Url           url.URL                `query:"url"`
+	UserAgent     string                 `header:"User-Agent"`
+	Accept        string                 `header:"Accept"`
+	RefererHeader string                 `header:"Referer"`
+	CustomHeader  string                 `header:"X-Custom-Header"`
+	StringsArray  []string               `json:"strings"`
+	NumbersArray  []int                  `json:"numbers"`
+	MapData       map[string]interface{} `json:"map"`
+}
+
+// Helper function to generate JSON body
+func toJSON(v any) (int, io.Reader, error) {
+	var buffer bytes.Buffer
+	if err := json.NewEncoder(&buffer).Encode(&v); err != nil {
+		return 0, nil, err
+	}
+
+	return buffer.Len(), &buffer, nil
+}
+
+// Helper function to prepare a standard HTTP request for benchmarks
+func prepareTestHTTPRequest(b *testing.B, method string, withJSON, withHeaders, withQuery bool) (*http.Request, int64) {
+	var bodyLen int64
+	var body io.Reader
+
+	// Prepare query parameters
+	query := make(url.Values)
+	if withQuery {
+		query.Add("string", "valueFromQuery")
+		query.Add("int", "9223372036854775807")
+		query.Add("int8", "127")
+		query.Add("int16", "32767")
+		query.Add("int32", "2147483647")
+		query.Add("int64", "9223372036854775807")
+		query.Add("uint", "9223372036854775807")
+		query.Add("uint8", "255")
+		query.Add("uint16", "65535")
+		query.Add("uint32", "4294967295")
+		query.Add("uint64", "18446744073709551615")
+		query.Add("float32", "3.14159")
+		query.Add("float64", "3.141592653589793")
+		query.Add("bool", "true")
+		query.Add("time", "2002-10-02T15:00:00.05Z")
+		query.Add("url", "http://google.com")
+	}
+
+	// Prepare headers
+	header := make(http.Header)
+	if withHeaders {
+		header.Add("X-String", "valueFromHeader")
+		header.Add("X-Int", "42")
+		header.Add("User-Agent", "BenchmarkAgent/1.0")
+		header.Add("Accept", "application/json")
+		header.Add("Referer", "http://example.com")
+		header.Add("X-Custom-Header", "CustomValue")
+	}
+
+	// Prepare JSON body
+	if withJSON {
+		var err error
+		bLen, bReader, err := toJSON(RequestPayload{
+			Strings: []string{"string1", "string2", "string3"},
+			Numbers: []int{1, 2, 3, 4, 5},
+			Map: map[string]interface{}{
+				"key1": "value1",
+				"key2": 42,
+				"key3": true,
+			},
+		})
+		if err != nil {
+			b.Fatal(err)
 		}
 
-		return buffer.Len(), &buffer, nil
+		bodyLen = int64(bLen)
+		body = bReader
+		header.Add("Content-Type", decoder.ContentTypeJSON)
+		header.Add("Content-Length", strconv.Itoa(bLen))
 	}
 
-	query := make(url.Values)
-	query.Add("int", "9223372036854775807")
-	query.Add("int8", "127")
-	query.Add("int16", "32767")
-	query.Add("int32", "2147483647")
-	query.Add("int64", "9223372036854775807")
-	query.Add("time", "2002-10-02T15:00:00.05Z")
-	query.Add("url", "http://google.com")
-
-	header := make(http.Header)
-	header.Add("User-Agent", "agent 1337")
-
-	bodyLen, body, err := toJSON(
-		struct {
-			Strings []string `json:"strings"`
-		}{
-			Strings: []string{"1", "2"},
-		},
-	)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	header.Add("Content-Type", decoder.ContentTypeJSON)
-	header.Add("Content-Length", strconv.Itoa(bodyLen))
-
-	type Data struct {
-		Int   int       `query:"int"`
-		Int8  int8      `query:"int8"`
-		Int32 int32     `query:"int32"`
-		Int64 int64     `query:"int64"`
-		Time  time.Time `query:"time"`
-		Url   url.URL   `query:"url"`
-
-		UserAgent string   `header:"User-Agent"`
-		Strings   []string `json:"strings"`
-	}
-
-	req := http.Request{
-		Method: http.MethodPost,
+	// Create request
+	req := &http.Request{
+		Method: method,
 		URL: &url.URL{
 			RawQuery: query.Encode(),
 		},
 		Header:        header,
-		ContentLength: int64(bodyLen),
+		ContentLength: bodyLen,
 		Body:          io.NopCloser(body),
 	}
 
-	r := NewRoamer(
-		WithSkipFilled(false),
-		WithParsers(parser.NewHeader(), parser.NewQuery()),
-	)
+	return req, bodyLen
+}
 
-	var d Data
+// Benchmark for JSON body parsing with small struct
+func BenchmarkParse_JSONSmall(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, false, false)
+
+	r := NewRoamer(WithDecoders(decoder.NewJSON()))
+	var data SmallStruct
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := r.Parse(&req, &d); err != nil {
+		if err := r.Parse(req, &data); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func BenchmarkParse_With_Body_Header_Query_FastStructFieldParser(b *testing.B) {
-	toJSON := func(v any) (int, io.Reader, error) {
-		var buffer bytes.Buffer
-		if err := json.NewEncoder(&buffer).Encode(&v); err != nil {
-			return 0, nil, err
-		}
+// Benchmark for JSON body parsing with large struct
+func BenchmarkParse_JSONLarge(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, false, false)
 
-		return buffer.Len(), &buffer, nil
-	}
-
-	query := make(url.Values, 7)
-	query.Add("int", "9223372036854775807")
-	query.Add("int8", "127")
-	query.Add("int16", "32767")
-	query.Add("int32", "2147483647")
-	query.Add("int64", "9223372036854775807")
-	query.Add("time", "2002-10-02T15:00:00.05Z")
-	query.Add("url", "http://google.com")
-
-	header := make(http.Header)
-	header.Add("User-Agent", "agent 1337")
-
-	bodyLen, body, err := toJSON(
-		struct {
-			Strings []string `json:"strings"`
-		}{
-			Strings: []string{"1", "2"},
-		},
-	)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	header.Add("Content-Type", decoder.ContentTypeJSON)
-	header.Add("Content-Length", strconv.Itoa(bodyLen))
-
-	type Data struct {
-		Int   int       `query:"int"`
-		Int8  int8      `query:"int8"`
-		Int32 int32     `query:"int32"`
-		Int64 int64     `query:"int64"`
-		Time  time.Time `query:"time"`
-		Url   url.URL   `query:"url"`
-
-		UserAgent string   `header:"User-Agent"`
-		Strings   []string `json:"strings"`
-	}
-
-	req := http.Request{
-		Method: http.MethodPost,
-		URL: &url.URL{
-			RawQuery: query.Encode(),
-		},
-		Header:        header,
-		ContentLength: int64(bodyLen),
-		Body:          io.NopCloser(body),
-	}
-
-	r := NewRoamer(
-		WithSkipFilled(false),
-		WithParsers(parser.NewHeader(), parser.NewQuery()),
-		WithExperimentalFastStructFieldParser(),
-	)
-
-	var d Data
+	r := NewRoamer(WithDecoders(decoder.NewJSON()))
+	var data LargeStruct
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := r.Parse(&req, &d); err != nil {
+		if err := r.Parse(req, &data); err != nil {
 			b.Fatal(err)
 		}
 	}
+}
+
+// Benchmark for query parameters parsing
+func BenchmarkParse_QueryParams(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodGet, false, false, true)
+
+	r := NewRoamer(WithParsers(parser.NewQuery()))
+	var data MediumStruct
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark for header parsing
+func BenchmarkParse_Headers(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodGet, false, true, false)
+
+	r := NewRoamer(WithParsers(parser.NewHeader()))
+	var data MediumStruct
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark for all parsers combined
+func BenchmarkParse_AllParsers(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
+
+	r := NewRoamer(
+		WithDecoders(decoder.NewJSON()),
+		WithParsers(parser.NewHeader(), parser.NewQuery()),
+	)
+	var data LargeStruct
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark for all parsers with string formatter
+func BenchmarkParse_WithFormatter(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
+
+	r := NewRoamer(
+		WithDecoders(decoder.NewJSON()),
+		WithParsers(parser.NewHeader(), parser.NewQuery()),
+		WithFormatters(formatter.NewString()),
+	)
+	var data LargeStruct
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark for all parsers with skipFilled=true
+func BenchmarkParse_SkipFilled(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
+
+	r := NewRoamer(
+		WithDecoders(decoder.NewJSON()),
+		WithParsers(parser.NewHeader(), parser.NewQuery()),
+		WithSkipFilled(true),
+	)
+
+	// Pre-fill some fields
+	data := LargeStruct{
+		String: "prefilled",
+		Int:    999,
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark for fast struct field parser
+func BenchmarkParse_FastStructFieldParser(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
+
+	r := NewRoamer(
+		WithDecoders(decoder.NewJSON()),
+		WithParsers(parser.NewHeader(), parser.NewQuery()),
+		WithExperimentalFastStructFieldParser(),
+	)
+	var data LargeStruct
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := r.Parse(req, &data); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Benchmark to compare regular parsing vs fast struct field parser
+func BenchmarkParse_RegularVsFast(b *testing.B) {
+	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
+
+	b.Run("Regular", func(b *testing.B) {
+		r := NewRoamer(
+			WithDecoders(decoder.NewJSON()),
+			WithParsers(parser.NewHeader(), parser.NewQuery()),
+		)
+		var data LargeStruct
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			if err := r.Parse(req, &data); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run("FastStructFieldParser", func(b *testing.B) {
+		r := NewRoamer(
+			WithDecoders(decoder.NewJSON()),
+			WithParsers(parser.NewHeader(), parser.NewQuery()),
+			WithExperimentalFastStructFieldParser(),
+		)
+		var data LargeStruct
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			if err := r.Parse(req, &data); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
