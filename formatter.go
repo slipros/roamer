@@ -12,7 +12,7 @@ import (
 // Implementing a custom formatter allows extending the functionality of the roamer
 // package to support additional transformations on parsed values.
 //
-//go:generate mockery --name=Formatter --outpkg=mock --output=./mock
+//go:generate mockery --name=Formatter --outpkg=mockroamer --output=./mockroamer
 type Formatter interface {
 	// Format transforms a field value based on the provided struct tag.
 	// The implementation should check if the tag contains relevant formatting

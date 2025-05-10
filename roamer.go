@@ -19,7 +19,7 @@ import (
 // AfterParser is an interface that can be implemented by the target struct
 // to execute custom logic after the HTTP request has been parsed.
 //
-//go:generate mockery --name=AfterParser --outpkg=mock --output=./mock
+//go:generate mockery --name=AfterParser --outpkg=mockroamer --output=./mockroamer
 type AfterParser interface {
 	// AfterParse is called after the HTTP request has been successfully parsed.
 	// This method can be used to perform additional validation, data transformation,

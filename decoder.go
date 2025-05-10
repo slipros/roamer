@@ -10,7 +10,7 @@ import "net/http"
 // Implementing a custom decoder allows extending the functionality of the roamer
 // package to support additional content types or custom parsing logic.
 //
-//go:generate mockery --name=Decoder --outpkg=mock --output=./mock
+//go:generate mockery --name=Decoder --outpkg=mockroamer --output=./mockroamer
 type Decoder interface {
 	// Decode parses the body of an HTTP request into the provided pointer.
 	// The implementation should determine how to handle the request body

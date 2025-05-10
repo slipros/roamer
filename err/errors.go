@@ -57,6 +57,10 @@ func (d DecodeError) Error() string {
 	return d.Err.Error()
 }
 
+func (d DecodeError) Unwrap() error {
+	return d.Err
+}
+
 // SliceIterationError represents an error that occurred while iterating over
 // a slice during parsing or processing. It captures both the underlying error
 // and the index of the slice element where the error occurred.
@@ -82,6 +86,10 @@ type SliceIterationError struct {
 // This method implements the error interface.
 func (s SliceIterationError) Error() string {
 	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
+}
+
+func (s SliceIterationError) Unwrap() error {
+	return s.Err
 }
 
 // FormatterNotFound is returned when a formatter tag references a formatter

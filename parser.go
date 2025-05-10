@@ -15,7 +15,7 @@ import (
 // Implementing a custom parser allows extending the functionality of the roamer
 // package to support additional data sources or custom parsing logic.
 //
-//go:generate mockery --name=Parser --outpkg=mock --output=./mock
+//go:generate mockery --name=Parser --outpkg=mockroamer --output=./mockroamer
 type Parser interface {
 	// Parse extracts data from an HTTP request based on the provided struct tag.
 	// It returns the parsed value and a boolean indicating whether parsing was successful.
