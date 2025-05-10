@@ -25,7 +25,6 @@ linters:
     - gochecknoinits
     - goconst
     - gocritic
-    - godot
     - gosec
     - misspell
     - nakedret
