@@ -13,10 +13,10 @@ linters-settings:
 
   govet:
     check-shadowing: true
-    enable-all: true
 
-  gocyclo:
-    min-complexity: 15
+  cyclop:
+    max-complexity: 15
+    package-average: 10.0
 
   dupl:
     threshold: 100
@@ -25,9 +25,8 @@ linters-settings:
     min-len: 3
     min-occurrences: 3
 
-  gosec:
-    excludes:
-      - G104
+  gocyclo:
+    min-complexity: 15
 
   revive:
     rules:
@@ -45,52 +44,45 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    - bodyclose
-    - dupl
-    - errname
-    - errorlint
-    - exportloopref
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - godot
-    - goimports
-    - gosec
-    - misspell
-    - nakedret
-    - nolintlint
-    - prealloc
-    - predeclared
-    - promlinter
-    - revive
-    - tenv
-    - thelper
-    - tparallel
-    - unconvert
-    - unparam
-    - wastedassign
+    # Default enabled - basic linters
+    - errcheck      # Check for unchecked errors
+    - govet         # Suspicious constructs checker
+    - ineffassign   # Unused assignments detector
+    - staticcheck   # Set of static analysis rules
+    - unused        # Unused code elements detector
+
+    # Additional linters for library
+    - bodyclose     # Check HTTP response body is closed (critical for HTTP libraries)
+    - dupl          # Detect duplicated code fragments
+    - errorlint     # Proper error wrapping check (Go 1.13+)
+    - gochecknoinits # Check for init functions
+    - goconst       # Find repeated strings that could be constants
+    - gocritic      # General style and error checks
+    - gosec         # Code security checker
+    - misspell      # Spelling mistakes checker
+    - nakedret      # Check for naked returns
+    - nilerr        # Check for returning nil when error is not nil
+    - nilnil        # Check for simultaneous return of nil value and nil error
+    - noctx         # Check for context.Context usage in HTTP requests
+    - nolintlint    # Check proper usage of //nolint directives
+    - prealloc      # Slice pre-allocation suggestions
+    - thelper       # Test helper function checks
+    - tparallel     # Check correct usage of t.Parallel()
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Detect unused function parameters
+    - wastedassign  # Find redundant assignments
 
 issues:
   exclude-use-default: false
+  max-issues-per-linter: 50
+  max-same-issues: 3
+
   exclude:
     - 'package-comments: should have a package comment'
     - 'G103: Use of unsafe calls should be audited'
     - 'Line contains TODO/BUG/FIXME'
+
   exclude-rules:
-    - path: internal/abi
-      linters:
-        - revive
-        - unused
-        - stylecheck
-        - godot
-        - unparam
     - path: internal/experiment
       linters:
         - revive

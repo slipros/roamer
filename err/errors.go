@@ -3,7 +3,7 @@
 // Since this package is dedicated to errors and the package is named "err",
 // all errors elide the standard "Err" prefix.
 //
-//nolint:revive,errname,stylecheck
+//nolint:staticcheck
 package err
 
 import (

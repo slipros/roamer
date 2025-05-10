@@ -88,9 +88,9 @@ func SetSliceString(field reflect.Value, arr []string) error {
 	case reflect.Interface:
 		// Handle interface{} fields that might expect a string slice
 		// Note: This is a special case and might need reconsideration
-		switch field.Interface().(type) {
-		case []string:
-			field.Set(reflect.ValueOf(arr))
+		if v, ok := field.Interface().([]string); ok {
+			field.Set(reflect.ValueOf(v))
+
 			return nil
 		}
 	}
