@@ -1,97 +1,41 @@
-version: 2
+version: "2"
 
 run:
-  tests: false
+  go: "1.22"
   timeout: 5m
-  skip-dirs:
-    - mock
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  govet:
-    check-shadowing: true
-
-  cyclop:
-    max-complexity: 15
-    package-average: 10.0
-
-  dupl:
-    threshold: 100
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  gocyclo:
-    min-complexity: 15
-
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-        disabled: false
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - opinionated
-
-linters:
-  disable-all: true
-  enable:
-    # Default enabled - basic linters
-    - errcheck      # Check for unchecked errors
-    - govet         # Suspicious constructs checker
-    - ineffassign   # Unused assignments detector
-    - staticcheck   # Set of static analysis rules
-    - unused        # Unused code elements detector
-
-    # Additional linters for library
-    - bodyclose     # Check HTTP response body is closed (critical for HTTP libraries)
-    - dupl          # Detect duplicated code fragments
-    - errorlint     # Proper error wrapping check (Go 1.13+)
-    - gochecknoinits # Check for init functions
-    - goconst       # Find repeated strings that could be constants
-    - gocritic      # General style and error checks
-    - gosec         # Code security checker
-    - misspell      # Spelling mistakes checker
-    - nakedret      # Check for naked returns
-    - nilerr        # Check for returning nil when error is not nil
-    - nilnil        # Check for simultaneous return of nil value and nil error
-    - noctx         # Check for context.Context usage in HTTP requests
-    - nolintlint    # Check proper usage of //nolint directives
-    - prealloc      # Slice pre-allocation suggestions
-    - thelper       # Test helper function checks
-    - tparallel     # Check correct usage of t.Parallel()
-    - unconvert     # Remove unnecessary type conversions
-    - unparam       # Detect unused function parameters
-    - wastedassign  # Find redundant assignments
+  tests: false
 
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 50
   max-same-issues: 3
 
-  exclude:
-    - 'package-comments: should have a package comment'
-    - 'G103: Use of unsafe calls should be audited'
-    - 'Line contains TODO/BUG/FIXME'
-
-  exclude-rules:
-    - path: internal/experiment
-      linters:
-        - revive
-        - govet
-        - staticcheck
-    - path: (schema|protocol)\.go
-      linters:
-        - gosec
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
+linters:
+  enable:
+    # Default enabled linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    
+    # Additional linters for library
+    - bodyclose
+    - dupl
+    - errorlint
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - godot
+    - gosec
+    - misspell
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - wastedassign
