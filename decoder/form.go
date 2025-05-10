@@ -1,3 +1,4 @@
+// Package decoder provides decoders for extracting data from HTTP request bodies.
 package decoder
 
 import (
@@ -13,40 +14,95 @@ import (
 )
 
 const (
-	// ContentTypeFormURL content-type header for url form decoder.
+	// ContentTypeFormURL is the Content-Type header value for URL-encoded form data.
+	// This is used to match requests with the appropriate decoder.
 	ContentTypeFormURL = "application/x-www-form-urlencoded"
-	// SplitSymbol array split symbol.
-	SplitSymbol     = ","
+
+	// SplitSymbol is the default character used to split form values when
+	// multiple values are provided for the same field.
+	SplitSymbol = ","
+
+	// tagValueFormURL is the struct tag name used for URL-encoded form values.
 	tagValueFormURL = "form"
 )
 
-// FormURLOptionsFunc function for setting options.
+// FormURLOptionsFunc is a function type for configuring a FormURL decoder.
+// It follows the functional options pattern to provide a clean and extensible API.
 type FormURLOptionsFunc func(*FormURL)
 
-// WithDisabledSplit disables array splitting.
+// WithDisabledSplit disables the automatic splitting of form values.
+// By default, if a field is set to handle multiple values (e.g., a slice),
+// the decoder will split values using the split symbol (default: comma).
+// This option disables that behavior.
+//
+// Example:
+//
+//	// Create a form decoder with splitting disabled
+//	formDecoder := decoder.NewFormURL(decoder.WithDisabledSplit())
+//
+//	// With splitting disabled, a form field like "tags=foo,bar,baz" will be
+//	// parsed as a single string "foo,bar,baz" rather than a slice ["foo", "bar", "baz"]
 func WithDisabledSplit() FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.split = false
 	}
 }
 
-// WithSplitSymbol sets array split symbol.
+// WithSplitSymbol sets the character used to split form values.
+// By default, the decoder uses a comma (,) as the split symbol.
+// This option allows using a different character instead.
+//
+// Example:
+//
+//	// Create a form decoder that splits on semicolons instead of commas
+//	formDecoder := decoder.NewFormURL(decoder.WithSplitSymbol(";"))
+//
+//	// With this configuration, a form field like "tags=foo;bar;baz" will be
+//	// parsed as a slice ["foo", "bar", "baz"]
 func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.splitSymbol = splitSymbol
 	}
 }
 
-// FormURL url form decoder.
+// FormURL is a decoder for handling URL-encoded form data.
+// It can parse form data into structs and maps, handling both
+// single values and multiple values.
 type FormURL struct {
-	contentType                 string
-	skipFilled                  bool
-	split                       bool
-	splitSymbol                 string
-	experimentalFastStructField bool
+	contentType                 string // The Content-Type header value that this decoder handles
+	skipFilled                  bool   // Whether to skip fields that are already filled
+	split                       bool   // Whether to split comma-separated values
+	splitSymbol                 string // The character to use when splitting values
+	experimentalFastStructField bool   // Whether to use experimental fast struct field access
 }
 
-// NewFormURL returns new url form decoder.
+// NewFormURL creates a new FormURL decoder with the specified options.
+// By default, it handles requests with Content-Type "application/x-www-form-urlencoded",
+// skips fields that are already filled, and splits comma-separated values.
+//
+// Example:
+//
+//	// Create a form decoder with default settings
+//	formDecoder := decoder.NewFormURL()
+//
+//	// Create a form decoder with custom options
+//	formDecoder := decoder.NewFormURL(
+//	    decoder.WithDisabledSplit(),         // Don't split comma-separated values
+//	    decoder.WithSplitSymbol(";"),        // Use semicolon as separator (if splitting is enabled)
+//	    decoder.WithSkipFilled(false),       // Don't skip fields that are already filled
+//	)
+//
+//	// Use it with roamer
+//	r := roamer.NewRoamer(
+//	    roamer.WithDecoders(formDecoder),
+//	)
+//
+//	// Example struct using form tags
+//	type SearchRequest struct {
+//	    Query string   `form:"q"`
+//	    Page  int      `form:"page"`
+//	    Tags  []string `form:"tags"` // Can be provided as "tags=foo,bar,baz"
+//	}
 func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 	f := FormURL{
 		contentType: ContentTypeFormURL,
@@ -62,9 +118,18 @@ func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 	return &f
 }
 
-// Decode decodes url form value from http request into ptr.
+// Decode parses URL-encoded form data from an HTTP request into the provided pointer.
+// The pointer must be to a struct or a map.
 //
-// ptr must have a type of either struct or map.
+// For structs, the decoder uses the "form" tag to map form fields to struct fields.
+// For maps, the decoder populates the map with form field names as keys.
+//
+// Parameters:
+//   - r: The HTTP request containing the form data to decode.
+//   - ptr: A pointer to the target value (struct or map) where the decoded data will be stored.
+//
+// Returns:
+//   - error: An error if decoding fails, or nil if successful.
 func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	if err := r.ParseForm(); err != nil {
 		return errors.WithMessage(err, "parse http form")
@@ -83,26 +148,45 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	}
 }
 
-// EnableExperimentalFastStructFieldParser enables the use of experimental fast struct field parser.
+// EnableExperimentalFastStructFieldParser enables the use of an experimental
+// fast struct field parser. This can improve performance but may not be
+// as stable as the standard parser.
+//
+// This method is part of the internal Experiment interface and is primarily
+// used by the roamer package.
 func (f *FormURL) EnableExperimentalFastStructFieldParser() {
 	f.experimentalFastStructField = true
 }
 
-// ContentType returns content-type header value.
+// ContentType returns the Content-Type header value that this decoder handles.
+// For the FormURL decoder, this is "application/x-www-form-urlencoded" by default.
+// This method is used by the roamer package to match requests with the appropriate decoder.
 func (f *FormURL) ContentType() string {
 	return f.contentType
 }
 
-// setContentType set content-type value.
+// setContentType sets the Content-Type header value that this decoder handles.
+// This is primarily used internally by option functions.
 func (f *FormURL) setContentType(contentType string) {
 	f.contentType = contentType
 }
 
-// setSkipFilled sets skip filled value.
+// setSkipFilled sets whether the decoder should skip fields that are already filled.
+// This is primarily used internally by option functions.
 func (f *FormURL) setSkipFilled(skip bool) {
 	f.skipFilled = skip
 }
 
+// parseFormValue extracts a form value from the provided form data.
+// It handles both single values and multiple values.
+//
+// Parameters:
+//   - form: The form data to extract values from.
+//   - tag: The struct tag containing the form field name.
+//
+// Returns:
+//   - any: The extracted form value (string or []string).
+//   - bool: Whether a value was found.
 func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, bool) {
 	tagValue, ok := tag.Lookup(tagValueFormURL)
 	if !ok {
@@ -121,6 +205,16 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 	return values, true
 }
 
+// parseStruct parses form data into a struct.
+// It maps form field names to struct fields using the "form" tag.
+//
+// Parameters:
+//   - v: A pointer to the reflect.Value of the struct.
+//   - t: The reflect.Type of the struct.
+//   - form: The form data to parse.
+//
+// Returns:
+//   - error: An error if parsing fails, or nil if successful.
 func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) (err error) {
 	var fieldType reflect.StructField
 	for i := range v.NumField() {
@@ -158,6 +252,21 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 	return nil
 }
 
+// parseMap parses form data into a map.
+// It populates the map with form field names as keys and field values as values.
+//
+// The function supports different map types:
+//   - map[string]string: Single form values
+//   - map[string]interface{}: Both single and multiple form values
+//   - map[string][]string: Direct form data
+//
+// Parameters:
+//   - v: A pointer to the reflect.Value of the map.
+//   - t: The reflect.Type of the map.
+//   - form: The form data to parse.
+//
+// Returns:
+//   - error: An error if parsing fails, or nil if successful.
 func (f *FormURL) parseMap(v *reflect.Value, t reflect.Type, form url.Values) error {
 	if t.Key().Kind() != reflect.String {
 		return errors.WithStack(rerr.NotSupported)
