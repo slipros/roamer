@@ -55,6 +55,21 @@ type testStruct struct {
 	Int    int    `json:"int" header:"X-Int" query:"int"`
 }
 
+// Multi-source struct with dedicated fields for each source
+type multiSourceStruct struct {
+	// JSON-specific fields
+	JSONString string `json:"string"`
+	JSONInt    int    `json:"int"`
+
+	// Header-specific fields
+	HeaderString string `header:"X-String"`
+	HeaderInt    int    `header:"X-Int"`
+
+	// Query-specific fields
+	QueryString string `query:"string"`
+	QueryInt    int    `query:"int"`
+}
+
 // TestRoamer_Parse_Successfully tests successful parsing scenarios
 func TestRoamer_Parse_Successfully(t *testing.T) {
 	// Create test JSON
@@ -153,15 +168,24 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 		{
 			name: "parse struct with multiple sources",
 			setup: func() (fields, args) {
+				// Create test JSON for this specific test
+				jsonData, _ := json.Marshal(struct {
+					String string `json:"string"`
+					Int    int    `json:"int"`
+				}{
+					String: "jsonValue",
+					Int:    123,
+				})
+
 				// Create request with all data sources
-				req, _ := http.NewRequest(http.MethodPost, "http://example.com?string=queryValue&int=456", bytes.NewReader(testJSON))
+				req, _ := http.NewRequest(http.MethodPost, "http://example.com?string=queryValue&int=456", bytes.NewReader(jsonData))
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Content-Length", strconv.Itoa(len(testJSON)))
+				req.Header.Set("Content-Length", strconv.Itoa(len(jsonData)))
 				req.Header.Set("X-String", "headerValue")
 				req.Header.Set("X-Int", "789")
 
-				// Create struct to fill
-				target := &testStruct{}
+				// Create multi-source struct to fill
+				target := &multiSourceStruct{}
 
 				// Configure roamer with parsers and decoders
 				return fields{
@@ -178,12 +202,18 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 					}
 			},
 			verify: func(t *testing.T, result any) {
-				target, ok := result.(*testStruct)
+				target, ok := result.(*multiSourceStruct)
 				require.True(t, ok)
-				// Priority should be given to the first successful parser
-				// Check actual priority order
-				assert.Equal(t, "headerValue", target.String)
-				assert.Equal(t, 789, target.Int)
+
+				// Each field should be filled from its specific source
+				assert.Equal(t, "jsonValue", target.JSONString, "JSON field should be filled from JSON body")
+				assert.Equal(t, 123, target.JSONInt, "JSON field should be filled from JSON body")
+
+				assert.Equal(t, "headerValue", target.HeaderString, "Header field should be filled from HTTP header")
+				assert.Equal(t, 789, target.HeaderInt, "Header field should be filled from HTTP header")
+
+				assert.Equal(t, "queryValue", target.QueryString, "Query field should be filled from URL query")
+				assert.Equal(t, 456, target.QueryInt, "Query field should be filled from URL query")
 			},
 		},
 		{
