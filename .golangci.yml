@@ -1,40 +1,81 @@
+version: 2
+
 run:
   tests: false
-  deadline: 5m
+  timeout: 5m
+  skip-dirs:
+    - mock
 
 linters-settings:
-  gofumpt:
-    extra-rules: true
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gosec:
+    excludes:
+      - G104
+
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - opinionated
 
 linters:
-  enable-all: true
-  disable:
-    - interfacebloat
-    - sqlclosecheck # not relevant (SQL)
-    - rowserrcheck # not relevant (SQL)
-    - execinquery # not relevant (SQL)
-    - cyclop # duplicate of gocyclo
-    - exhaustive
-    - exhaustruct
-    - forcetypeassert
-    - funlen
-    - gochecknoglobals
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - bodyclose
+    - dupl
+    - errname
+    - errorlint
+    - exportloopref
     - gochecknoinits
-    - gocognit
-    - gocyclo
-    - err113
-    - gomnd
-    - ireturn
-    - nestif
-    - nlreturn
-    - nonamedreturns
-    - tagliatelle
-    - varnamelen
-    - wrapcheck
-    - wsl
-    - depguard
-    - gci
-    - gofumpt
+    - goconst
+    - gocritic
+    - godot
+    - goimports
+    - gosec
+    - misspell
+    - nakedret
+    - nolintlint
+    - prealloc
+    - predeclared
+    - promlinter
+    - revive
+    - tenv
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - wastedassign
 
 issues:
   exclude-use-default: false
@@ -57,4 +98,8 @@ issues:
         - staticcheck
     - path: (schema|protocol)\.go
       linters:
+        - gosec
+    - path: _test\.go
+      linters:
+        - errcheck
         - gosec
