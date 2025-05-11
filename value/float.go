@@ -95,7 +95,7 @@ func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 		}
 
 		// Check if value is too small and will be truncated to zero
-		if math.Abs(floatVal) < 1.0 && floatVal != 0.0 {
+		if math.Abs(floatVal) < 1.0 && floatVal != 0.0 { //nolint:staticcheck // for future use
 			// This is not an error, but a warning that could be logged in a real-world app
 			// For now, just proceed with truncation
 		}
@@ -134,7 +134,7 @@ func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 		}
 
 		// Check if value is too small and will be truncated to zero
-		if floatVal > 0 && floatVal < 1.0 {
+		if floatVal > 0 && floatVal < 1.0 { //nolint:staticcheck // for future use
 			// This is not an error, but a warning that could be logged in a real-world app
 			// For now, just proceed with truncation
 		}

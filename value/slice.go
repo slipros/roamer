@@ -9,16 +9,6 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
-var (
-	// typeAnySlice is a reflect.Type for []any.
-	// It's used for type comparison and conversion.
-	typeAnySlice = reflect.TypeOf([]any{})
-
-	// typeStringSlice is a reflect.Type for []string.
-	// It's used for type comparison and conversion.
-	typeStringSlice = reflect.TypeOf([]string{})
-)
-
 // SliceOption is a functional option for configuring SetSliceString behavior
 type SliceOption func(*sliceOptions)
 
