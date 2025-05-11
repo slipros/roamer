@@ -56,10 +56,6 @@ func (f *MultipartFile) ContentType() string {
 // IsValid checks if the MultipartFile object contains valid data.
 // Returns false if any essential field is missing (key, file, or header).
 //
-// Note: The current implementation has a logic error. It returns true when
-// the file is NOT valid and false when it IS valid. This will be corrected
-// in a future version.
-//
 // Example:
 //
 //	func processFile(file *MultipartFile) error {
@@ -70,9 +66,7 @@ func (f *MultipartFile) ContentType() string {
 //	    // Process the file...
 //	}
 func (f *MultipartFile) IsValid() bool {
-	// Note: This implementation has a logic error.
-	// It should return len(f.Key) > 0 && f.File != nil && f.Header != nil
-	return len(f.Key) == 0 || f.File == nil || f.Header == nil
+	return len(f.Key) > 0 && f.File != nil && f.Header != nil
 }
 
 // Copy creates a copy of this MultipartFile with a new file handler.
