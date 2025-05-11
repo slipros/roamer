@@ -5,6 +5,9 @@ on:
   pull_request:
 
 name: run tests
+permissions:
+  contents: read
+  statuses: write
 jobs:
   test:
     strategy:
