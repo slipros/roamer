@@ -57,6 +57,9 @@ func (d DecodeError) Error() string {
 	return d.Err.Error()
 }
 
+// Unwrap returns the underlying error that caused the decoding failure.
+// This method implements the interface for errors.Unwrap(), allowing the use
+// of errors.Is() and errors.As() functions to examine the error chain.
 func (d DecodeError) Unwrap() error {
 	return d.Err
 }
@@ -88,6 +91,11 @@ func (s SliceIterationError) Error() string {
 	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
 }
 
+// Unwrap returns the underlying error that occurred during slice iteration.
+// This method implements the interface for errors.Unwrap(), allowing the use
+// of errors.Is() and errors.As() functions to examine the error chain.
+// This is useful for checking what specific type of error occurred while
+// still maintaining the context of which slice element caused it.
 func (s SliceIterationError) Unwrap() error {
 	return s.Err
 }
