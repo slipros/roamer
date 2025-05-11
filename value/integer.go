@@ -40,6 +40,11 @@ import (
 //	    return err
 //	}
 func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
+	// Check if the field is settable
+	if !field.CanSet() {
+		return errors.Errorf("field of type %s is not settable", field.Type())
+	}
+
 	// Determine if the number is signed or unsigned
 	var (
 		isSigned  bool

@@ -450,6 +450,21 @@ func TestSetInteger_Failure(t *testing.T) {
 			},
 		},
 		{
+			name: "int to non-settable field",
+			setupField: func() (reflect.Value, any) {
+				type privateStruct struct {
+					privateField int
+				}
+				s := &privateStruct{}
+				field := reflect.ValueOf(s).Elem().FieldByName("privateField")
+				return field, 42
+			},
+			errorCheck: func(t *testing.T, err error) {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "not settable")
+			},
+		},
+		{
 			name: "uint64 max to int64",
 			setupField: func() (reflect.Value, any) {
 				s := &TestStruct{}
