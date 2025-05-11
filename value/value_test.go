@@ -9,6 +9,7 @@ import (
 )
 
 var num = 1
+var str = "test_string"
 
 type implementsStringer struct {
 }
