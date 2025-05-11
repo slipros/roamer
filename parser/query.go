@@ -1,3 +1,4 @@
+// Package parser provides parsers for extracting data from HTTP requests.
 package parser
 
 import (
@@ -8,37 +9,78 @@ import (
 )
 
 const (
-	// TagQuery query tag.
+	// TagQuery is the struct tag name used for parsing query parameters.
+	// Fields tagged with this will be populated from matching URL query parameters.
+	// Example: `query:"user_id"`
 	TagQuery = "query"
-	// SplitSymbol array split symbol.
-	SplitSymbol   = ","
+
+	// SplitSymbol is the default character used to split comma-separated query values
+	// when the split feature is enabled.
+	SplitSymbol = ","
+
+	// cacheKeyQuery is the key used to store parsed query parameters in the cache.
 	cacheKeyQuery = "query"
 )
 
-// QueryOptionsFunc query options changer.
+// QueryOptionsFunc is a function type for configuring a Query parser instance.
+// It follows the functional options pattern to provide a clean and extensible API.
 type QueryOptionsFunc func(*Query)
 
-// WithDisabledSplit disable array splitting.
+// WithDisabledSplit disables the automatic splitting of comma-separated query values.
+// By default, if a query parameter contains comma-separated values and splitting is enabled,
+// the parser will split it into a slice. This option disables that behavior.
+//
+// Example:
+//
+//	// Create a query parser with splitting disabled
+//	parser := parser.NewQuery(parser.WithDisabledSplit())
+//
+//	// With splitting disabled, a query like "?tags=foo,bar,baz" will be parsed
+//	// as a single string "foo,bar,baz" rather than a slice ["foo", "bar", "baz"]
 func WithDisabledSplit() QueryOptionsFunc {
 	return func(q *Query) {
 		q.split = false
 	}
 }
 
-// WithSplitSymbol set array split symbol.
+// WithSplitSymbol sets the character used to split query values.
+// By default, the parser uses a comma (,) as the split symbol.
+// This option allows using a different character instead.
+//
+// Example:
+//
+//	// Create a query parser that splits on semicolons instead of commas
+//	parser := parser.NewQuery(parser.WithSplitSymbol(";"))
+//
+//	// With this configuration, a query like "?tags=foo;bar;baz" will be parsed
+//	// as a slice ["foo", "bar", "baz"]
 func WithSplitSymbol(splitSymbol string) QueryOptionsFunc {
 	return func(q *Query) {
 		q.splitSymbol = splitSymbol
 	}
 }
 
-// Query query parser.
+// Query is a parser for extracting URL query parameters from HTTP requests.
+// It can handle single values, multiple values (using repeated parameters),
+// and comma-separated values.
 type Query struct {
-	split       bool
-	splitSymbol string
+	split       bool   // Whether to split comma-separated values
+	splitSymbol string // The character to use when splitting values
 }
 
-// NewQuery returns new query parser.
+// NewQuery creates a new Query parser with the specified options.
+// By default, it will split comma-separated query values using a comma as the separator.
+//
+// Example:
+//
+//	// Create a default query parser
+//	parser := parser.NewQuery()
+//
+//	// Create a query parser with custom options
+//	parser := parser.NewQuery(
+//	    parser.WithDisabledSplit(),            // Don't split comma-separated values
+//	    parser.WithSplitSymbol(";"),           // Use semicolon as separator (if splitting is enabled)
+//	)
 func NewQuery(opts ...QueryOptionsFunc) *Query {
 	q := Query{split: true, splitSymbol: SplitSymbol}
 
@@ -49,9 +91,21 @@ func NewQuery(opts ...QueryOptionsFunc) *Query {
 	return &q
 }
 
-// Parse parses query from request.
+// Parse extracts a query parameter from an HTTP request based on the provided struct tag.
+// If the query parameter exists, it returns the value and true.
+// If the query parameter does not exist, it returns an empty string and false.
 //
-// If query is not found in cache it will be parsed from request url and cached.
+// For efficiency, the parser caches the parsed query parameters to avoid
+// parsing them multiple times for different struct fields.
+//
+// Parameters:
+//   - r: The HTTP request to extract query parameters from.
+//   - tag: The struct tag containing the query parameter name.
+//   - cache: A cache for storing parsed query parameters.
+//
+// Returns:
+//   - any: The parsed query parameter (string, []string, or split string).
+//   - bool: Whether the query parameter was found.
 func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagQuery)
 	if !ok {
@@ -80,7 +134,8 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 	return values, true
 }
 
-// Tag returns working tag.
+// Tag returns the name of the struct tag that this parser handles.
+// For the Query parser, this is "query".
 func (q *Query) Tag() string {
 	return TagQuery
 }

@@ -1,60 +1,40 @@
+version: "2"
+
 run:
+  go: "1.22"
+  timeout: 5m
   tests: false
-  deadline: 5m
-
-linters-settings:
-  gofumpt:
-    extra-rules: true
-
-linters:
-  enable-all: true
-  disable:
-    - interfacebloat
-    - sqlclosecheck # not relevant (SQL)
-    - rowserrcheck # not relevant (SQL)
-    - execinquery # not relevant (SQL)
-    - cyclop # duplicate of gocyclo
-    - exhaustive
-    - exhaustruct
-    - forcetypeassert
-    - funlen
-    - gochecknoglobals
-    - gochecknoinits
-    - gocognit
-    - gocyclo
-    - err113
-    - gomnd
-    - ireturn
-    - nestif
-    - nlreturn
-    - nonamedreturns
-    - tagliatelle
-    - varnamelen
-    - wrapcheck
-    - wsl
-    - depguard
-    - gci
-    - gofumpt
 
 issues:
-  exclude-use-default: false
-  exclude:
-    - 'package-comments: should have a package comment'
-    - 'G103: Use of unsafe calls should be audited'
-    - 'Line contains TODO/BUG/FIXME'
-  exclude-rules:
-    - path: internal/abi
-      linters:
-        - revive
-        - unused
-        - stylecheck
-        - godot
-        - unparam
-    - path: internal/experiment
-      linters:
-        - revive
-        - govet
-        - staticcheck
-    - path: (schema|protocol)\.go
-      linters:
-        - gosec
+  max-issues-per-linter: 50
+  max-same-issues: 3
+
+linters:
+  enable:
+    # Default enabled linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    
+    # Additional linters for library
+    - bodyclose
+    - dupl
+    - errorlint
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gosec
+    - misspell
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - wastedassign

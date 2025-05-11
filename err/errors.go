@@ -1,9 +1,9 @@
-// Package err contains roamer errors.
+// Package err contains error definitions for the roamer package.
 //
 // Since this package is dedicated to errors and the package is named "err",
 // all errors elide the standard "Err" prefix.
 //
-//nolint:revive,errname,stylecheck
+//nolint:staticcheck
 package err
 
 import (
@@ -12,46 +12,107 @@ import (
 )
 
 var (
-	// NoData unable to find parsed data.
+	// NoData is returned when parsed data cannot be found in the context.
+	// This typically occurs when trying to retrieve data using ParsedDataFromContext
+	// but no data of the expected type was previously stored in the context.
 	NoData = errors.New("no data")
-	// NilValue value is nil.
+
+	// NilValue is returned when a nil pointer is provided to a function that expects
+	// a valid pointer. This can happen with ParsedDataFromContext or Parse when
+	// the destination pointer is nil.
 	NilValue = errors.New("value is nil")
-	// NotPtr not a pointer.
+
+	// NotPtr is returned when a non-pointer value is provided to a function that
+	// expects a pointer. This typically occurs when calling Parse with a non-pointer
+	// destination.
 	NotPtr = errors.New("not a ptr")
-	// NotSupported type is not supported.
+
+	// NotSupported is returned when attempting to parse or set a value of a type
+	// that is not supported by the roamer package.
 	NotSupported = errors.New("not supported type")
-	// FieldIndexOutOfBounds field index out of bounds.
+
+	// FieldIndexOutOfBounds is returned when attempting to access a struct field
+	// using an index that is out of range. This should generally not occur during
+	// normal operation and indicates an internal error.
 	FieldIndexOutOfBounds = errors.New("field index out of bounds")
 )
 
-// DecodeError decode error.
+// DecodeError represents an error that occurred during the decoding of an HTTP
+// request body. It wraps the underlying error that caused the decoding failure.
+//
+// DecodeError can be detected using the IsDecodeError function in the roamer package:
+//
+//	if decodeErr, ok := roamer.IsDecodeError(err); ok {
+//	    // Handle decode error
+//	}
 type DecodeError struct {
+	// Err is the underlying error that caused the decoding failure.
+	// This could be a JSON parsing error, XML parsing error, etc.
 	Err error
 }
 
-// Error returns string.
+// Error returns a string representation of the decode error.
+// This method implements the error interface.
 func (d DecodeError) Error() string {
 	return d.Err.Error()
 }
 
-// SliceIterationError slice iteration error.
+// Unwrap returns the underlying error that caused the decoding failure.
+// This method implements the interface for errors.Unwrap(), allowing the use
+// of errors.Is() and errors.As() functions to examine the error chain.
+func (d DecodeError) Unwrap() error {
+	return d.Err
+}
+
+// SliceIterationError represents an error that occurred while iterating over
+// a slice during parsing or processing. It captures both the underlying error
+// and the index of the slice element where the error occurred.
+//
+// SliceIterationError can be detected using the IsSliceIterationError function
+// in the roamer package:
+//
+//	if iterErr, ok := roamer.IsSliceIterationError(err); ok {
+//	    // Access iterErr.Index to get the index where the error occurred
+//	    // Handle slice iteration error
+//	}
 type SliceIterationError struct {
-	Err   error
+	// Err is the underlying error that occurred during slice iteration.
+	Err error
+
+	// Index is the position in the slice where the error occurred.
+	// This allows pinpointing which element caused the problem.
 	Index int
 }
 
-// Error returns string.
+// Error returns a string representation of the slice iteration error,
+// including the index where the error occurred.
+// This method implements the error interface.
 func (s SliceIterationError) Error() string {
 	return fmt.Sprintf("slice element with index %d: %v", s.Index, s.Err)
 }
 
-// FormatterNotFound not found formatter error.
+// Unwrap returns the underlying error that occurred during slice iteration.
+// This method implements the interface for errors.Unwrap(), allowing the use
+// of errors.Is() and errors.As() functions to examine the error chain.
+// This is useful for checking what specific type of error occurred while
+// still maintaining the context of which slice element caused it.
+func (s SliceIterationError) Unwrap() error {
+	return s.Err
+}
+
+// FormatterNotFound is returned when a formatter tag references a formatter
+// that is not registered. This typically occurs when using a formatter tag
+// in a struct field but not registering the corresponding formatter.
 type FormatterNotFound struct {
-	Tag       string
+	// Tag is the struct tag name that references the formatter.
+	Tag string
+
+	// Formatter is the name of the formatter that could not be found.
 	Formatter string
 }
 
-// Error returns string.
+// Error returns a string representation of the formatter not found error.
+// This method implements the error interface.
 func (f FormatterNotFound) Error() string {
 	return "formatter '" + f.Formatter + "' not found for tag '" + f.Tag + "'"
 }
