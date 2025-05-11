@@ -8,6 +8,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+var num = 1
+
 type implementsStringer struct {
 }
 
