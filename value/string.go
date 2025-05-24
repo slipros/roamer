@@ -1,4 +1,3 @@
-// Package value provides utilities for type conversion and setting values in Go structs.
 package value
 
 import (
@@ -6,7 +5,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
@@ -16,52 +14,16 @@ import (
 // It's used for type comparison and conversion.
 var typeString = reflect.TypeOf("")
 
-// typeTime is a reflect.Type for the time.Time type.
-// It's used for type comparison when handling time values.
-var typeTime = reflect.TypeOf(time.Time{})
-
-// Common time layouts used for time parsing.
-var timeLayouts = []string{
-	time.RFC3339,
-	time.RFC3339Nano,
-	time.RFC1123,
-	time.RFC1123Z,
-	time.RFC822,
-	time.RFC822Z,
-	time.RFC850,
-	"2006-01-02",
-	"2006-01-02 15:04:05",
-	"2006-01-02T15:04:05",
-	"2006-01-02 15:04:05.999999999 -0700 MST",
-	"01/02/2006",
-	"01/02/2006 15:04:05",
-}
-
-// SetString converts a string value to the appropriate type for the target field
-// and sets the field's value. This function handles conversion to various types,
-// including all numeric types, booleans, slices, and types that implement the
-// TextUnmarshaler or BinaryUnmarshaler interfaces.
+// SetString converts a string value to the appropriate type for a target field.
+// Handles conversion to numeric types, booleans, slices, time.Time and other types.
+// Supports types implementing TextUnmarshaler or BinaryUnmarshaler interfaces.
 //
 // Parameters:
-//   - field: The target field to set (as a reflect.Value).
-//   - str: The string value to convert and set.
+//   - field: Target field to set (reflect.Value).
+//   - str: String value to convert and set.
 //
 // Returns:
-//   - error: An error if the conversion or setting fails, or nil if successful.
-//
-// Example usage (internal to the package):
-//
-//	// Convert and set a string value to an int field
-//	intField := reflect.ValueOf(&myStruct).Elem().FieldByName("Count")
-//	if err := SetString(intField, "42"); err != nil {
-//	    return err
-//	}
-//
-//	// Convert and set a string value to a time.Time field
-//	timeField := reflect.ValueOf(&myStruct).Elem().FieldByName("CreatedAt")
-//	if err := SetString(timeField, "2023-01-15T12:00:00Z"); err != nil {
-//	    return err
-//	}
+//   - error: If conversion or assignment fails.
 func SetString(field reflect.Value, str string) error {
 	// Check if field can be set
 	if !field.CanSet() {
@@ -297,31 +259,39 @@ func setSliceFromString(field reflect.Value, str string) error {
 		return nil
 
 	case reflect.String:
-		// For []string, we have options:
-		// 1. If there are delimiters, split the string
-		if strings.Contains(str, ",") {
-			// Split by comma and trim spaces
-			parts := strings.Split(str, ",")
-			for _, part := range parts {
-				trimmed := strings.TrimSpace(part)
-				if trimmed != "" {
-					// Convert value if needed
-					strValue := reflect.ValueOf(trimmed)
-					if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
-						strValue = strValue.Convert(elemType)
-					}
-					field.Set(reflect.Append(field, strValue))
-				}
+		if !strings.Contains(str, ",") {
+			// Single value case - avoid slice creation
+			strValue := reflect.ValueOf(str)
+			if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
+				strValue = strValue.Convert(elemType)
 			}
+			field.Set(reflect.Append(field, strValue))
 			return nil
 		}
 
-		// 2. If no delimiters, treat as a single string element
-		strValue := reflect.ValueOf(str)
-		if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
-			strValue = strValue.Convert(elemType)
+		// Pre-calculate capacity to reduce allocations
+		commaCount := strings.Count(str, ",")
+		parts := make([]string, 0, commaCount+1)
+
+		// Use strings.FieldsFunc for better performance
+		parts = strings.FieldsFunc(str, func(r rune) bool {
+			return r == ','
+		})
+
+		// Pre-allocate slice with known capacity
+		newSlice := reflect.MakeSlice(field.Type(), 0, len(parts))
+
+		for _, part := range parts {
+			if part = strings.TrimSpace(part); part != "" {
+				strValue := reflect.ValueOf(part)
+				if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
+					strValue = strValue.Convert(elemType)
+				}
+				newSlice = reflect.Append(newSlice, strValue)
+			}
 		}
-		field.Set(reflect.Append(field, strValue))
+		field.Set(newSlice)
+
 		return nil
 
 	default:
@@ -370,16 +340,14 @@ func setStructFromString(field reflect.Value, str string) error {
 
 // setTimeFromString parses a string into a time.Time value using various layouts.
 func setTimeFromString(field reflect.Value, str string) error {
-	// Try parsing with common layouts
-	for _, layout := range timeLayouts {
-		if t, err := time.Parse(layout, str); err == nil {
-			field.Set(reflect.ValueOf(t))
-			return nil
-		}
+	t, err := parseTime(str)
+	if err != nil {
+		return err
 	}
 
-	// If we get here, none of the layouts worked
-	return errors.Errorf("cannot parse '%s' as time.Time with any known layout", str)
+	field.Set(reflect.ValueOf(t))
+
+	return nil
 }
 
 // setMapFromString attempts to set a map value from a string.
@@ -448,17 +416,8 @@ func tryUnmarshalers(field reflect.Value, str string) error {
 	return implementsBytesUnmarshaler(ptr.Interface(), str)
 }
 
-// implementsBytesUnmarshaler checks if the provided value implements
-// TextUnmarshaler or BinaryUnmarshaler interfaces, and if so, calls
-// the appropriate method to unmarshal the string.
-//
-// Parameters:
-//   - ptr: A pointer to the value that might implement the unmarshaler interfaces.
-//   - str: The string value to unmarshal.
-//
-// Returns:
-//   - error: An error if unmarshaling fails or if the value doesn't implement
-//     either interface, or nil if successful.
+// implementsBytesUnmarshaler uses TextUnmarshaler or BinaryUnmarshaler interfaces
+// to unmarshal a string into a value, if supported.
 func implementsBytesUnmarshaler(ptr any, str string) error {
 	switch i := ptr.(type) {
 	case encoding.TextUnmarshaler:

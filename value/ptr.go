@@ -6,13 +6,7 @@ import (
 )
 
 // Pointer gets a pointer to the underlying value of a reflect.Value.
-// This is useful when you need to pass a pointer to a field to a function
-// that requires a pointer argument.
-//
-// The function handles both values that are already pointers and values
-// that need to be converted to pointers. For non-pointer values, the function
-// attempts to get the address of the value (which may fail if the value is
-// not addressable).
+// Handles both existing pointers and non-pointer values that need addressing.
 //
 // Parameters:
 //   - value: The reflect.Value to get a pointer to.
@@ -20,19 +14,6 @@ import (
 // Returns:
 //   - any: A pointer to the value, or nil if not possible.
 //   - bool: Whether the operation was successful.
-//
-// Example usage (internal to the package):
-//
-//	// Get a pointer to a struct field
-//	field := reflect.ValueOf(&myStruct).Elem().FieldByName("Name")
-//	ptr, ok := Pointer(field)
-//	if !ok {
-//	    return errors.New("failed to get pointer to field")
-//	}
-//
-//	// Now ptr is a *string that can be passed to a function
-//	// expecting a string pointer
-//	stringPtr := ptr.(*string)
 func Pointer(value reflect.Value) (any, bool) {
 	switch value.Kind() {
 	case reflect.Ptr:

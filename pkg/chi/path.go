@@ -9,22 +9,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// NewPath creates a path parameter extraction function that works with the chi router.
-// It creates a new route context and uses chi's routing system to extract
-// path parameters from the request URL.
-//
-// Parameters:
-//   - mux: The chi.Mux router instance to use for parameter lookup.
-//
-// Returns:
-//   - A function that extracts path parameters from HTTP requests.
+// NewPath creates a path parameter extraction function compatible with chi router.
+// Returns a function that extracts URL path parameters from HTTP requests.
 //
 // Example:
 //
-//	// Create a router
+//	// Setup with chi router
 //	router := chi.NewRouter()
-//
-//	// Create a roamer instance with the chi path parser
 //	r := roamer.NewRoamer(
 //	    roamer.WithParsers(
 //	        parser.NewPath(chi.NewPath(router)),

@@ -5,3 +5,7 @@
 // The package is designed to be extensible, allowing users to create custom formatters
 // for specific needs.
 package formatter
+
+const (
+	SplitSymbol = ","
+)

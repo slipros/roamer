@@ -1,10 +1,10 @@
-// Package parser provides parsers for extracting data from HTTP requests.
 package parser
 
 import (
 	"net/http"
 	"reflect"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -19,45 +19,31 @@ const (
 // if the primary header is not present.
 type Header struct{}
 
-// NewHeader creates a new Header parser.
+// NewHeader creates a Header parser for extracting HTTP headers from requests.
 //
 // Example:
 //
-//	// Create a header parser
-//	headerParser := parser.NewHeader()
-//
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithParsers(headerParser),
-//	)
-//
-//	// Example struct using the parser
 //	type Request struct {
 //	    UserAgent string `header:"User-Agent"`
-//	    Accept    string `header:"Accept"`
-//	    // Multiple headers with fallback (tries each one until it finds a non-empty value)
-//	    ClientIP  string `header:"X-Forwarded-For,X-Real-IP,CF-Connecting-IP"`
+//	    // Multiple headers with fallback (tries each until finding non-empty value)
+//	    ClientIP  string `header:"X-Forwarded-For,X-Real-IP"`
 //	}
 func NewHeader() *Header {
 	return &Header{}
 }
 
 // Parse extracts a header from an HTTP request based on the provided struct tag.
-// If the header exists, it returns the value and true.
-// If the header does not exist, it returns an empty string and false.
-//
-// The tag may contain a comma-separated list of header names to try.
-// In this case, the parser will try each header in order until it finds
-// a non-empty value.
+// The tag may contain a comma-separated list of header names, and the parser will
+// try each header until finding a non-empty value.
 //
 // Parameters:
 //   - r: The HTTP request to extract headers from.
 //   - tag: The struct tag containing the header name(s).
-//   - _: Cache parameter (not used by this parser).
+//   - _: Cache parameter (not used).
 //
 // Returns:
-//   - any: The parsed header value (string).
-//   - bool: Whether a valid header value was found.
+//   - any: The header value (string).
+//   - bool: Whether a valid header was found.
 func (h *Header) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagHeader)
 	if !ok {
@@ -82,16 +68,21 @@ func (h *Header) Tag() string {
 	return TagHeader
 }
 
-// manyValues handles the case where multiple header names are provided
-// in a comma-separated list. It tries each header in sequence until it
-// finds a non-empty value.
+// manyValues handles multiple header names in a comma-separated list.
+// It tries each header in sequence until finding a non-empty value.
 //
-// Example: `header:"X-Forwarded-For,X-Real-IP,CF-Connecting-IP"`
-// This will try X-Forwarded-For first, then X-Real-IP, then CF-Connecting-IP,
-// and return the first non-empty value.
+// Example: `header:"X-Forwarded-For,X-Real-IP"`
 func (h *Header) manyValues(r *http.Request, tagValue string) (string, bool) {
-	for _, v := range strings.Split(tagValue, SplitSymbol) {
-		headerValue := r.Header.Get(strings.TrimSpace(v))
+	for _, headerName := range strings.Split(tagValue, SplitSymbol) {
+		if len(headerName) == 0 {
+			continue
+		}
+
+		if unicode.IsSpace(rune(headerName[0])) || unicode.IsSpace(rune(headerName[len(headerName)-1])) {
+			headerName = strings.TrimSpace(headerName)
+		}
+
+		headerValue := r.Header.Get(headerName)
 		if len(headerValue) == 0 {
 			continue
 		}

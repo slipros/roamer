@@ -1,4 +1,3 @@
-// Package roamer provides a flexible HTTP request parser.
 package roamer
 
 // OptionsFunc is a function type for configuring a Roamer instance.
@@ -6,18 +5,16 @@ package roamer
 // extensible API for customizing the behavior of the parser.
 type OptionsFunc func(*Roamer)
 
-// WithParsers registers one or more parsers with a Roamer instance.
-// Parsers are responsible for extracting data from different parts of an HTTP request
-// (headers, query parameters, cookies, etc.) based on struct tags.
+// WithParsers registers parsers that extract data from HTTP requests.
+// Parsers handle different parts of a request based on struct tags.
 //
 // Example:
 //
 //	r := roamer.NewRoamer(
 //	    roamer.WithParsers(
-//	        parser.NewQuery(),    // Parse query parameters using the 'query' tag
-//	        parser.NewHeader(),   // Parse headers using the 'header' tag
-//	        parser.NewCookie(),   // Parse cookies using the 'cookie' tag
-//	        parser.NewPath(),     // Parse path parameters using the 'path' tag
+//	        parser.NewQuery(),    // 'query' tag for URL parameters
+//	        parser.NewHeader(),   // 'header' tag for HTTP headers
+//	        parser.NewCookie(),   // 'cookie' tag for cookies
 //	    ),
 //	)
 func WithParsers(parsers ...Parser) OptionsFunc {
@@ -28,17 +25,16 @@ func WithParsers(parsers ...Parser) OptionsFunc {
 	}
 }
 
-// WithDecoders registers one or more decoders with a Roamer instance.
-// Decoders are responsible for parsing the HTTP request body based on
-// the Content-Type header (e.g., JSON, XML, form data).
+// WithDecoders registers decoders for parsing request bodies.
+// Decoders handle different content types like JSON, XML, or form data.
 //
 // Example:
 //
 //	r := roamer.NewRoamer(
 //	    roamer.WithDecoders(
-//	        decoder.NewJSON(),            // Parse JSON request bodies
-//	        decoder.NewFormURL(),         // Parse URL-encoded form data
-//	        decoder.NewMultipartFormData(), // Parse multipart form data (with file uploads)
+//	        decoder.NewJSON(),               // JSON bodies
+//	        decoder.NewFormURL(),            // URL-encoded forms
+//	        decoder.NewMultipartFormData(),  // Multipart forms
 //	    ),
 //	)
 func WithDecoders(decoders ...Decoder) OptionsFunc {
@@ -49,21 +45,20 @@ func WithDecoders(decoders ...Decoder) OptionsFunc {
 	}
 }
 
-// WithFormatters registers one or more formatters with a Roamer instance.
-// Formatters are used to process field values after they have been parsed,
-// allowing for operations like string trimming, case conversion, etc.
+// WithFormatters registers formatters that process values after parsing.
+// Formatters handle operations like string trimming or case conversion.
 //
 // Example:
 //
 //	r := roamer.NewRoamer(
 //	    roamer.WithFormatters(
-//	        formatter.NewString(), // Apply string formatters based on the 'string' tag
+//	        formatter.NewString(), // Apply 'string' tag formatters
 //	    ),
 //	)
 //
-//	// Usage in a struct:
+//	// Example usage:
 //	type User struct {
-//	    Name string `json:"name" string:"trim_space"` // Trim spaces from the parsed name
+//	    Name string `json:"name" string:"trim_space"` // Trim spaces
 //	}
 func WithFormatters(formatters ...Formatter) OptionsFunc {
 	return func(r *Roamer) {
@@ -73,39 +68,17 @@ func WithFormatters(formatters ...Formatter) OptionsFunc {
 	}
 }
 
-// WithSkipFilled controls whether the parser should skip fields that already
-// have non-zero values. When set to true (default), fields that are already
-// filled will not be overwritten by parsed values.
+// WithSkipFilled controls whether to skip fields with non-zero values.
+// When true (default), existing non-zero values won't be overwritten.
 //
 // Example:
 //
-//	// Don't skip filled fields (overwrite all fields with parsed values)
+//	// Override even filled fields
 //	r := roamer.NewRoamer(
 //	    roamer.WithSkipFilled(false),
 //	)
-//
-//	// Pre-fill some fields and let the parser fill the rest
-//	user := User{Name: "Default Name"}
-//	r.Parse(req, &user) // Will not overwrite the Name field if WithSkipFilled(true)
 func WithSkipFilled(skip bool) OptionsFunc {
 	return func(r *Roamer) {
 		r.skipFilled = skip
-	}
-}
-
-// WithExperimentalFastStructFieldParser enables the use of an experimental fast struct field parser.
-// This can improve performance but may not be as stable as the standard parser.
-//
-// Warning: This is an experimental feature and may change or be removed in future versions.
-//
-// Example:
-//
-//	// Enable experimental fast struct field parser
-//	r := roamer.NewRoamer(
-//	    roamer.WithExperimentalFastStructFieldParser(),
-//	)
-func WithExperimentalFastStructFieldParser() OptionsFunc {
-	return func(r *Roamer) {
-		r.experimentalFastStructField = true
 	}
 }

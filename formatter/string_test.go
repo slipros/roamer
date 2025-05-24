@@ -234,7 +234,7 @@ func TestWithExtendedStringFormatters_Successfully(t *testing.T) {
 	// Create base formatter with a custom formatter and the default trim_space
 	baseFormatters := StringsFormatters{
 		"base":       func(s string) string { return "base:" + s },
-		"trim_space": strings.TrimSpace, // Включаем встроенный форматтер явно
+		"trim_space": strings.TrimSpace, // Include built-in formatter explicitly
 	}
 
 	// Create extended formatters

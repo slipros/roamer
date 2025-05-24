@@ -19,7 +19,7 @@ Roamer is a flexible, extensible HTTP request parser for Go that makes handling 
 - **Type conversion**: Automatic conversion of string values to appropriate Go types
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
 - **Middleware support**: Convenient middleware for integrating with HTTP handlers
-- **Performance optimizations**: Experimental features for reducing allocations and improving performance
+- **Performance optimizations**: Efficient reflection techniques and caching for improved performance
 
 ## Installation
 
@@ -782,15 +782,11 @@ func main() {
 
 ## Performance Optimization
 
-Roamer includes experimental features to optimize performance:
+Roamer is designed with performance in mind, using efficient reflection techniques and caching where possible. For optimal performance:
 
-```go
-// Enable experimental fast struct field parser to reduce heap allocations
-r := roamer.NewRoamer(
-	roamer.WithParsers(parser.NewHeader(), parser.NewQuery()),
-	roamer.WithExperimentalFastStructFieldParser(),
-)
-```
+- Use request structs that only include fields needed for specific endpoints
+- Consider the performance implications of heavy reflection usage
+- Benchmark your specific use case to identify bottlenecks
 
 ## Best Practices for Using Roamer
 
@@ -1082,11 +1078,11 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 ### How does roamer perform with high-load applications?
 
-Roamer is designed with performance in mind, using efficient reflection techniques and caching where possible. The experimental fast struct field parser feature can further reduce memory allocations. For high-load applications, consider:
+Roamer is designed with performance in mind, using efficient reflection techniques and caching where possible. For high-load applications, consider:
 
 1. Using request structs that only include fields needed for specific endpoints
-2. Enabling the experimental fast struct field parser
-3. Benchmarking your specific use case to identify bottlenecks
+2. Benchmarking your specific use case to identify bottlenecks
+3. Profiling memory usage and allocations in your specific context
 
 ### Can I use roamer with OpenAPI/Swagger specifications?
 

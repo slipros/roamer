@@ -687,28 +687,6 @@ func TestFormURL_Decode(t *testing.T) {
 
 			require.EqualValues(t, args.want, args.ptr)
 		})
-
-		t.Run("experiment_"+tt.name, func(t *testing.T) {
-			args := tt.args()
-			f := NewFormURL()
-			f.EnableExperimentalFastStructFieldParser()
-
-			err := f.Decode(args.req, args.ptr)
-			if !tt.wantErr && err != nil {
-				require.NoError(t, err)
-			}
-
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			if tt.wantNotEqual {
-				require.NotEqualValues(t, args.want, args.ptr)
-				return
-			}
-
-			require.EqualValues(t, args.want, args.ptr)
-		})
 	}
 }
 
@@ -781,89 +759,6 @@ func BenchmarkFormURL_Decode(b *testing.B) {
 	req.Header.Add("Content-Type", ContentTypeFormURL)
 
 	f := NewFormURL(WithSkipFilled[*FormURL](false))
-	var d Data
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		if err := f.Decode(req, &d); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkFormURL_Decode_FastStructFieldParser(b *testing.B) {
-	var (
-		str           = "string"
-		integerString = fmt.Sprintf("%d", 1)
-		floatString   = fmt.Sprintf("%f", float32(1))
-	)
-
-	integer, err := strconv.Atoi(integerString)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	floating64 := float64(integer)
-	complexNum128 := complex(floating64, 0)
-	complexString := fmt.Sprintf("%f", complexNum128)
-
-	form := make(url.Values, 20)
-	form.Add("string", str)
-	form.Add("string_ptr", str)
-	form.Add("int", integerString)
-	form.Add("int_ptr", integerString)
-	form.Add("int_8", integerString)
-	form.Add("int_8_ptr", integerString)
-	form.Add("int_16", integerString)
-	form.Add("int_16_ptr", integerString)
-	form.Add("int_32", integerString)
-	form.Add("int_32_ptr", integerString)
-	form.Add("int_64", integerString)
-	form.Add("int_64_ptr", integerString)
-	form.Add("float_32", floatString)
-	form.Add("float_32_ptr", floatString)
-	form.Add("float_64", floatString)
-	form.Add("float_64_ptr", floatString)
-	form.Add("complex_64", complexString)
-	form.Add("complex_64_ptr", complexString)
-	form.Add("complex_128", complexString)
-	form.Add("complex_128_ptr", complexString)
-
-	type Data struct {
-		String        string      `form:"string"`
-		StringPtr     *string     `form:"string_ptr"`
-		Integer       int         `form:"int"`
-		IntegerPtr    *int        `form:"int_ptr"`
-		Integer8      int8        `form:"int_8"`
-		Integer8Ptr   *int8       `form:"int_8_ptr"`
-		Integer16     int16       `form:"int_16"`
-		Integer16Ptr  *int16      `form:"int_16_ptr"`
-		Integer32     int32       `form:"int_32"`
-		Integer32Ptr  *int32      `form:"int_32_ptr"`
-		Integer64     int64       `form:"int_64"`
-		Integer64Ptr  *int64      `form:"int_64_ptr"`
-		Float32       float32     `form:"float_32"`
-		Float32Ptr    *float32    `form:"float_32_ptr"`
-		Float64       float64     `form:"float_64"`
-		Float64Ptr    *float64    `form:"float_64_ptr"`
-		Complex64     complex64   `form:"complex_64"`
-		Complex64Ptr  *complex64  `form:"complex_64_ptr"`
-		Complex128    complex128  `form:"complex_128"`
-		Complex128Ptr *complex128 `form:"complex_128_ptr"`
-	}
-
-	req, err := http.NewRequest(http.MethodPost, requestURL, strings.NewReader(form.Encode()))
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	req.Header.Add("Content-Type", ContentTypeFormURL)
-
-	f := NewFormURL(WithSkipFilled[*FormURL](false))
-	f.EnableExperimentalFastStructFieldParser()
-
 	var d Data
 
 	b.ReportAllocs()

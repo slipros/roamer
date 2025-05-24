@@ -12,24 +12,21 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
-// Set assigns a value to a reflect.Value field, performing type conversion if necessary.
-// This is a high-level function that handles various input types and target field types,
-// dispatching to specialized setters based on the input type.
+// Set assigns a value to a reflect.Value field with automatic type conversion.
+// Handles initialization of nil pointers, various primitive types, and interfaces.
 //
-// The function handles:
-// - Automatic initialization of nil pointers
-// - Type conversion between compatible types
-// - Special handling for strings, integers, floats, booleans, and string slices
-// - Support for fmt.Stringer interface
-//
-// If the value cannot be set (e.g., incompatible types), an error is returned.
+// Key features:
+// - Converts between compatible types (string to int, float to string, etc.)
+// - Initializes nil pointers when needed
+// - Supports fmt.Stringer interface
+// - Handles slices and common primitive types
 //
 // Parameters:
-//   - field: The target field to set (as a reflect.Value).
-//   - value: The value to set (can be of any type).
+//   - field: Target field to set (reflect.Value).
+//   - value: Value to assign (any type).
 //
 // Returns:
-//   - error: An error if the value could not be set, or nil if successful.
+//   - error: If value could not be set due to type incompatibility.
 func Set(field reflect.Value, value any) error {
 	// Check if field can be set
 	if !field.CanSet() {
@@ -42,8 +39,10 @@ func Set(field reflect.Value, value any) error {
 		return nil
 	}
 
+	kind := field.Kind()
+
 	// Initialize and dereference nil pointers recursively
-	if field.Kind() == reflect.Pointer {
+	if kind == reflect.Pointer {
 		if field.IsNil() {
 			// Initialize the pointer with a new value of the appropriate type
 			field.Set(reflect.New(field.Type().Elem()))
@@ -65,7 +64,7 @@ func Set(field reflect.Value, value any) error {
 		return SetString(field, *t)
 	case bool:
 		// Add direct support for boolean values
-		if field.Kind() == reflect.Bool {
+		if kind == reflect.Bool {
 			field.SetBool(t)
 			return nil
 		}
@@ -75,7 +74,7 @@ func Set(field reflect.Value, value any) error {
 			field.Set(reflect.Zero(field.Type()))
 			return nil
 		}
-		if field.Kind() == reflect.Bool {
+		if kind == reflect.Bool {
 			field.SetBool(*t)
 			return nil
 		}
@@ -180,7 +179,7 @@ func Set(field reflect.Value, value any) error {
 		return SetSliceString(field, t)
 	case []any:
 		// Handle []any differently based on the field type
-		if field.Kind() == reflect.Slice {
+		if kind == reflect.Slice {
 			return handleInterfaceSlice(field, t)
 		}
 	}
