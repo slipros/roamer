@@ -1,4 +1,3 @@
-// Package decoder provides decoders for extracting data from HTTP request bodies.
 package decoder
 
 import (
@@ -25,29 +24,21 @@ type XML struct {
 	contentType string // The Content-Type header value that this decoder handles
 }
 
-// NewXML creates a new XML decoder with the specified options.
-// By default, it handles requests with Content-Type "application/xml".
+// NewXML creates an XML decoder for handling application/xml content.
+// Uses standard library's encoding/xml package for XML parsing.
 //
 // Example:
 //
-//	// Create an XML decoder with default settings
+//	// Default XML decoder
 //	xmlDecoder := decoder.NewXML()
 //
-//	// Create an XML decoder with custom Content-Type
-//	xmlDecoder := decoder.NewXML(
-//	    decoder.WithContentType("text/xml"),
-//	)
+//	// With custom Content-Type
+//	xmlDecoder := decoder.NewXML(decoder.WithContentType("text/xml"))
 //
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithDecoders(xmlDecoder),
-//	)
-//
-//	// Example struct using XML tags
+//	// Example struct
 //	type BookRequest struct {
 //	    Title  string `xml:"title"`
 //	    Author string `xml:"author"`
-//	    Year   int    `xml:"year"`
 //	}
 func NewXML(opts ...XMLOptionsFunc) *XML {
 	x := XML{
@@ -62,17 +53,14 @@ func NewXML(opts ...XMLOptionsFunc) *XML {
 }
 
 // Decode parses an XML request body into the provided pointer.
-// It uses the standard library's encoding/xml package for XML parsing.
-//
-// The function handles empty bodies gracefully (treating them as an empty XML document).
-// For other parsing errors, the original error is returned.
+// Handles empty bodies gracefully as empty XML documents.
 //
 // Parameters:
-//   - r: The HTTP request containing the XML body to decode.
-//   - ptr: A pointer to the target structure where the decoded data will be stored.
+//   - r: The HTTP request with XML body.
+//   - ptr: Target structure pointer.
 //
 // Returns:
-//   - error: An error if decoding fails, or nil if successful.
+//   - error: Error if decoding fails, nil if successful.
 func (x *XML) Decode(r *http.Request, ptr any) error {
 	if err := xml.NewDecoder(r.Body).Decode(ptr); err != nil {
 		if !errors.Is(err, io.EOF) {

@@ -1,4 +1,3 @@
-// Package roamer provides a flexible HTTP request parser.
 package roamer
 
 import (

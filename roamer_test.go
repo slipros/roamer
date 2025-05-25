@@ -39,10 +39,7 @@ func (p *errorAfterParser) AfterParse(r *http.Request) error {
 
 // Common test types and utilities
 type fields struct {
-	skipFilled bool
-	decoders   Decoders
-	parsers    Parsers
-	formatters Formatters
+	opts []OptionsFunc
 }
 
 type args struct {
@@ -96,8 +93,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with JSON decoder
 				return fields{
-						decoders: Decoders{
-							"application/json": decoder.NewJSON(),
+						opts: []OptionsFunc{
+							WithDecoders(decoder.NewJSON()),
 						},
 					}, args{
 						req: req,
@@ -122,8 +119,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with query parser
 				return fields{
-						parsers: Parsers{
-							"query": parser.NewQuery(),
+						opts: []OptionsFunc{
+							WithParsers(parser.NewQuery()),
 						},
 					}, args{
 						req: req,
@@ -150,8 +147,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with header parser
 				return fields{
-						parsers: Parsers{
-							"header": parser.NewHeader(),
+						opts: []OptionsFunc{
+							WithParsers(parser.NewHeader()),
 						},
 					}, args{
 						req: req,
@@ -189,12 +186,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with parsers and decoders
 				return fields{
-						decoders: Decoders{
-							"application/json": decoder.NewJSON(),
-						},
-						parsers: Parsers{
-							"header": parser.NewHeader(),
-							"query":  parser.NewQuery(),
+						opts: []OptionsFunc{
+							WithDecoders(decoder.NewJSON()),
+							WithParsers(parser.NewHeader(), parser.NewQuery()),
 						},
 					}, args{
 						req: req,
@@ -229,8 +223,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with JSON decoder
 				return fields{
-						decoders: Decoders{
-							"application/json": decoder.NewJSON(),
+						opts: []OptionsFunc{
+							WithDecoders(decoder.NewJSON()),
 						},
 					}, args{
 						req: req,
@@ -261,8 +255,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with JSON decoder
 				return fields{
-						decoders: Decoders{
-							"application/json": decoder.NewJSON(),
+						opts: []OptionsFunc{
+							WithDecoders(decoder.NewJSON()),
 						},
 					}, args{
 						req: req,
@@ -289,11 +283,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with header parser and string formatter
 				return fields{
-						parsers: Parsers{
-							"header": parser.NewHeader(),
-						},
-						formatters: Formatters{
-							"string": formatter.NewString(),
+						opts: []OptionsFunc{
+							WithParsers(parser.NewHeader()),
+							WithFormatters(formatter.NewString()),
 						},
 					}, args{
 						req: req,
@@ -341,9 +333,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with query parser and skipFilled=true
 				return fields{
-						skipFilled: true,
-						parsers: Parsers{
-							"query": parser.NewQuery(),
+						opts: []OptionsFunc{
+							WithParsers(parser.NewQuery()),
+							WithSkipFilled(true),
 						},
 					}, args{
 						req: req,
@@ -370,9 +362,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 				// Configure roamer with query parser and skipFilled=false
 				return fields{
-						skipFilled: false,
-						parsers: Parsers{
-							"query": parser.NewQuery(),
+						opts: []OptionsFunc{
+							WithParsers(parser.NewQuery()),
+							WithSkipFilled(false),
 						},
 					}, args{
 						req: req,
@@ -393,16 +385,7 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			// Setup test scenario
 			f, a := tt.setup()
 
-			r := &Roamer{
-				skipFilled:    f.skipFilled,
-				decoders:      f.decoders,
-				parsers:       f.parsers,
-				formatters:    f.formatters,
-				hasParsers:    len(f.parsers) > 0,
-				hasDecoders:   len(f.decoders) > 0,
-				hasFormatters: len(f.formatters) > 0,
-			}
-
+			r := NewRoamer(f.opts...)
 			err := r.Parse(a.req, a.ptr)
 			// In success tests we expect no errors
 			require.NoError(t, err, "Parse() should not return an error")
@@ -472,16 +455,7 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 			// Setup test scenario
 			f, a := tt.setup()
 
-			r := &Roamer{
-				skipFilled:    f.skipFilled,
-				decoders:      f.decoders,
-				parsers:       f.parsers,
-				formatters:    f.formatters,
-				hasParsers:    len(f.parsers) > 0,
-				hasDecoders:   len(f.decoders) > 0,
-				hasFormatters: len(f.formatters) > 0,
-			}
-
+			r := NewRoamer(f.opts...)
 			err := r.Parse(a.req, a.ptr)
 			// In failure tests we expect errors
 			require.Error(t, err, "Parse() should return an error")
@@ -763,65 +737,4 @@ func BenchmarkParse_SkipFilled(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-}
-
-// Benchmark for fast struct field parser
-func BenchmarkParse_FastStructFieldParser(b *testing.B) {
-	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
-
-	r := NewRoamer(
-		WithDecoders(decoder.NewJSON()),
-		WithParsers(parser.NewHeader(), parser.NewQuery()),
-		WithExperimentalFastStructFieldParser(),
-	)
-	var data LargeStruct
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		if err := r.Parse(req, &data); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-// Benchmark to compare regular parsing vs fast struct field parser
-func BenchmarkParse_RegularVsFast(b *testing.B) {
-	req, _ := prepareTestHTTPRequest(b, http.MethodPost, true, true, true)
-
-	b.Run("Regular", func(b *testing.B) {
-		r := NewRoamer(
-			WithDecoders(decoder.NewJSON()),
-			WithParsers(parser.NewHeader(), parser.NewQuery()),
-		)
-		var data LargeStruct
-
-		b.ReportAllocs()
-		b.ResetTimer()
-
-		for i := 0; i < b.N; i++ {
-			if err := r.Parse(req, &data); err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
-	b.Run("FastStructFieldParser", func(b *testing.B) {
-		r := NewRoamer(
-			WithDecoders(decoder.NewJSON()),
-			WithParsers(parser.NewHeader(), parser.NewQuery()),
-			WithExperimentalFastStructFieldParser(),
-		)
-		var data LargeStruct
-
-		b.ReportAllocs()
-		b.ResetTimer()
-
-		for i := 0; i < b.N; i++ {
-			if err := r.Parse(req, &data); err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
 }

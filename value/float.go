@@ -1,4 +1,3 @@
-// Package value provides utilities for type conversion and setting values in Go structs.
 package value
 
 import (
@@ -12,32 +11,16 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
-// SetFloat converts a floating-point value to the appropriate type for the target field
-// and sets the field's value. This function handles conversion to various types,
-// including strings, booleans, all numeric types, complex types, and interfaces.
-//
-// The function is generic and works with any floating-point type (float32, float64).
+// SetFloat converts a floating-point value to the appropriate type for a target field.
+// Handles conversion to strings, booleans, numeric types, complex types, and interfaces.
+// Special values (NaN, Infinity) are handled appropriately for each target type.
 //
 // Parameters:
-//   - field: The target field to set (as a reflect.Value).
-//   - number: The floating-point value to convert and set.
+//   - field: Target field to set (reflect.Value).
+//   - number: Floating-point value to convert and set.
 //
 // Returns:
-//   - error: An error if the conversion or setting fails, or nil if successful.
-//
-// Example usage (internal to the package):
-//
-//	// Convert and set a float64 value to a string field
-//	stringField := reflect.ValueOf(&myStruct).Elem().FieldByName("Score")
-//	if err := SetFloat(stringField, 42.5); err != nil {
-//	    return err
-//	}
-//
-//	// Convert and set a float32 value to an int field
-//	intField := reflect.ValueOf(&myStruct).Elem().FieldByName("RoundedScore")
-//	if err := SetFloat(intField, float32(42.5)); err != nil {
-//	    return err // Will set 42
-//	}
+//   - error: If conversion or assignment fails.
 func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 	// Check if the field is settable
 	if !field.CanSet() {

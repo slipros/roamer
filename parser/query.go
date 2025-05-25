@@ -1,4 +1,3 @@
-// Package parser provides parsers for extracting data from HTTP requests.
 package parser
 
 import (
@@ -68,18 +67,18 @@ type Query struct {
 	splitSymbol string // The character to use when splitting values
 }
 
-// NewQuery creates a new Query parser with the specified options.
-// By default, it will split comma-separated query values using a comma as the separator.
+// NewQuery creates a Query parser with specified options.
+// By default, splits comma-separated values into slices.
 //
 // Example:
 //
-//	// Create a default query parser
+//	// Default query parser
 //	parser := parser.NewQuery()
 //
-//	// Create a query parser with custom options
+//	// With custom options
 //	parser := parser.NewQuery(
-//	    parser.WithDisabledSplit(),            // Don't split comma-separated values
-//	    parser.WithSplitSymbol(";"),           // Use semicolon as separator (if splitting is enabled)
+//	    parser.WithDisabledSplit(),      // Don't split comma-separated values
+//	    parser.WithSplitSymbol(";"),     // Use semicolon as separator
 //	)
 func NewQuery(opts ...QueryOptionsFunc) *Query {
 	q := Query{split: true, splitSymbol: SplitSymbol}
@@ -124,11 +123,13 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 	}
 
 	if len(values) == 1 {
-		if q.split && strings.Contains(values[0], q.splitSymbol) {
-			return strings.Split(values[0], q.splitSymbol), true
+		v := values[0]
+
+		if q.split && strings.Contains(v, q.splitSymbol) {
+			return strings.Split(v, q.splitSymbol), true
 		}
 
-		return values[0], true
+		return v, true
 	}
 
 	return values, true

@@ -1,19 +1,20 @@
 // Package roamer provides a flexible HTTP request parser for Go applications.
-// It allows easy extraction of data from various parts of an HTTP request
-// (headers, query parameters, cookies, body) into Go structures using struct tags.
+// It extracts data from various parts of an HTTP request (headers, query parameters,
+// cookies, body) into Go structures using struct tags, simplifying API development.
 package roamer
 
 import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
-	rexp "github.com/slipros/roamer/internal/experiment"
+	"github.com/slipros/roamer/internal/cache"
 	"github.com/slipros/roamer/parser"
 	"github.com/slipros/roamer/value"
+	"golang.org/x/exp/maps"
 )
 
 // AfterParser is an interface that can be implemented by the target struct
@@ -27,47 +28,57 @@ type AfterParser interface {
 	AfterParse(r *http.Request) error
 }
 
+// RequireStructureCache is an interface for components that require
+// a structure cache for efficient field analysis and caching.
+type RequireStructureCache interface {
+	SetStructureCache(cache *cache.StructureCache)
+}
+
 // Roamer is a flexible HTTP request parser that extracts data from various parts
 // of an HTTP request into Go structures using struct tags.
 type Roamer struct {
-	parsers                     Parsers    // Collection of registered parsers
-	decoders                    Decoders   // Collection of registered decoders
-	formatters                  Formatters // Collection of registered formatters
-	skipFilled                  bool       // Whether to skip fields that are already filled
-	hasParsers                  bool       // Whether any parsers are registered
-	hasDecoders                 bool       // Whether any decoders are registered
-	hasFormatters               bool       // Whether any formatters are registered
-	experimentalFastStructField bool       // Whether to use experimental fast struct field access
+	parsers       Parsers    // Collection of registered parsers
+	decoders      Decoders   // Collection of registered decoders
+	formatters    Formatters // Collection of registered formatters
+	skipFilled    bool       // Whether to skip fields that are already filled
+	hasParsers    bool       // Whether any parsers are registered
+	hasDecoders   bool       // Whether any decoders are registered
+	hasFormatters bool       // Whether any formatters are registered
+
+	parserCachePool sync.Pool
+	structureCache  cache.StructureCache
 }
 
-// NewRoamer creates and returns a new configured Roamer instance.
-// It accepts optional configuration functions to customize the behavior.
+// NewRoamer creates a configured Roamer instance with optional configuration.
 //
 // Example:
 //
-//	// Create a basic Roamer with JSON decoder and query parser
+//	// Basic Roamer with JSON decoder and query parser
 //	r := roamer.NewRoamer(
 //	    roamer.WithDecoders(decoder.NewJSON()),
 //	    roamer.WithParsers(parser.NewQuery()),
 //	)
 //
-//	// Create Roamer with multiple parsers and formatters
+//	// Roamer with multiple components
 //	r := roamer.NewRoamer(
 //	    roamer.WithDecoders(decoder.NewJSON(), decoder.NewFormURL()),
-//	    roamer.WithParsers(
-//	        parser.NewQuery(),
-//	        parser.NewHeader(),
-//	        parser.NewCookie(),
-//	    ),
+//	    roamer.WithParsers(parser.NewQuery(), parser.NewHeader()),
 //	    roamer.WithFormatters(formatter.NewString()),
 //	    roamer.WithSkipFilled(false), // Parse all fields, even if not zero
 //	)
 func NewRoamer(opts ...OptionsFunc) *Roamer {
+	const parserCacheCapacity = 5
+
 	r := Roamer{
 		parsers:    make(Parsers),
 		decoders:   make(Decoders),
 		formatters: make(Formatters),
 		skipFilled: true,
+		parserCachePool: sync.Pool{
+			New: func() any {
+				return make(parser.Cache, parserCacheCapacity)
+			},
+		},
 	}
 
 	for _, opt := range opts {
@@ -78,38 +89,42 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r.hasDecoders = len(r.decoders) > 0
 	r.hasFormatters = len(r.formatters) > 0
 
-	if r.experimentalFastStructField {
-		r.enableExperimentalFeatures()
+	r.structureCache = cache.NewStructureCache(
+		maps.Keys(r.decoders),
+		maps.Keys(r.parsers),
+		maps.Keys(r.formatters),
+	)
+
+	for _, d := range r.decoders {
+		if i, ok := d.(RequireStructureCache); ok {
+			i.SetStructureCache(&r.structureCache)
+		}
 	}
 
 	return &r
 }
 
-// Parse extracts data from an HTTP request into the provided pointer.
-// The pointer must be to a struct, slice, array, or map.
+// Parse extracts data from an HTTP request into the provided pointer (struct, slice, array, or map).
+// For structs, it processes both the request body and other parts (headers, query parameters, cookies)
+// according to struct tags. For slices, arrays, and maps, only the request body is processed.
 //
-// If the pointer is to a struct, both the request body and other parts of the request
-// (headers, query parameters, cookies) will be parsed according to the struct tags.
-//
-// If the pointer is to a slice, array, or map, only the request body will be parsed.
-//
-// The target type can implement the AfterParser interface to execute custom logic
-// after parsing is complete.
+// The target can implement AfterParser to execute custom logic after parsing is complete.
 //
 // Example:
 //
-//	// Define a struct with tags for parsing
 //	type UserData struct {
 //	    ID        int       `query:"id"`
 //	    Name      string    `json:"name"`
 //	    UserAgent string    `header:"User-Agent"`
-//	    SessionID string    `cookie:"session_id"`
 //	}
 //
-//	// Parse request into the struct
 //	var userData UserData
 //	err := roamer.Parse(request, &userData)
 func (r *Roamer) Parse(req *http.Request, ptr any) error {
+	if req == nil {
+		return errors.Wrapf(rerr.NilValue, "request")
+	}
+
 	if ptr == nil {
 		return errors.Wrapf(rerr.NilValue, "ptr")
 	}
@@ -147,63 +162,62 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		return err
 	}
 
-	if !r.hasParsers {
+	if !r.hasParsers && !r.hasFormatters {
 		return nil
 	}
 
 	v := reflect.Indirect(reflect.ValueOf(ptr))
 	t := v.Type()
 
-	var fieldType reflect.StructField
+	parserCache := r.parserCachePool.Get().(parser.Cache)
+	defer func() {
+		clear(parserCache)
+		r.parserCachePool.Put(parserCache)
+	}()
 
-	fieldsAmount := v.NumField()
-	cache := make(parser.Cache, fieldsAmount)
+	fields := r.structureCache.Fields(t)
 
-	for i := range fieldsAmount {
-		if r.experimentalFastStructField {
-			ft, exists := exp.FastStructField(&v, i)
-			if !exists {
-				// should never happen - anomaly.
-				return errors.WithStack(rerr.FieldIndexOutOfBounds)
-			}
+	for i := range fields {
+		f := &fields[i]
 
-			fieldType = ft
-		} else {
-			fieldType = t.Field(i)
-		}
-
-		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
+		if !f.IsExported || !f.HasTag {
 			continue
 		}
 
-		fieldValue := v.Field(i)
-		if r.skipFilled && !fieldValue.IsZero() {
-			if r.hasFormatters {
-				if err := r.formatFieldValue(&fieldType, fieldValue); err != nil {
-					return errors.WithMessagef(err, "format field `%s` in struct `%T`", fieldType.Name, ptr)
+		fieldValue := v.Field(f.Index)
+
+		if r.skipFilled && !fieldValue.IsZero() || !r.hasParsers {
+			if r.hasFormatters && len(f.Formatters) > 0 {
+				if err := r.applyFormatters(f, fieldValue); err != nil {
+					return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
 				}
 			}
 
 			continue
 		}
 
-		for tag, p := range r.parsers {
-			parsedValue, ok := p.Parse(req, fieldType.Tag, cache)
+		for _, parserName := range f.Parsers {
+			p, ok := r.parsers[parserName]
+			if !ok {
+				continue
+			}
+
+			parsedValue, ok := p.Parse(req, f.StructField.Tag, parserCache)
 			if !ok {
 				continue
 			}
 
 			if err := value.Set(fieldValue, parsedValue); err != nil {
 				return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
-					parsedValue, fieldType.Name, tag, ptr)
+					parsedValue, f.Name, parserName, ptr)
 			}
 
 			break
 		}
 
-		if r.hasFormatters {
-			if err := r.formatFieldValue(&fieldType, fieldValue); err != nil {
-				return errors.WithMessagef(err, "format field `%s` in struct `%T`", fieldType.Name, ptr)
+		if r.hasFormatters && len(f.Formatters) > 0 {
+			if err := r.applyFormatters(f, fieldValue); err != nil {
+				return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
 			}
 		}
 	}
@@ -211,22 +225,20 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	return nil
 }
 
-// formatFieldValue applies registered formatters to the field value if any formatter
-// is applicable to the field's tags. This allows post-processing of parsed values
-// (e.g., trimming strings, converting case, etc.).
-func (r *Roamer) formatFieldValue(fieldType *reflect.StructField, fieldValue reflect.Value) error {
-	if !r.formatters.has(fieldType.Tag) {
-		return nil
-	}
-
-	fieldPtrValue, ok := value.Pointer(fieldValue)
+func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) error {
+	ptr, ok := value.Pointer(fieldValue)
 	if !ok {
 		return nil
 	}
 
-	for _, f := range r.formatters {
-		if err := f.Format(fieldType.Tag, fieldPtrValue); err != nil {
-			return err
+	for _, formatterName := range field.Formatters {
+		f, ok := r.formatters[formatterName]
+		if !ok {
+			continue
+		}
+
+		if err := f.Format(field.StructField.Tag, ptr); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 
@@ -241,8 +253,8 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	contentType := req.Header.Get("Content-Type")
-	if base, _, found := strings.Cut(contentType, ";"); found {
-		contentType = base
+	if idx := strings.IndexByte(contentType, ';'); idx != -1 {
+		contentType = contentType[:idx]
 	}
 
 	d, ok := r.decoders[contentType]
@@ -257,17 +269,4 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	}
 
 	return nil
-}
-
-// enableExperimentalFeatures configures experimental features in the registered decoders.
-// Currently, this only enables the fast struct field parser if available.
-func (r *Roamer) enableExperimentalFeatures() {
-	for _, d := range r.decoders {
-		e, ok := d.(rexp.Experiment)
-		if !ok {
-			continue
-		}
-
-		e.EnableExperimentalFastStructFieldParser()
-	}
 }

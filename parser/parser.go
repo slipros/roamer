@@ -1,29 +1,21 @@
-// Package parser provides parsers for extracting data from HTTP requests.
-// These parsers are used by the roamer package to populate struct fields
-// based on struct tags.
+// Package parser provides components for extracting data from HTTP requests.
+// These parsers extract values from different request sources based on struct tags.
 package parser
 
-// Cache is a type alias for a map that stores parsed values.
-// It is used to avoid redundant parsing of the same values from an HTTP request
-// when multiple struct fields use the same tag.
+// Cache stores parsed values to prevent redundant parsing of the same request elements.
+// Used internally by parsers to optimize performance for repeated request data.
 //
-// For example, if multiple struct fields use the same query parameter,
-// the parameter will be parsed once and cached for subsequent fields.
-//
-// Example usage (internal to parsers):
+// Example usage within parsers:
 //
 //	func (p *MyParser) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any, bool) {
-//	    // Check if value is already cached
-//	    if cachedValue, ok := cache["my_cache_key"]; ok {
+//	    if cachedValue, ok := cache["my_key"]; ok {
 //	        return cachedValue, true
 //	    }
 //
-//	    // Parse value
-//	    // ...
+//	    // Parse value and store in cache
+//	    value := parseValue(r)
+//	    cache["my_key"] = value
 //
-//	    // Cache value for future use
-//	    cache["my_cache_key"] = parsedValue
-//
-//	    return parsedValue, true
+//	    return value, true
 //	}
 type Cache = map[string]any

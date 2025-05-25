@@ -1,4 +1,3 @@
-// Package value provides utilities for type conversion and setting values in Go structs.
 package value
 
 import (
@@ -12,33 +11,16 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
-// SetInteger converts an integer value to the appropriate type for the target field
-// and sets the field's value. This function handles conversion to various types,
-// including strings, booleans, all numeric types, and interfaces.
-//
-// The function is generic and works with any integer type (int, int8, int16, int32, int64,
-// uint, uint8, uint16, uint32, uint64).
+// SetInteger converts an integer value to the appropriate type for a target field.
+// Handles conversion to strings, booleans, numeric types, and interfaces.
+// Performs range checking to prevent overflow.
 //
 // Parameters:
-//   - field: The target field to set (as a reflect.Value).
-//   - number: The integer value to convert and set.
+//   - field: Target field to set (reflect.Value).
+//   - number: Integer value to convert and set.
 //
 // Returns:
-//   - error: An error if the conversion or setting fails, or nil if successful.
-//
-// Example usage (internal to the package):
-//
-//	// Convert and set an int value to a string field
-//	stringField := reflect.ValueOf(&myStruct).Elem().FieldByName("Count")
-//	if err := SetInteger(stringField, 42); err != nil {
-//	    return err
-//	}
-//
-//	// Convert and set a uint8 value to a float field
-//	floatField := reflect.ValueOf(&myStruct).Elem().FieldByName("Score")
-//	if err := SetInteger(floatField, uint8(100)); err != nil {
-//	    return err
-//	}
+//   - error: If conversion or assignment fails.
 func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
 	// Check if the field is settable
 	if !field.CanSet() {
@@ -171,16 +153,8 @@ func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
 		valueStr, field.Type())
 }
 
-// checkSignedIntegerRange verifies that a signed integer value is within the acceptable range
-// for the target field type. This helps prevent unexpected behavior from type
-// conversions that could cause data loss or overflow.
-//
-// Parameters:
-//   - field: The target field to check against (as a reflect.Value).
-//   - number: The signed integer value to check.
-//
-// Returns:
-//   - error: An error if the value is out of range for the target type, or nil if acceptable.
+// checkSignedIntegerRange verifies a signed integer value is within range for the target field.
+// Prevents data loss or overflow from type conversions.
 func checkSignedIntegerRange(field reflect.Value, number int64) error {
 	// Store field kind to avoid multiple calls to field.Kind()
 	kind := field.Kind()
@@ -203,15 +177,8 @@ func checkSignedIntegerRange(field reflect.Value, number int64) error {
 	return nil
 }
 
-// checkUnsignedIntegerRange verifies that an unsigned integer value is within the acceptable range
-// for the target field type.
-//
-// Parameters:
-//   - field: The target field to check against (as a reflect.Value).
-//   - number: The unsigned integer value to check.
-//
-// Returns:
-//   - error: An error if the value is out of range for the target type, or nil if acceptable.
+// checkUnsignedIntegerRange verifies an unsigned integer value is within range for the target field.
+// Checks for potential overflow based on bit size.
 func checkUnsignedIntegerRange(field reflect.Value, number uint64) error {
 	// For unsigned types, check for potential overflow
 	bitSize := field.Type().Bits()

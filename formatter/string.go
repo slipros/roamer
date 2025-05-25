@@ -1,9 +1,9 @@
-// Package formatter provides value formatters for post-processing parsed data.
 package formatter
 
 import (
 	"reflect"
 	"strings"
+	"unicode"
 
 	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
@@ -66,24 +66,18 @@ type String struct {
 	formatters StringsFormatters // Map of available string formatters
 }
 
-// NewString creates a new String formatter with the specified options.
-// By default, it includes the "trim_space" formatter for removing leading
-// and trailing whitespace from strings.
+// NewString creates a String formatter that processes string values based on the "string" tag.
+// Includes "trim_space" formatter by default, which removes leading/trailing whitespace.
 //
 // Example:
 //
-//	// Create a string formatter with default formatters
+//	// Basic string formatter
 //	strFormatter := formatter.NewString()
 //
-//	// Create a string formatter with custom formatters
+//	// With custom formatters
 //	strFormatter := formatter.NewString(
 //	    formatter.WithStringFormatter("uppercase", strings.ToUpper),
 //	    formatter.WithStringFormatter("lowercase", strings.ToLower),
-//	)
-//
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithFormatters(strFormatter),
 //	)
 func NewString(opts ...StringOptionsFunc) *String {
 	s := String{
@@ -126,29 +120,32 @@ func (s *String) Format(tag reflect.StructTag, ptr any) error {
 		return errors.Wrapf(rerr.NotSupported, "%T", ptr)
 	}
 
-	if strings.Contains(tagValue, ",") {
-		str := *strPtr
-		for _, tagValue := range strings.Split(tagValue, ",") {
-			name := strings.TrimSpace(tagValue)
-			formatter, ok := s.formatters[name]
-			if !ok {
-				return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: name})
-			}
-
-			str = formatter(str)
+	if !strings.Contains(tagValue, SplitSymbol) {
+		formatter, ok := s.formatters[tagValue]
+		if !ok {
+			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: tagValue})
 		}
 
-		*strPtr = str
+		*strPtr = formatter(*strPtr)
 
 		return nil
 	}
 
-	formatter, ok := s.formatters[tagValue]
-	if !ok {
-		return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: tagValue})
+	str := *strPtr
+	for _, tagValue := range strings.Split(tagValue, SplitSymbol) {
+		if unicode.IsSpace(rune(tagValue[0])) || unicode.IsSpace(rune(tagValue[len(tagValue)-1])) {
+			tagValue = strings.TrimSpace(tagValue)
+		}
+
+		formatter, ok := s.formatters[tagValue]
+		if !ok {
+			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: tagValue})
+		}
+
+		str = formatter(str)
 	}
 
-	*strPtr = formatter(*strPtr)
+	*strPtr = str
 
 	return nil
 }

@@ -1,6 +1,3 @@
-// Package decoder provides decoders for extracting data from HTTP request bodies.
-// These decoders are used by the roamer package to populate struct fields
-// based on request body content.
 package decoder
 
 import (
@@ -31,24 +28,21 @@ type JSON struct {
 	contentType string // The Content-Type header value that this decoder handles
 }
 
-// NewJSON creates a new JSON decoder with the specified options.
-// By default, it handles requests with Content-Type "application/json".
+// NewJSON creates a JSON decoder for handling application/json content type.
+// Uses jsoniter for improved performance over standard library.
 //
 // Example:
 //
-//	// Create a JSON decoder with default settings
+//	// Basic JSON decoder
 //	jsonDecoder := decoder.NewJSON()
 //
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithDecoders(jsonDecoder),
-//	)
+//	// Use with roamer
+//	r := roamer.NewRoamer(roamer.WithDecoders(jsonDecoder))
 //
-//	// Example struct using JSON tags
+//	// Example struct definition
 //	type UserRequest struct {
 //	    Name  string `json:"name"`
 //	    Email string `json:"email"`
-//	    Age   int    `json:"age"`
 //	}
 func NewJSON(opts ...JSONOptionsFunc) *JSON {
 	j := JSON{

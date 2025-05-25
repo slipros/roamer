@@ -1,4 +1,3 @@
-// Package parser provides parsers for extracting data from HTTP requests.
 package parser
 
 import (
@@ -29,32 +28,22 @@ type Path struct {
 	valueFromPath PathValueFunc // Function to extract path parameters
 }
 
-// NewPath creates a new Path parser with the specified extraction function.
-// The extraction function should be provided by the router being used.
-//
-// If no function is provided (nil), a default function that always returns
-// empty values is used.
+// NewPath creates a Path parser with the specified extraction function.
+// The function should match the router being used to extract URL path parameters.
+// If nil is provided, a default function that always returns empty values is used.
 //
 // Example:
 //
-//	// Using with standard ServeMux (Go 1.22+)
+//	// Standard ServeMux (Go 1.22+)
 //	pathParser := parser.NewPath(parser.ServeMuxValueFromPath)
 //
-//	// Using with chi router
-//	import "github.com/go-chi/chi/v5"
-//	// ...
-//	router := chi.NewRouter()
+//	// Chi router
 //	pathParser := parser.NewPath(func(r *http.Request, name string) (string, bool) {
 //	    value := chi.URLParam(r, name)
-//	    if value == "" {
-//	        return "", false
-//	    }
-//	    return value, true
+//	    return value, value != ""
 //	})
 //
-//	// Using with gorilla/mux
-//	import "github.com/gorilla/mux"
-//	// ...
+//	// Gorilla Mux
 //	pathParser := parser.NewPath(func(r *http.Request, name string) (string, bool) {
 //	    vars := mux.Vars(r)
 //	    value, ok := vars[name]
@@ -68,18 +57,16 @@ func NewPath(valueFromPath PathValueFunc) *Path {
 	return &Path{valueFromPath: valueFromPath}
 }
 
-// Parse extracts a path parameter from an HTTP request based on the provided struct tag.
-// It delegates the actual extraction to the valueFromPath function provided
-// during initialization.
+// Parse extracts a path parameter from an HTTP request using the valueFromPath function.
 //
 // Parameters:
 //   - r: The HTTP request to extract path parameters from.
 //   - tag: The struct tag containing the path parameter name.
-//   - _: Cache parameter (not used by this parser).
+//   - _: Cache parameter (not used).
 //
 // Returns:
-//   - any: The parsed path parameter (string).
-//   - bool: Whether the path parameter was found.
+//   - any: The path parameter value (string).
+//   - bool: Whether the parameter was found.
 func (p *Path) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bool) {
 	tagValue, ok := tag.Lookup(TagPath)
 	if !ok {
@@ -95,29 +82,17 @@ func (p *Path) Tag() string {
 	return TagPath
 }
 
-// ServeMuxValueFromPath is a PathValueFunc implementation for the standard
-// Go 1.22+ ServeMux with native path parameter support.
+// ServeMuxValueFromPath extracts path parameters from standard Go 1.22+ ServeMux requests.
 //
 // Example:
 //
-//	// Create a path parser for standard ServeMux
 //	pathParser := parser.NewPath(parser.ServeMuxValueFromPath)
 //
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithParsers(pathParser),
-//	)
-//
-//	// In your HTTP handler
 //	http.HandleFunc("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
 //	    var req struct {
 //	        UserID string `path:"id"`
 //	    }
-//	    if err := r.Parse(r, &req); err != nil {
-//	        http.Error(w, err.Error(), http.StatusBadRequest)
-//	        return
-//	    }
-//	    // Use req.UserID...
+//	    // Parse request...
 //	})
 func ServeMuxValueFromPath(r *http.Request, name string) (string, bool) {
 	value := r.PathValue(name)

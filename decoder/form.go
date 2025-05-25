@@ -1,4 +1,3 @@
-// Package decoder provides decoders for extracting data from HTTP request bodies.
 package decoder
 
 import (
@@ -8,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/slipros/exp"
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/value"
 )
@@ -30,35 +28,20 @@ const (
 // It follows the functional options pattern to provide a clean and extensible API.
 type FormURLOptionsFunc func(*FormURL)
 
-// WithDisabledSplit disables the automatic splitting of form values.
-// By default, if a field is set to handle multiple values (e.g., a slice),
-// the decoder will split values using the split symbol (default: comma).
-// This option disables that behavior.
+// WithDisabledSplit disables automatic splitting of form values into slices.
 //
-// Example:
-//
-//	// Create a form decoder with splitting disabled
-//	formDecoder := decoder.NewFormURL(decoder.WithDisabledSplit())
-//
-//	// With splitting disabled, a form field like "tags=foo,bar,baz" will be
-//	// parsed as a single string "foo,bar,baz" rather than a slice ["foo", "bar", "baz"]
+// Example: With splitting disabled, "tags=foo,bar,baz" will parse as a single
+// string "foo,bar,baz" rather than a slice ["foo", "bar", "baz"]
 func WithDisabledSplit() FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.split = false
 	}
 }
 
-// WithSplitSymbol sets the character used to split form values.
-// By default, the decoder uses a comma (,) as the split symbol.
-// This option allows using a different character instead.
+// WithSplitSymbol sets the character used for splitting form values (default: comma).
 //
-// Example:
-//
-//	// Create a form decoder that splits on semicolons instead of commas
-//	formDecoder := decoder.NewFormURL(decoder.WithSplitSymbol(";"))
-//
-//	// With this configuration, a form field like "tags=foo;bar;baz" will be
-//	// parsed as a slice ["foo", "bar", "baz"]
+// Example: With splitSymbol set to ";", a form field "tags=foo;bar;baz"
+// will parse as a slice ["foo", "bar", "baz"]
 func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 	return func(f *FormURL) {
 		f.splitSymbol = splitSymbol
@@ -69,39 +52,30 @@ func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 // It can parse form data into structs and maps, handling both
 // single values and multiple values.
 type FormURL struct {
-	contentType                 string // The Content-Type header value that this decoder handles
-	skipFilled                  bool   // Whether to skip fields that are already filled
-	split                       bool   // Whether to split comma-separated values
-	splitSymbol                 string // The character to use when splitting values
-	experimentalFastStructField bool   // Whether to use experimental fast struct field access
+	contentType string // The Content-Type header value that this decoder handles
+	skipFilled  bool   // Whether to skip fields that are already filled
+	split       bool   // Whether to split comma-separated values
+	splitSymbol string // The character to use when splitting values
 }
 
-// NewFormURL creates a new FormURL decoder with the specified options.
-// By default, it handles requests with Content-Type "application/x-www-form-urlencoded",
-// skips fields that are already filled, and splits comma-separated values.
+// NewFormURL creates a FormURL decoder that handles application/x-www-form-urlencoded content.
+// By default, it skips already filled fields and splits comma-separated values.
 //
 // Example:
 //
-//	// Create a form decoder with default settings
+//	// Default form decoder
 //	formDecoder := decoder.NewFormURL()
 //
-//	// Create a form decoder with custom options
+//	// Custom configuration
 //	formDecoder := decoder.NewFormURL(
-//	    decoder.WithDisabledSplit(),         // Don't split comma-separated values
-//	    decoder.WithSplitSymbol(";"),        // Use semicolon as separator (if splitting is enabled)
-//	    decoder.WithSkipFilled(false),       // Don't skip fields that are already filled
+//	    decoder.WithDisabledSplit(),       // Don't split comma-separated values
+//	    decoder.WithSplitSymbol(";"),      // Use semicolon as separator
 //	)
 //
-//	// Use it with roamer
-//	r := roamer.NewRoamer(
-//	    roamer.WithDecoders(formDecoder),
-//	)
-//
-//	// Example struct using form tags
+//	// Example struct
 //	type SearchRequest struct {
 //	    Query string   `form:"q"`
-//	    Page  int      `form:"page"`
-//	    Tags  []string `form:"tags"` // Can be provided as "tags=foo,bar,baz"
+//	    Tags  []string `form:"tags"` // Can handle "tags=foo,bar,baz"
 //	}
 func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 	f := FormURL{
@@ -118,18 +92,16 @@ func NewFormURL(opts ...FormURLOptionsFunc) *FormURL {
 	return &f
 }
 
-// Decode parses URL-encoded form data from an HTTP request into the provided pointer.
-// The pointer must be to a struct or a map.
-//
-// For structs, the decoder uses the "form" tag to map form fields to struct fields.
-// For maps, the decoder populates the map with form field names as keys.
+// Decode parses URL-encoded form data into a struct or map.
+// For structs, uses the "form" tag to map fields.
+// For maps, populates with form field names as keys.
 //
 // Parameters:
-//   - r: The HTTP request containing the form data to decode.
-//   - ptr: A pointer to the target value (struct or map) where the decoded data will be stored.
+//   - r: The HTTP request with form data.
+//   - ptr: Target pointer (struct or map).
 //
 // Returns:
-//   - error: An error if decoding fails, or nil if successful.
+//   - error: Error if decoding fails, nil if successful.
 func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	if err := r.ParseForm(); err != nil {
 		return errors.WithMessage(err, "parse http form")
@@ -146,16 +118,6 @@ func (f *FormURL) Decode(r *http.Request, ptr any) error {
 	default:
 		return errors.WithStack(rerr.NotSupported)
 	}
-}
-
-// EnableExperimentalFastStructFieldParser enables the use of an experimental
-// fast struct field parser. This can improve performance but may not be
-// as stable as the standard parser.
-//
-// This method is part of the internal Experiment interface and is primarily
-// used by the roamer package.
-func (f *FormURL) EnableExperimentalFastStructFieldParser() {
-	f.experimentalFastStructField = true
 }
 
 // ContentType returns the Content-Type header value that this decoder handles.
@@ -218,17 +180,7 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values) (err error) {
 	var fieldType reflect.StructField
 	for i := range v.NumField() {
-		if f.experimentalFastStructField {
-			ft, exists := exp.FastStructField(v, i)
-			if !exists {
-				// should never happen - anomaly.
-				return errors.WithStack(rerr.FieldIndexOutOfBounds)
-			}
-
-			fieldType = ft
-		} else {
-			fieldType = t.Field(i)
-		}
+		fieldType = t.Field(i)
 
 		if !fieldType.IsExported() || len(fieldType.Tag) == 0 {
 			continue

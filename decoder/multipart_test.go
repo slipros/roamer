@@ -100,41 +100,6 @@ func TestMultipartFormData_Decode(t *testing.T) {
 			require.NotEmpty(t, args.ptr.AllFiles)
 			require.Equal(t, 2, len(args.ptr.AllFiles))
 		})
-
-		t.Run("experiment_"+tt.name, func(t *testing.T) {
-			args := tt.args()
-
-			m := NewMultipartFormData()
-			m.EnableExperimentalFastStructFieldParser()
-
-			if err := m.Decode(args.r, args.ptr); !tt.wantErr && err != nil {
-				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			require.Equal(t, "http://some.url", args.ptr.Image)
-			require.NotNil(t, args.ptr.ImageAsPtr)
-			require.Equal(t, "http://some.url", *args.ptr.ImageAsPtr)
-			require.Equal(t, "http://some.url", args.ptr.ImageAsURL.String())
-
-			require.Empty(t, args.ptr.NoKey)
-			require.Nil(t, args.ptr.NoKeyAsPtr)
-
-			require.Equal(t, "text_file", args.ptr.TextFile.Key)
-			require.NotNil(t, args.ptr.TextFile.File)
-			require.NotNil(t, args.ptr.TextFile.Header)
-
-			require.NotNil(t, args.ptr.OtherTextFile)
-			require.Equal(t, "other_text_file", args.ptr.OtherTextFile.Key)
-			require.NotNil(t, args.ptr.OtherTextFile.File)
-			require.NotNil(t, args.ptr.OtherTextFile.Header)
-
-			require.Empty(t, args.ptr.NoFile)
-			require.Nil(t, args.ptr.NoFileAsPtr)
-
-			require.NotEmpty(t, args.ptr.AllFiles)
-			require.Equal(t, 2, len(args.ptr.AllFiles))
-		})
 	}
 }
 
@@ -142,22 +107,6 @@ func BenchmarkMultipartFormData_Decode(b *testing.B) {
 	r, ptr, _ := prepareMultipartFormDataArgs()
 
 	m := NewMultipartFormData(WithSkipFilled[*MultipartFormData](false))
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		if err := m.Decode(r, ptr); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkMultipartFormData_Decode_FastStructFieldParser(b *testing.B) {
-	r, ptr, _ := prepareMultipartFormDataArgs()
-
-	m := NewMultipartFormData(WithSkipFilled[*MultipartFormData](false))
-	m.EnableExperimentalFastStructFieldParser()
 
 	b.ReportAllocs()
 	b.ResetTimer()
