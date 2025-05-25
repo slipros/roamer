@@ -10,6 +10,8 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
+const splitSymbol = ","
+
 // typeString is a reflect.Type for the string type.
 // It's used for type comparison and conversion.
 var typeString = reflect.TypeOf("")
@@ -259,7 +261,7 @@ func setSliceFromString(field reflect.Value, str string) error {
 		return nil
 
 	case reflect.String:
-		if !strings.Contains(str, ",") {
+		if !strings.Contains(str, splitSymbol) {
 			// Single value case - avoid slice creation
 			strValue := reflect.ValueOf(str)
 			if elemType != typeString && strValue.Type().ConvertibleTo(elemType) {
@@ -269,14 +271,7 @@ func setSliceFromString(field reflect.Value, str string) error {
 			return nil
 		}
 
-		// Pre-calculate capacity to reduce allocations
-		commaCount := strings.Count(str, ",")
-		parts := make([]string, 0, commaCount+1)
-
-		// Use strings.FieldsFunc for better performance
-		parts = strings.FieldsFunc(str, func(r rune) bool {
-			return r == ','
-		})
+		parts := strings.Split(str, splitSymbol)
 
 		// Pre-allocate slice with known capacity
 		newSlice := reflect.MakeSlice(field.Type(), 0, len(parts))
@@ -296,8 +291,8 @@ func setSliceFromString(field reflect.Value, str string) error {
 
 	default:
 		// For other slice types, try to parse the string as a comma-separated list
-		if strings.Contains(str, ",") {
-			parts := strings.Split(str, ",")
+		if strings.Contains(str, splitSymbol) {
+			parts := strings.Split(str, splitSymbol)
 			for _, part := range parts {
 				trimmed := strings.TrimSpace(part)
 				if trimmed != "" {
@@ -368,7 +363,7 @@ func setMapFromString(field reflect.Value, str string) error {
 		return errors.Wrapf(rerr.NotSupported, "invalid map format, expected 'key:value' pairs separated by commas")
 	}
 
-	pairs := strings.Split(str, ",")
+	pairs := strings.Split(str, splitSymbol)
 	for _, pair := range pairs {
 		pair = strings.TrimSpace(pair)
 		if pair == "" {

@@ -34,16 +34,3 @@ type Formatter interface {
 // Formatters is a map of registered formatters where keys are the tag names
 // returned by the Formatter.Tag() method.
 type Formatters map[string]Formatter
-
-// has checks if any of the formatters registered in this collection
-// are applicable to the given struct tag. This method is used internally
-// to determine if formatting should be applied to a field.
-func (ft Formatters) has(tag reflect.StructTag) bool {
-	for t := range ft {
-		if _, ok := tag.Lookup(t); ok {
-			return true
-		}
-	}
-
-	return false
-}

@@ -84,11 +84,12 @@ func parseTime(str string) (time.Time, error) {
 	case dateOnlyPattern.MatchString(str):
 		likelyFormats = []string{time.DateOnly}
 	case rfc3339Pattern.MatchString(str):
-		if strings.HasSuffix(str, "Z") {
+		switch {
+		case strings.HasSuffix(str, "Z"):
 			likelyFormats = []string{time.RFC3339}
-		} else if strings.Contains(str, "+") || strings.Contains(str, "-") {
+		case strings.Contains(str, "+"), strings.Contains(str, "-"):
 			likelyFormats = []string{time.RFC3339}
-		} else {
+		default:
 			likelyFormats = []string{"2006-01-02T15:04:05"}
 		}
 	case dateTimePattern.MatchString(str):
