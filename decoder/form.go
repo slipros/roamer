@@ -16,12 +16,12 @@ const (
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeFormURL = "application/x-www-form-urlencoded"
 
+	// TagForm is the struct tag name used for URL-encoded form values.
+	TagForm = "form"
+
 	// SplitSymbol is the default character used to split form values when
 	// multiple values are provided for the same field.
 	SplitSymbol = ","
-
-	// tagValueFormURL is the struct tag name used for URL-encoded form values.
-	tagValueFormURL = "form"
 )
 
 // FormURLOptionsFunc is a function type for configuring a FormURL decoder.
@@ -127,6 +127,12 @@ func (f *FormURL) ContentType() string {
 	return f.contentType
 }
 
+// Tag returns the struct tag name used for form field mapping.
+// For the FormURL decoder, this is "form" by default.
+func (f *FormURL) Tag() string {
+	return TagForm
+}
+
 // setContentType sets the Content-Type header value that this decoder handles.
 // This is primarily used internally by option functions.
 func (f *FormURL) setContentType(contentType string) {
@@ -150,7 +156,7 @@ func (f *FormURL) setSkipFilled(skip bool) {
 //   - any: The extracted form value (string or []string).
 //   - bool: Whether a value was found.
 func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, bool) {
-	tagValue, ok := tag.Lookup(tagValueFormURL)
+	tagValue, ok := tag.Lookup(TagForm)
 	if !ok {
 		return nil, false
 	}

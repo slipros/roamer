@@ -9,12 +9,16 @@ import (
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/internal/cache"
 	"github.com/slipros/roamer/value"
+	"golang.org/x/exp/slices"
 )
 
 const (
 	// ContentTypeMultipartFormData is the Content-Type header value for multipart form data.
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeMultipartFormData = "multipart/form-data"
+
+	// TagMultipart is the struct tag name used for multipart form values.
+	TagMultipart = "multipart"
 
 	// defaultMultipartFormDataMaxMemory is the default maximum memory in bytes
 	// that will be used to parse multipart form data. Content beyond this limit
@@ -24,9 +28,6 @@ const (
 	// tagValueAllFiles is a special tag value that instructs the parser
 	// to collect all files in the request.
 	tagValueAllFiles = ",allfiles"
-
-	// tagValueMultipartFormData is the struct tag name used for multipart form values.
-	tagValueMultipartFormData = "multipart"
 )
 
 // MultipartFormDataOptionsFunc is a function type for configuring a MultipartFormData decoder.
@@ -119,6 +120,14 @@ func (m *MultipartFormData) ContentType() string {
 	return m.contentType
 }
 
+// Tag returns the struct tag name used for multipart field mapping.
+// For the MultipartFormData decoder, this is "multipart" by default.
+func (m *MultipartFormData) Tag() string {
+	return TagMultipart
+}
+
+// SetStructureCache assigns a structure cache to the decoder for improved performance.
+// The cache stores precomputed field information to avoid reflection overhead on each request.
 func (m *MultipartFormData) SetStructureCache(cache *cache.StructureCache) {
 	m.structureCache = cache
 }
@@ -152,11 +161,11 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 		for i := range fields {
 			f := &fields[i]
 
-			if !f.IsExported || !f.HasTag || len(f.Decoders) == 0 {
+			if !f.IsExported || !f.HasTag || len(f.Decoders) == 0 || !slices.Contains(f.Decoders, TagMultipart) {
 				continue
 			}
 
-			tagValue, ok := f.StructField.Tag.Lookup(tagValueMultipartFormData)
+			tagValue, ok := f.StructField.Tag.Lookup(TagMultipart)
 			if !ok {
 				continue
 			}
@@ -176,7 +185,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 			continue
 		}
 
-		tagValue, ok := f.Tag.Lookup(tagValueMultipartFormData)
+		tagValue, ok := f.Tag.Lookup(TagMultipart)
 		if !ok {
 			continue
 		}

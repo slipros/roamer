@@ -12,6 +12,8 @@ const (
 	// ContentTypeXML is the Content-Type header value for XML requests.
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeXML = "application/xml"
+
+	TagXML = "xml"
 )
 
 // XMLOptionsFunc is a function type for configuring an XML decoder.
@@ -76,6 +78,12 @@ func (x *XML) Decode(r *http.Request, ptr any) error {
 // This method is used by the roamer package to match requests with the appropriate decoder.
 func (x *XML) ContentType() string {
 	return x.contentType
+}
+
+// Tag returns the struct tag name used for XML field mapping.
+// For the XML decoder, this is "xml" by default.
+func (x *XML) Tag() string {
+	return TagXML
 }
 
 // setContentType sets the Content-Type header value that this decoder handles.

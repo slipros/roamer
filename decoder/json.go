@@ -12,6 +12,8 @@ const (
 	// ContentTypeJSON is the Content-Type header value for JSON requests.
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeJSON = "application/json"
+
+	TagJSON = "json"
 )
 
 // json is a jsoniter instance configured to be compatible with the standard library.
@@ -83,6 +85,12 @@ func (j *JSON) Decode(r *http.Request, ptr any) error {
 // This method is used by the roamer package to match requests with the appropriate decoder.
 func (j *JSON) ContentType() string {
 	return j.contentType
+}
+
+// Tag returns the struct tag name used for JSON field mapping.
+// For the JSON decoder, this is "json" by default.
+func (j *JSON) Tag() string {
+	return TagJSON
 }
 
 // setContentType sets the Content-Type header value that this decoder handles.
