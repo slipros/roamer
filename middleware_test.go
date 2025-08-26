@@ -59,6 +59,7 @@ func TestMiddleware_Successfully(t *testing.T) {
 			setupRoamer: func() *Roamer {
 				mockDecoder := mockroamer.NewDecoder(t)
 				mockDecoder.EXPECT().ContentType().Return("application/json").Maybe()
+				mockDecoder.EXPECT().Tag().Return(decoder.TagJSON).Maybe()
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*roamer.testData")).
 					Run(func(r *http.Request, ptr interface{}) {
@@ -125,6 +126,7 @@ func TestMiddleware_Failure(t *testing.T) {
 			setupRoamer: func() *Roamer {
 				mockDecoder := mockroamer.NewDecoder(t)
 				mockDecoder.EXPECT().ContentType().Return("application/json").Maybe()
+				mockDecoder.EXPECT().Tag().Return(decoder.TagJSON).Maybe()
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*roamer.testData")).
 					Return(errBigBad)
@@ -201,6 +203,7 @@ func TestSliceMiddleware_Successfully(t *testing.T) {
 			setupRoamer: func() *Roamer {
 				mockDecoder := mockroamer.NewDecoder(t)
 				mockDecoder.EXPECT().ContentType().Return(decoder.ContentTypeJSON).Maybe()
+				mockDecoder.EXPECT().Tag().Return(decoder.TagJSON).Maybe()
 
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*[]string")).
@@ -268,6 +271,7 @@ func TestSliceMiddleware_Failure(t *testing.T) {
 			setupRoamer: func() *Roamer {
 				mockDecoder := mockroamer.NewDecoder(t)
 				mockDecoder.EXPECT().ContentType().Return(decoder.ContentTypeJSON).Maybe()
+				mockDecoder.EXPECT().Tag().Return(decoder.TagJSON).Maybe()
 
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*[]string")).

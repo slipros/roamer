@@ -90,7 +90,7 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r.hasFormatters = len(r.formatters) > 0
 
 	r.structureCache = cache.NewStructureCache(
-		maps.Keys(r.decoders),
+		r.decoders.Tags(),
 		maps.Keys(r.parsers),
 		maps.Keys(r.formatters),
 	)

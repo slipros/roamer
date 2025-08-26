@@ -27,8 +27,23 @@ type Decoder interface {
 	// For example, a JSON decoder might return "application/json",
 	// an XML decoder might return "application/xml", etc.
 	ContentType() string
+
+	// Tag returns the struct tag name used for field mapping.
+	// For example, a JSON decoder returns "json", XML decoder returns "xml", etc.
+	Tag() string
 }
 
 // Decoders is a map of registered decoders where keys are the Content-Type
 // header values returned by the Decoder.ContentType() method.
 type Decoders map[string]Decoder
+
+// Tags returns all struct tag names from the registered decoders.
+// This is useful for determining which struct tags are supported by the current decoder set.
+func (ds Decoders) Tags() []string {
+	tags := make([]string, 0, len(ds))
+	for _, d := range ds {
+		tags = append(tags, d.Tag())
+	}
+
+	return tags
+}
