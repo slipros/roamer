@@ -13,6 +13,7 @@ const (
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeJSON = "application/json"
 
+	// TagJSON is the struct tag name used for JSON field mapping.
 	TagJSON = "json"
 )
 

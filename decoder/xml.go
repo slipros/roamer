@@ -13,6 +13,7 @@ const (
 	// This is used to match requests with the appropriate decoder.
 	ContentTypeXML = "application/xml"
 
+	// TagXML is the struct tag name used for XML field mapping.
 	TagXML = "xml"
 )
 
