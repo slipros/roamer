@@ -113,6 +113,51 @@ func (_c *Decoder_Decode_Call) RunAndReturn(run func(*http.Request, interface{})
 	return _c
 }
 
+// Tag provides a mock function with no fields
+func (_m *Decoder) Tag() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Tag")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// Decoder_Tag_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Tag'
+type Decoder_Tag_Call struct {
+	*mock.Call
+}
+
+// Tag is a helper method to define mock.On call
+func (_e *Decoder_Expecter) Tag() *Decoder_Tag_Call {
+	return &Decoder_Tag_Call{Call: _e.mock.On("Tag")}
+}
+
+func (_c *Decoder_Tag_Call) Run(run func()) *Decoder_Tag_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *Decoder_Tag_Call) Return(_a0 string) *Decoder_Tag_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Decoder_Tag_Call) RunAndReturn(run func() string) *Decoder_Tag_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewDecoder creates a new instance of Decoder. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewDecoder(t interface {
