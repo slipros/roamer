@@ -14,6 +14,7 @@ Roamer is a flexible, extensible HTTP request parser for Go that makes handling 
 
 - **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, and path variables
 - **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
+- **Default Values**: Set default values for fields using the `default` tag if no value is found in the request.
 - **Formatters**: Format parsed data (e.g., trim spaces from strings)
 - **Router integration**: Built-in support for popular routers (Chi, Gorilla Mux, HttpRouter)
 - **Type conversion**: Automatic conversion of string values to appropriate Go types
@@ -187,6 +188,31 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+```
+
+### Default Values
+
+You can provide default values for fields using the `default` tag. The default value is applied only if no value is found by any parser (e.g., from a query parameter or header) and the field has its zero value.
+
+```go
+// Define a request struct with default values
+type ListRequest struct {
+    // Page will be 1 if the "page" query param is not provided.
+	Page    int `query:"page" default:"1"`
+	
+	// PerPage will be 20 if the "per_page" query param is not provided.
+	PerPage int `query:"per_page" default:"20"`
+	
+	// Sort will be "asc" if the "sort" query param is not provided.
+	Sort    string `query:"sort" default:"asc"`
+}
+
+// Example usage:
+// r := roamer.NewRoamer(roamer.WithParsers(parser.NewQuery()))
+// req, _ := http.NewRequest("GET", "/items", nil)
+// var listReq ListRequest
+// r.Parse(req, &listReq) 
+// listReq.Page is now 1, PerPage is 20, Sort is "asc"
 ```
 
 ## Router Integration Examples

@@ -8,14 +8,14 @@ import (
 // Field represents a cached struct field with metadata about its properties
 // and applicable parsers, decoders, and formatters.
 type Field struct {
-	Index       int
-	Name        string
-	StructField reflect.StructField
-	IsExported  bool
-	HasTag      bool
-	Decoders    []string
-	Formatters  []string
-	Parsers     []string
+	Index        int
+	Name         string
+	StructField  reflect.StructField
+	HasDefault   bool
+	DefaultValue string
+	Decoders     []string
+	Formatters   []string
+	Parsers      []string
 }
 
 // StructureCache provides thread-safe caching of struct field analysis
@@ -60,15 +60,21 @@ func (s *StructureCache) analyzeStruct(t reflect.Type) []Field {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
+		if !f.IsExported() || len(f.Tag) == 0 {
+			continue
+		}
+
+		defaultValue, hasDefault := f.Tag.Lookup("default")
+
 		fields = append(fields, Field{
-			Index:       i,
-			Name:        f.Name,
-			StructField: f,
-			IsExported:  f.IsExported(),
-			HasTag:      len(f.Tag) > 0,
-			Decoders:    s.tagLookup(f.Tag, s.decoders),
-			Parsers:     s.tagLookup(f.Tag, s.parsers),
-			Formatters:  s.tagLookup(f.Tag, s.formatters),
+			Index:        i,
+			Name:         f.Name,
+			StructField:  f,
+			HasDefault:   hasDefault,
+			DefaultValue: defaultValue,
+			Decoders:     s.tagLookup(f.Tag, s.decoders),
+			Parsers:      s.tagLookup(f.Tag, s.parsers),
+			Formatters:   s.tagLookup(f.Tag, s.formatters),
 		})
 	}
 

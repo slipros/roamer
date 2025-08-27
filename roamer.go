@@ -180,13 +180,9 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	for i := range fields {
 		f := &fields[i]
 
-		if !f.IsExported || !f.HasTag {
-			continue
-		}
-
 		fieldValue := v.Field(f.Index)
 
-		if r.skipFilled && !fieldValue.IsZero() || !r.hasParsers {
+		if r.skipFilled && !fieldValue.IsZero() {
 			if r.hasFormatters && len(f.Formatters) > 0 {
 				if err := r.applyFormatters(f, fieldValue); err != nil {
 					return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
@@ -196,23 +192,34 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 			continue
 		}
 
-		for _, parserName := range f.Parsers {
-			p, ok := r.parsers[parserName]
-			if !ok {
-				continue
-			}
+		var parsedSuccessfully bool
+		if r.hasParsers {
+			for _, parserName := range f.Parsers {
+				p, ok := r.parsers[parserName]
+				if !ok {
+					continue
+				}
 
-			parsedValue, ok := p.Parse(req, f.StructField.Tag, parserCache)
-			if !ok {
-				continue
-			}
+				parsedValue, ok := p.Parse(req, f.StructField.Tag, parserCache)
+				if !ok {
+					continue
+				}
 
-			if err := value.Set(fieldValue, parsedValue); err != nil {
-				return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
-					parsedValue, f.Name, parserName, ptr)
-			}
+				if err := value.Set(fieldValue, parsedValue); err != nil {
+					return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
+						parsedValue, f.Name, parserName, ptr)
+				}
 
-			break
+				parsedSuccessfully = true
+
+				break
+			}
+		}
+
+		if !parsedSuccessfully && f.HasDefault && fieldValue.IsZero() {
+			if err := value.Set(fieldValue, f.DefaultValue); err != nil {
+				return errors.Wrapf(err, "set default value for field `%s`", f.Name)
+			}
 		}
 
 		if r.hasFormatters && len(f.Formatters) > 0 {
