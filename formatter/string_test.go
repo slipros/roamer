@@ -51,26 +51,7 @@ func TestString_NewString(t *testing.T) {
 
 // TestString_Format_Successfully tests successful formatting scenarios
 func TestString_Format_Successfully(t *testing.T) {
-	// Define custom formatters for tests
-	uppercaseFn := strings.ToUpper
-	lowercaseFn := strings.ToLower
-	removeVowelsFn := func(s string) string {
-		return strings.Map(func(r rune) rune {
-			switch r {
-			case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
-				return -1
-			default:
-				return r
-			}
-		}, s)
-	}
-
-	// Create formatter with custom functions
-	f := NewString(
-		WithStringFormatter("uppercase", uppercaseFn),
-		WithStringFormatter("lowercase", lowercaseFn),
-		WithStringFormatter("remove_vowels", removeVowelsFn),
-	)
+	f := NewString()
 
 	tests := []struct {
 		name     string
@@ -85,34 +66,106 @@ func TestString_Format_Successfully(t *testing.T) {
 			expected: "hello world",
 		},
 		{
-			name:     "Apply uppercase",
-			tag:      createTestTag("uppercase"),
+			name:     "Apply upper",
+			tag:      createTestTag("upper"),
 			input:    "hello world",
 			expected: "HELLO WORLD",
 		},
 		{
-			name:     "Apply lowercase",
-			tag:      createTestTag("lowercase"),
+			name:     "Apply lower",
+			tag:      createTestTag("lower"),
 			input:    "HELLO WORLD",
 			expected: "hello world",
 		},
 		{
-			name:     "Apply remove_vowels",
-			tag:      createTestTag("remove_vowels"),
+			name:     "Apply title",
+			tag:      createTestTag("title"),
 			input:    "hello world",
-			expected: "hll wrld",
+			expected: "Hello World",
+		},
+		{
+			name:     "Apply snake",
+			tag:      createTestTag("snake"),
+			input:    "HelloWorld",
+			expected: "hello_world",
+		},
+		{
+			name:     "Apply camel",
+			tag:      createTestTag("camel"),
+			input:    "hello_world",
+			expected: "HelloWorld",
+		},
+		{
+			name:     "Apply kebab",
+			tag:      createTestTag("kebab"),
+			input:    "HelloWorld",
+			expected: "hello-world",
+		},
+		{
+			name:     "Apply base64_encode",
+			tag:      createTestTag("base64_encode"),
+			input:    "hello world",
+			expected: "aGVsbG8gd29ybGQ=",
+		},
+		{
+			name:     "Apply base64_decode",
+			tag:      createTestTag("base64_decode"),
+			input:    "aGVsbG8gd29ybGQ=",
+			expected: "hello world",
+		},
+		{
+			name:     "Apply url_encode",
+			tag:      createTestTag("url_encode"),
+			input:    "hello world",
+			expected: "hello+world",
+		},
+		{
+			name:     "Apply url_decode",
+			tag:      createTestTag("url_decode"),
+			input:    "hello+world",
+			expected: "hello world",
+		},
+		{
+			name:     "Apply sanitize_html",
+			tag:      createTestTag("sanitize_html"),
+			input:    "<p>hello</p>",
+			expected: "&lt;p&gt;hello&lt;/p&gt;",
+		},
+		{
+			name:     "Apply reverse",
+			tag:      createTestTag("reverse"),
+			input:    "hello",
+			expected: "olleh",
+		},
+		{
+			name:     "Apply trim_prefix",
+			tag:      createTestTag("trim_prefix=Bearer "),
+			input:    "Bearer token",
+			expected: "token",
+		},
+		{
+			name:     "Apply trim_suffix",
+			tag:      createTestTag("trim_suffix=Action"),
+			input:    "SubmitAction",
+			expected: "Submit",
+		},
+		{
+			name:     "Apply truncate",
+			tag:      createTestTag("truncate=5"),
+			input:    "hello world",
+			expected: "hello",
 		},
 		{
 			name:     "Apply multiple formatters",
-			tag:      createTestTag("trim_space,uppercase"),
+			tag:      createTestTag("trim_space,upper"),
 			input:    "  hello world  ",
 			expected: "HELLO WORLD",
 		},
 		{
-			name:     "Apply multiple formatters in order",
-			tag:      createTestTag("trim_space,uppercase,remove_vowels"),
+			name:     "Apply multiple formatters with arguments",
+			tag:      createTestTag("trim_space,truncate=5,upper"),
 			input:    "  hello world  ",
-			expected: "HLL WRLD",
+			expected: "HELLO",
 		},
 		{
 			name:     "No tag value - should not modify",
@@ -165,6 +218,12 @@ func TestString_Format_Failure(t *testing.T) {
 			input:     new(string),
 			expectErr: rerr.FormatterNotFound{Tag: TagString, Formatter: "non_existent"},
 		},
+		{
+			name:      "Invalid argument for truncate",
+			tag:       createTestTag("truncate=abc"),
+			input:     new(string),
+			expectErr: errors.New("invalid argument for truncate: abc"),
+		},
 	}
 
 	for _, tc := range tests {
@@ -182,6 +241,8 @@ func TestString_Format_Failure(t *testing.T) {
 					assert.Equal(t, formatterErr.Tag, actual.Tag)
 					assert.Equal(t, formatterErr.Formatter, actual.Formatter)
 				}
+			} else if tc.expectErr != nil {
+				assert.Contains(t, err.Error(), tc.expectErr.Error())
 			}
 		})
 	}
@@ -269,4 +330,45 @@ func TestWithExtendedStringFormatters_Successfully(t *testing.T) {
 	err = f.Format(extendedTag, &extendedInput)
 	require.NoError(t, err)
 	assert.Equal(t, "extended:test", extendedInput)
+}
+
+func TestWithStringsFormatters_Successfully(t *testing.T) {
+	// Create custom formatters map
+	customFormatters := StringsFormatters{
+		"reverse": func(s string) string {
+			runes := []rune(s)
+			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+				runes[i], runes[j] = runes[j], runes[i]
+			}
+			return string(runes)
+		},
+		"double": func(s string) string {
+			return s + s
+		},
+	}
+
+	// Test WithStringsFormatters option
+	f := NewString(WithStringsFormatters(customFormatters))
+
+	// Verify formatters are added and defaults are preserved
+	assert.Contains(t, f.formatters, "trim_space", "Default formatters should be preserved")
+	assert.Contains(t, f.formatters, "reverse", "Custom formatter should be added")
+	assert.Contains(t, f.formatters, "double", "Custom formatter should be added")
+
+	// Test formatters work
+	input := "hello"
+
+	// Test reverse formatter
+	reverseTag := createTestTag("reverse")
+	reverseInput := input
+	err := f.Format(reverseTag, &reverseInput)
+	require.NoError(t, err)
+	assert.Equal(t, "olleh", reverseInput)
+
+	// Test double formatter
+	doubleTag := createTestTag("double")
+	doubleInput := input
+	err = f.Format(doubleTag, &doubleInput)
+	require.NoError(t, err)
+	assert.Equal(t, "hellohello", doubleInput)
 }

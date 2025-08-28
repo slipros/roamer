@@ -1,7 +1,10 @@
 package formatter
 
 import (
+	"encoding/base64"
+	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -10,10 +13,20 @@ import (
 )
 
 // defaultStringFormatters defines the built-in string formatting functions.
-// Currently, only "trim_space" is supported by default, which removes leading
-// and trailing whitespace from strings.
 var defaultStringFormatters = StringsFormatters{
-	"trim_space": strings.TrimSpace,
+	"trim_space":    strings.TrimSpace,
+	"upper":         strings.ToUpper,
+	"lower":         strings.ToLower,
+	"title":         toTitle,
+	"snake":         toSnake,
+	"camel":         toCamel,
+	"kebab":         toKebab,
+	"base64_encode": base64Encode,
+	"base64_decode": base64Decode,
+	"url_encode":    urlEncode,
+	"url_decode":    urlDecode,
+	"sanitize_html": sanitizeHTML,
+	"reverse":       reverse,
 }
 
 // StringFormatterFunc is a function type for string transformations.
@@ -57,6 +70,16 @@ const (
 func WithStringFormatter(name string, formatter StringFormatterFunc) StringOptionsFunc {
 	return func(s *String) {
 		s.formatters[name] = formatter
+	}
+}
+
+// WithStringsFormatters adds multiple custom string formatter functions from a map.
+// This allows for bulk addition of formatters.
+func WithStringsFormatters(formatters StringsFormatters) StringOptionsFunc {
+	return func(s *String) {
+		for name, formatter := range formatters {
+			s.formatters[name] = formatter
+		}
 	}
 }
 
@@ -120,29 +143,36 @@ func (s *String) Format(tag reflect.StructTag, ptr any) error {
 		return errors.Wrapf(rerr.NotSupported, "%T", ptr)
 	}
 
-	if !strings.Contains(tagValue, SplitSymbol) {
-		formatter, ok := s.formatters[tagValue]
-		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: tagValue})
-		}
-
-		*strPtr = formatter(*strPtr)
-
-		return nil
-	}
-
+	formatters := strings.Split(tagValue, SplitSymbol)
 	str := *strPtr
-	for _, tagValue := range strings.Split(tagValue, SplitSymbol) {
-		if unicode.IsSpace(rune(tagValue[0])) || unicode.IsSpace(rune(tagValue[len(tagValue)-1])) {
-			tagValue = strings.TrimSpace(tagValue)
+
+	for _, f := range formatters {
+		name, arg := parseFormatter(f)
+		name = strings.TrimSpace(name)
+
+		formatter, ok := s.formatters[name]
+		if ok {
+			str = formatter(str)
+			continue
 		}
 
-		formatter, ok := s.formatters[tagValue]
-		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: tagValue})
+		// Handle formatters with arguments
+		switch name {
+		case "trim_prefix":
+			str = strings.TrimPrefix(str, arg)
+		case "trim_suffix":
+			str = strings.TrimSuffix(str, arg)
+		case "truncate":
+			length, err := strconv.Atoi(arg)
+			if err != nil {
+				return errors.Wrapf(err, "invalid argument for truncate: %s", arg)
+			}
+			if len(str) > length {
+				str = str[:length]
+			}
+		default:
+			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: name})
 		}
-
-		str = formatter(str)
 	}
 
 	*strPtr = str
@@ -150,8 +180,115 @@ func (s *String) Format(tag reflect.StructTag, ptr any) error {
 	return nil
 }
 
+func parseFormatter(tagPart string) (name, arg string) {
+	if idx := strings.Index(tagPart, "="); idx != -1 {
+		return tagPart[:idx], tagPart[idx+1:]
+	}
+	return tagPart, ""
+}
+
 // Tag returns the name of the struct tag that this formatter handles.
 // For the String formatter, this is "string".
 func (s *String) Tag() string {
 	return TagString
+}
+
+func toTitle(s string) string {
+	var result strings.Builder
+	capNext := true
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			result.WriteRune(r)
+			capNext = true
+		} else if capNext {
+			result.WriteRune(unicode.ToUpper(r))
+			capNext = false
+		} else {
+			result.WriteRune(unicode.ToLower(r))
+		}
+	}
+	return result.String()
+}
+
+func toSnake(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result.WriteRune('_')
+			}
+			result.WriteRune(unicode.ToLower(r))
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+func toCamel(s string) string {
+	var result strings.Builder
+	upper := true
+	for _, r := range s {
+		if r == '_' {
+			upper = true
+		} else if upper {
+			result.WriteRune(unicode.ToUpper(r))
+			upper = false
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+func toKebab(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result.WriteRune('-')
+			}
+			result.WriteRune(unicode.ToLower(r))
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+func base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func base64Decode(s string) string {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return s // Or handle error appropriately
+	}
+	return string(decoded)
+}
+
+func urlEncode(s string) string {
+	return url.QueryEscape(s)
+}
+
+func urlDecode(s string) string {
+	decoded, err := url.QueryUnescape(s)
+	if err != nil {
+		return s // Or handle error appropriately
+	}
+	return decoded
+}
+
+func sanitizeHTML(s string) string {
+	// A very basic sanitizer. For robust protection, a library like bluemonday is recommended.
+	return strings.ReplaceAll(strings.ReplaceAll(s, "<", "&lt;"), ">", "&gt;")
+}
+
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
 }
