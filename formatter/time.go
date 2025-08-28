@@ -24,18 +24,18 @@ func NewTime() *Time {
 }
 
 // Tag returns the name of the struct tag that this formatter handles.
-func (f *Time) Tag() string {
+func (t *Time) Tag() string {
 	return TagTime
 }
 
 // Format applies time formatters to a field value based on the struct tag.
-func (f *Time) Format(tag reflect.StructTag, ptr any) error {
+func (t *Time) Format(tag reflect.StructTag, ptr any) error {
 	tagValue, ok := tag.Lookup(TagTime)
 	if !ok {
 		return nil
 	}
 
-	t, ok := ptr.(*time.Time)
+	v, ok := ptr.(*time.Time)
 	if !ok {
 		return errors.Wrapf(rerr.NotSupported, "time formatter for %T", ptr)
 	}
@@ -49,18 +49,18 @@ func (f *Time) Format(tag reflect.StructTag, ptr any) error {
 			if err != nil {
 				return errors.Wrapf(err, "invalid timezone: %s", arg)
 			}
-			*t = t.In(loc)
+			*v = v.In(loc)
 		case "truncate":
 			d, err := parseDuration(arg)
 			if err != nil {
 				return err
 			}
-			*t = t.Truncate(d)
+			*v = v.Truncate(d)
 		case "start_of_day":
-			*t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+			*v = time.Date(v.Year(), v.Month(), v.Day(), 0, 0, 0, 0, v.Location())
 		case "end_of_day":
-			y, m, d := t.Date()
-			*t = time.Date(y, m, d, 23, 59, 59, int(time.Second-time.Nanosecond), t.Location())
+			y, m, d := v.Date()
+			*v = time.Date(y, m, d, 23, 59, 59, int(time.Second-time.Nanosecond), v.Location())
 		}
 	}
 

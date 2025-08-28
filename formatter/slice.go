@@ -24,12 +24,12 @@ func NewSlice() *Slice {
 }
 
 // Tag returns the name of the struct tag that this formatter handles.
-func (f *Slice) Tag() string {
+func (s *Slice) Tag() string {
 	return TagSlice
 }
 
 // Format applies slice formatters to a field value based on the struct tag.
-func (f *Slice) Format(tag reflect.StructTag, ptr any) error {
+func (s *Slice) Format(tag reflect.StructTag, ptr any) error {
 	tagValue, ok := tag.Lookup(TagSlice)
 	if !ok {
 		return nil

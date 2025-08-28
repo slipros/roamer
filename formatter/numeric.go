@@ -25,12 +25,12 @@ func NewNumeric() *Numeric {
 }
 
 // Tag returns the name of the struct tag that this formatter handles.
-func (f *Numeric) Tag() string {
+func (n *Numeric) Tag() string {
 	return TagNumeric
 }
 
 // Format applies numeric formatters to a field value based on the struct tag.
-func (f *Numeric) Format(tag reflect.StructTag, ptr any) error {
+func (n *Numeric) Format(tag reflect.StructTag, ptr any) error {
 	tagValue, ok := tag.Lookup(TagNumeric)
 	if !ok {
 		return nil
