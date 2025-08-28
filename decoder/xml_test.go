@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,41 +19,43 @@ func TestNewXML(t *testing.T) {
 	require.Equal(t, "test", x.ContentType())
 }
 
-func TestXML_Decode(t *testing.T) {
+func TestXML_Tag(t *testing.T) {
+	x := NewXML()
+	assert.Equal(t, TagXML, x.Tag())
+}
+
+func TestXML_Decode_Successfully(t *testing.T) {
+	type Data struct {
+		Field1 string `xml:"field_1"`
+		Field2 int    `xml:"field_2"`
+	}
+
+	data := Data{
+		Field1: "field1",
+		Field2: 2,
+	}
+
+	body := toXML(t, &data)
+	req, err := http.NewRequest(http.MethodPost, requestURL, body)
+	require.NoError(t, err)
+
+	x := NewXML()
+	ptr := &Data{}
+	err = x.Decode(req, ptr)
+
+	require.NoError(t, err)
+	require.Equal(t, &data, ptr)
+}
+
+func TestXML_Decode_Failure(t *testing.T) {
 	type args struct {
-		req  *http.Request
-		ptr  any
-		want any
+		req *http.Request
+		ptr any
 	}
 	tests := []struct {
-		name    string
-		args    func() args
-		wantErr bool
+		name string
+		args func() args
 	}{
-		{
-			name: "Fill struct",
-			args: func() args {
-				type Data struct {
-					Field1 string `xml:"field_1"`
-					Field2 int    `xml:"field_2"`
-				}
-
-				data := Data{
-					Field1: "field1",
-					Field2: 2,
-				}
-
-				body := toXML(t, &data)
-				req, err := http.NewRequest(http.MethodPost, requestURL, body)
-				require.NoError(t, err)
-
-				return args{
-					req:  req,
-					ptr:  &Data{},
-					want: &data,
-				}
-			},
-		},
 		{
 			name: "Error request body is nil",
 			args: func() args {
@@ -63,7 +66,6 @@ func TestXML_Decode(t *testing.T) {
 					req: req,
 				}
 			},
-			wantErr: true,
 		},
 		{
 			name: "Error invalid request body",
@@ -75,7 +77,6 @@ func TestXML_Decode(t *testing.T) {
 					req: req,
 				}
 			},
-			wantErr: true,
 		},
 	}
 
@@ -84,15 +85,8 @@ func TestXML_Decode(t *testing.T) {
 			x := NewXML()
 			args := tt.args()
 
-			if err := x.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
-				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			require.Equal(t, args.want, args.ptr)
+			err := x.Decode(args.req, args.ptr)
+			require.Error(t, err)
 		})
 	}
 }

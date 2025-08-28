@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	rerr "github.com/slipros/roamer/err"
@@ -333,6 +334,61 @@ func TestSet_Successfully(t *testing.T) {
 			value:     "interface value",
 			expected:  "interface value",
 		},
+
+		// Time tests
+		{
+			name: "set time.Time to time.Time field",
+			targetStructFn: func() any {
+				return &struct{ Value time.Time }{}
+			},
+			fieldName: "Value",
+			value:     time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+			expected:  time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
+		},
+
+		// Complex tests
+		{
+			name: "set complex128 to complex128 field",
+			targetStructFn: func() any {
+				return &struct{ Value complex128 }{}
+			},
+			fieldName: "Value",
+			value:     complex(1, 2),
+			expected:  complex(1, 2),
+		},
+
+		// Map to map tests
+		{
+			name: "set map[string]any to map[string]any field",
+			targetStructFn: func() any {
+				return &struct{ Value map[string]any }{}
+			},
+			fieldName: "Value",
+			value:     map[string]any{"key": "value", "num": 123},
+			expected:  map[string]any{"key": "value", "num": 123},
+		},
+
+		// Pointer to slice
+		{
+			name: "set *[]string to []string field",
+			targetStructFn: func() any {
+				return &struct{ Value []string }{}
+			},
+			fieldName: "Value",
+			value:     &[]string{"a", "b"},
+			expected:  []string{"a", "b"},
+		},
+
+		// Pointer to map
+		{
+			name: "set *map[string]string to map[string]string field",
+			targetStructFn: func() any {
+				return &struct{ Value map[string]string }{}
+			},
+			fieldName: "Value",
+			value:     &map[string]string{"a": "b"},
+			expected:  map[string]string{"a": "b"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -454,6 +510,37 @@ func TestSet_Failure(t *testing.T) {
 			fieldName:     "Value",
 			value:         []any{1, true, struct{}{}}, // Can't convert to []string
 			expectedError: errors.New("failed to convert element of []any to string"),
+		},
+
+		// Unsupported type tests
+		{
+			name: "setting func to int field",
+			targetStructFn: func() any {
+				return &struct{ Value int }{}
+			},
+			fieldName:     "Value",
+			value:         func() {},
+			expectedError: rerr.NotSupported,
+		},
+		{
+			name: "setting chan to string field",
+			targetStructFn: func() any {
+				return &struct{ Value string }{}
+			},
+			fieldName:     "Value",
+			value:         make(chan int),
+			expectedError: rerr.NotSupported,
+		},
+
+		// Map to incompatible map
+		{
+			name: "setting map[string]any to map[string]int field",
+			targetStructFn: func() any {
+				return &struct{ Value map[string]int }{}
+			},
+			fieldName:     "Value",
+			value:         map[string]any{"key": "value"}, // value is string, not int
+			expectedError: rerr.NotSupported,              // This should fail because the value types are incompatible
 		},
 	}
 

@@ -167,7 +167,13 @@ func (f *FormURL) parseFormValue(form url.Values, tag reflect.StructTag) (any, b
 	}
 
 	if len(values) == 1 {
-		return values[0], true
+		v := values[0]
+
+		if f.split && strings.Contains(v, f.splitSymbol) {
+			return strings.Split(v, f.splitSymbol), true
+		}
+
+		return v, true
 	}
 
 	return values, true

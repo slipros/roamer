@@ -105,9 +105,18 @@ func handleEmptyString(field reflect.Value) error {
 		// For slices, don't append anything, keep it as is
 		return nil
 
+	case reflect.Map:
+		// For maps, create a new map if nil
+		if field.IsNil() {
+			field.Set(reflect.MakeMap(field.Type()))
+		}
+		return nil
+
 	case reflect.Ptr:
-		// For pointers, set to nil (zero value)
-		field.Set(reflect.Zero(field.Type()))
+		// For pointers, set to a new zero value if nil
+		if field.IsNil() {
+			field.Set(reflect.New(field.Type().Elem()))
+		}
 		return nil
 
 	case reflect.Interface:
