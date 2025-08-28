@@ -15,7 +15,7 @@ Roamer is a flexible, extensible HTTP request parser for Go that makes handling 
 - **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, and path variables
 - **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
 - **Default Values**: Set default values for fields using the `default` tag if no value is found in the request.
-- **Formatters**: Format parsed data (e.g., trim spaces from strings)
+- **Formatters**: Format parsed data (e.g., trim spaces from strings, apply numeric constraints, handle time zones, manipulate slices)
 - **Router integration**: Built-in support for popular routers (Chi, Gorilla Mux, HttpRouter)
 - **Type conversion**: Automatic conversion of string values to appropriate Go types
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
@@ -89,7 +89,12 @@ func main() {
 			parser.NewHeader(),
 			parser.NewQuery(),
 		),
-		roamer.WithFormatters(formatter.NewString()),
+		roamer.WithFormatters(
+			formatter.NewString(),
+			formatter.NewNumeric(),
+			formatter.NewTime(),
+			formatter.NewSlice(),
+		),
 	)
 	
 	// Create an HTTP handler
@@ -585,6 +590,154 @@ r := roamer.NewRoamer(
 )
 ```
 
+## Formatters
+
+Roamer provides several built-in formatters to post-process parsed values. Formatters are applied after values are extracted from the HTTP request and converted to the appropriate type.
+
+### String Formatter
+
+The String formatter provides text processing operations:
+
+```go
+type UserRequest struct {
+    Name     string `json:"name" string:"trim_space,lower_case"`
+    Username string `query:"username" string:"trim_space,slug"`
+    Bio      string `json:"bio" string:"trim_space"`
+}
+
+// Initialize with string formatter
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithParsers(parser.NewQuery()),
+    roamer.WithFormatters(formatter.NewString()),
+)
+```
+
+Available string operations:
+- `trim_space` - Remove leading and trailing whitespace
+- `lower_case` - Convert to lowercase 
+- `upper_case` - Convert to uppercase
+- `slug` - Convert to URL-friendly slug format
+
+### Numeric Formatter
+
+The Numeric formatter provides mathematical operations and constraints:
+
+```go
+type ProductRequest struct {
+    Price    float64 `json:"price" numeric:"min=0,max=1000"`
+    Quantity int     `json:"quantity" numeric:"min=1,abs"`
+    Rating   float64 `query:"rating" numeric:"min=0,max=5,round"`
+    Discount float32 `json:"discount" numeric:"ceil"`
+}
+
+// Initialize with numeric formatter
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithParsers(parser.NewQuery()),
+    roamer.WithFormatters(formatter.NewNumeric()),
+)
+```
+
+Available numeric operations:
+- `min=N` - Enforce minimum value (clamps to N if value is less)
+- `max=N` - Enforce maximum value (clamps to N if value is greater)
+- `abs` - Convert to absolute value
+- `round` - Round to nearest integer (float types only)
+- `ceil` - Round up to next integer (float types only)
+- `floor` - Round down to previous integer (float types only)
+
+### Time Formatter
+
+The Time formatter provides time manipulation operations:
+
+```go
+type EventRequest struct {
+    StartTime time.Time `json:"start_time" time:"timezone=UTC,truncate=hour"`
+    EndTime   time.Time `json:"end_time" time:"timezone=America/New_York"`
+    Date      time.Time `query:"date" time:"start_of_day"`
+    Deadline  time.Time `json:"deadline" time:"end_of_day"`
+}
+
+// Initialize with time formatter
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithParsers(parser.NewQuery()),
+    roamer.WithFormatters(formatter.NewTime()),
+)
+```
+
+Available time operations:
+- `timezone=TZ` - Convert to specified timezone (e.g., `UTC`, `America/New_York`)
+- `truncate=UNIT` - Truncate to time unit (`hour`, `minute`, `second`, or duration like `1h30m`)
+- `start_of_day` - Set time to beginning of day (00:00:00)
+- `end_of_day` - Set time to end of day (23:59:59.999999999)
+
+### Slice Formatter
+
+The Slice formatter provides operations for slice manipulation:
+
+```go
+type SearchRequest struct {
+    Tags       []string  `query:"tags" slice:"unique,sort"`
+    Categories []string  `json:"categories" slice:"compact,limit=10"`
+    Scores     []float64 `json:"scores" slice:"sort_desc,limit=5"`
+    IDs        []int     `query:"ids" slice:"unique,compact"`
+}
+
+// Initialize with slice formatter
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithParsers(parser.NewQuery()),
+    roamer.WithFormatters(formatter.NewSlice()),
+)
+```
+
+Available slice operations:
+- `unique` - Remove duplicate values
+- `sort` - Sort in ascending order
+- `sort_desc` - Sort in descending order
+- `compact` - Remove zero values (empty strings, 0, nil, etc.)
+- `limit=N` - Limit slice to first N elements
+
+### Combining Multiple Formatters
+
+You can use multiple formatters together in a single roamer instance:
+
+```go
+type ComprehensiveRequest struct {
+    // String formatting
+    Name     string `json:"name" string:"trim_space,lower_case"`
+    
+    // Numeric constraints
+    Age      int     `json:"age" numeric:"min=18,max=120"`
+    Salary   float64 `query:"salary" numeric:"min=0,round"`
+    
+    // Time manipulation  
+    BirthDate time.Time `json:"birth_date" time:"timezone=UTC,start_of_day"`
+    
+    // Slice operations
+    Skills    []string `json:"skills" slice:"unique,sort" string:"trim_space,lower_case"`
+    Scores    []int    `query:"scores" slice:"compact,sort_desc,limit=10" numeric:"min=0,max=100"`
+}
+
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithParsers(
+        parser.NewHeader(),
+        parser.NewQuery(),
+    ),
+    roamer.WithFormatters(
+        formatter.NewString(),
+        formatter.NewNumeric(), 
+        formatter.NewTime(),
+        formatter.NewSlice(),
+    ),
+)
+```
+
+**Note**: When multiple formatters are applied to the same field, they are processed in the order the formatters are registered with roamer.
+
 ## Extending Roamer
 
 Roamer is designed to be easily extended with custom parsers, decoders, and formatters. Here are examples of how to create each type of extension.
@@ -952,13 +1105,14 @@ type CreateProductRequest struct {
 	// Body data
 	Name        string  `json:"name" string:"trim_space"`
 	Description string  `json:"description" string:"trim_space"`
-	Price       float64 `json:"price"`
+	Price       float64 `json:"price" numeric:"min=0"`
 	
 	// Path parameter
 	ID string `path:"id"`
 	
 	// Query parameters
-	Category    string    `query:"category"`
+	Category    string    `query:"category" string:"trim_space,lower_case"`
+	Tags        []string  `query:"tags" slice:"unique,compact,sort"`
 	CustomType  *Custom   `query:"custom_type"`
 }
 
@@ -991,7 +1145,12 @@ func main() {
 			parser.NewQuery(),
 			parser.NewPath(rchi.NewPath(router)),
 		),
-		roamer.WithFormatters(formatter.NewString()),
+		roamer.WithFormatters(
+			formatter.NewString(),
+			formatter.NewNumeric(),
+			formatter.NewTime(),
+			formatter.NewSlice(),
+		),
 	)
 	
 	// Define routes with appropriate request structs for each endpoint
