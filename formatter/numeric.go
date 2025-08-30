@@ -99,7 +99,7 @@ func applyMinMax(ptr any, arg string, isMin bool) error {
 
 	switch v := ptr.(type) {
 	case *int:
-		m, err := strconv.ParseInt(arg, 10, 64)
+		m, err := strconv.ParseInt(arg, 10, strconv.IntSize)
 		if err != nil {
 			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
