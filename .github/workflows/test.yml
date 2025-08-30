@@ -8,15 +8,15 @@ name: run tests
 permissions:
   contents: read
   statuses: write
+  security-events: write
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [ "1.22" ]
+        go-version: [ "1.22", "1.25" ]
     runs-on: ubuntu-latest
     env:
       GOLANGCI_LINT_VERSION: v2.1.6
-
     steps:
       - name: Install Go
         if: success()
@@ -35,19 +35,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+
       - name: Run linter
         uses: golangci/golangci-lint-action@v8
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
 
       - name: Run tests
-        run: go test -covermode=count -coverprofile=coverage.out ./...
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
       - name: Convert coverage.out to coverage.lcov
         uses: jandelgado/gcov2lcov-action@v1
 
       - name: Coveralls
-        uses: coverallsapp/github-action@v2.3.6
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.lcov
