@@ -1,272 +1,421 @@
 package formatter
 
 import (
-	"errors"
 	"reflect"
-	"strings"
 	"testing"
 
-	rerr "github.com/slipros/roamer/err"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rerr "github.com/slipros/roamer/err"
 )
 
-// createTestTag creates a struct tag for testing
-func createTestTag(value string) reflect.StructTag {
-	return reflect.StructTag(`string:"` + value + `"`)
-}
+func TestNewString(t *testing.T) {
+	t.Parallel()
 
-// TestString_Tag tests the Tag method of the String formatter
-func TestString_Tag(t *testing.T) {
-	f := NewString()
-	assert.Equal(t, "string", f.Tag(), "Tag should return 'string'")
-}
+	t.Run("DefaultFormatters", func(t *testing.T) {
+		t.Parallel()
 
-// TestString_NewString tests the NewString constructor
-func TestString_NewString(t *testing.T) {
-	// Test default constructor
-	f := NewString()
-	assert.NotNil(t, f)
-	assert.Contains(t, f.formatters, "trim_space", "Default formatters should include 'trim_space'")
-	assert.NotNil(t, f.formatters["trim_space"], "The 'trim_space' formatter should be a valid function")
+		s := NewString()
+		require.NotNil(t, s)
+		assert.Equal(t, TagString, s.Tag())
 
-	// Test with custom formatter
-	reverseFn := func(s string) string {
-		runes := []rune(s)
-		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-			runes[i], runes[j] = runes[j], runes[i]
+		// Check if all default formatters are loaded
+		for name := range defaultStringFormatters {
+			_, ok := s.formatters[name]
+			assert.True(t, ok, "default formatter %s not found", name)
 		}
-		return string(runes)
-	}
+	})
 
-	f = NewString(WithStringFormatter("reverse", reverseFn))
-	assert.Contains(t, f.formatters, "trim_space", "Default formatters should be preserved")
-	assert.Contains(t, f.formatters, "reverse", "Custom formatter should be added")
-	assert.NotNil(t, f.formatters["reverse"], "The 'reverse' formatter should be a valid function")
+	t.Run("WithCustomFormatter", func(t *testing.T) {
+		t.Parallel()
 
-	// Test result of custom formatter
-	result := f.formatters["reverse"]("hello")
-	assert.Equal(t, "olleh", result, "Custom formatter should work correctly")
+		customFormatter := func(s string, _ string) (string, error) {
+			return "custom_" + s, nil
+		}
+		s := NewString(WithStringFormatter("custom", customFormatter))
+		require.NotNil(t, s)
+
+		// Test the custom formatter
+		formatted, err := s.formatters["custom"]("test", "")
+		require.NoError(t, err)
+		assert.Equal(t, "custom_test", formatted)
+	})
+
+	t.Run("WithCustomFormatters", func(t *testing.T) {
+		t.Parallel()
+
+		customFormatters := StringsFormatters{
+			"custom1": func(s string, _ string) (string, error) { return "c1_" + s, nil },
+			"custom2": func(s string, _ string) (string, error) { return "c2_" + s, nil },
+		}
+		s := NewString(WithStringsFormatters(customFormatters))
+		require.NotNil(t, s)
+
+		// Test custom formatters
+		f1, err := s.formatters["custom1"]("test", "")
+		require.NoError(t, err)
+		assert.Equal(t, "c1_test", f1)
+
+		f2, err := s.formatters["custom2"]("test", "")
+		require.NoError(t, err)
+		assert.Equal(t, "c2_test", f2)
+	})
 }
 
-// TestString_Format_Successfully tests successful formatting scenarios
 func TestString_Format_Successfully(t *testing.T) {
-	// Define custom formatters for tests
-	uppercaseFn := strings.ToUpper
-	lowercaseFn := strings.ToLower
-	removeVowelsFn := func(s string) string {
-		return strings.Map(func(r rune) rune {
-			switch r {
-			case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
-				return -1
-			default:
-				return r
-			}
-		}, s)
-	}
+	t.Parallel()
 
-	// Create formatter with custom functions
-	f := NewString(
-		WithStringFormatter("uppercase", uppercaseFn),
-		WithStringFormatter("lowercase", lowercaseFn),
-		WithStringFormatter("remove_vowels", removeVowelsFn),
-	)
+	s := NewString()
 
-	tests := []struct {
+	testCases := []struct {
 		name     string
-		tag      reflect.StructTag
-		input    string
+		tag      string
+		initial  string
 		expected string
 	}{
 		{
-			name:     "Apply trim_space",
-			tag:      createTestTag("trim_space"),
-			input:    "  hello world  ",
+			name:     "TrimSpace",
+			tag:      `string:"trim_space"`,
+			initial:  "  hello world  ",
 			expected: "hello world",
 		},
 		{
-			name:     "Apply uppercase",
-			tag:      createTestTag("uppercase"),
-			input:    "hello world",
-			expected: "HELLO WORLD",
+			name:     "ToUpper",
+			tag:      `string:"upper"`,
+			initial:  "hello",
+			expected: "HELLO",
 		},
 		{
-			name:     "Apply lowercase",
-			tag:      createTestTag("lowercase"),
-			input:    "HELLO WORLD",
-			expected: "hello world",
+			name:     "ToLower",
+			tag:      `string:"lower"`,
+			initial:  "WORLD",
+			expected: "world",
 		},
 		{
-			name:     "Apply remove_vowels",
-			tag:      createTestTag("remove_vowels"),
-			input:    "hello world",
-			expected: "hll wrld",
+			name:     "Title",
+			tag:      `string:"title"`,
+			initial:  "hello world",
+			expected: "Hello World",
 		},
 		{
-			name:     "Apply multiple formatters",
-			tag:      createTestTag("trim_space,uppercase"),
-			input:    "  hello world  ",
-			expected: "HELLO WORLD",
+			name:     "SnakeCase",
+			tag:      `string:"snake"`,
+			initial:  "helloWorld",
+			expected: "hello_world",
 		},
 		{
-			name:     "Apply multiple formatters in order",
-			tag:      createTestTag("trim_space,uppercase,remove_vowels"),
-			input:    "  hello world  ",
-			expected: "HLL WRLD",
+			name:     "CamelCase",
+			tag:      `string:"camel"`,
+			initial:  "hello_world",
+			expected: "HelloWorld",
 		},
 		{
-			name:     "No tag value - should not modify",
-			tag:      reflect.StructTag(""),
-			input:    "hello world",
-			expected: "hello world",
+			name:     "KebabCase",
+			tag:      `string:"kebab"`,
+			initial:  "helloWorld",
+			expected: "hello-world",
+		},
+		{
+			name:     "Base64Encode",
+			tag:      `string:"base64_encode"`,
+			initial:  "hello",
+			expected: "aGVsbG8=",
+		},
+		{
+			name:     "Base64Decode",
+			tag:      `string:"base64_decode"`,
+			initial:  "aGVsbG8=",
+			expected: "hello",
+		},
+		{
+			name:     "Base64Decode_Invalid",
+			tag:      `string:"base64_decode"`,
+			initial:  "invalid-base64",
+			expected: "invalid-base64",
+		},
+		{
+			name:     "URLEncode",
+			tag:      `string:"url_encode"`,
+			initial:  "a=b&c=d",
+			expected: "a%3Db%26c%3Dd",
+		},
+		{
+			name:     "URLDecode",
+			tag:      `string:"url_decode"`,
+			initial:  "a%3Db%26c%3Dd",
+			expected: "a=b&c=d",
+		},
+		{
+			name:     "URLDecode_Invalid",
+			tag:      `string:"url_decode"`,
+			initial:  "%invalid-url",
+			expected: "%invalid-url",
+		},
+		{
+			name:     "SanitizeHTML",
+			tag:      `string:"sanitize_html"`,
+			initial:  "<p>hello</p>",
+			expected: "&lt;p&gt;hello&lt;/p&gt;",
+		},
+		{
+			name:     "Reverse",
+			tag:      `string:"reverse"`,
+			initial:  "hello",
+			expected: "olleh",
+		},
+		{
+			name:     "TrimPrefix",
+			tag:      `string:"trim_prefix=pre"`,
+			initial:  "prefix_text",
+			expected: "fix_text",
+		},
+		{
+			name:     "TrimSuffix",
+			tag:      `string:"trim_suffix=fix"`,
+			initial:  "text_postfix",
+			expected: "text_post",
+		},
+		{
+			name:     "Truncate",
+			tag:      `string:"truncate=5"`,
+			initial:  "123456789",
+			expected: "12345",
+		},
+		{
+			name:     "Truncate_Shorter",
+			tag:      `string:"truncate=10"`,
+			initial:  "12345",
+			expected: "12345",
+		},
+		{
+			name:     "Replace",
+			tag:      `string:"replace=old:new"`,
+			initial:  "old string with old value",
+			expected: "new string with new value",
+		},
+		{
+			name:     "Replace_WithCount",
+			tag:      `string:"replace=a:b:2"`,
+			initial:  "aaabbbaaa",
+			expected: "bbabbbaaa",
+		},
+		{
+			name:     "Substring",
+			tag:      `string:"substring=1:5"`,
+			initial:  "0123456789",
+			expected: "1234",
+		},
+		{
+			name:     "Substring_ToEnd",
+			tag:      `string:"substring=5"`,
+			initial:  "0123456789",
+			expected: "56789",
+		},
+		{
+			name:     "Substring_StartOutOfBounds",
+			tag:      `string:"substring=15"`,
+			initial:  "0123456789",
+			expected: "",
+		},
+		{
+			name:     "Substring_EndOutOfBounds",
+			tag:      `string:"substring=5:15"`,
+			initial:  "0123456789",
+			expected: "56789",
+		},
+		{
+			name:     "Substring_StartAfterEnd",
+			tag:      `string:"substring=5:1"`,
+			initial:  "0123456789",
+			expected: "",
+		},
+		{
+			name:     "PadLeft",
+			tag:      `string:"pad_left=10:_"`,
+			initial:  "text",
+			expected: "______text",
+		},
+		{
+			name:     "PadLeft_NoChar",
+			tag:      `string:"pad_left=10"`,
+			initial:  "text",
+			expected: "      text",
+		},
+		{
+			name:     "PadLeft_Longer",
+			tag:      `string:"pad_left=3:_"`,
+			initial:  "text",
+			expected: "text",
+		},
+		{
+			name:     "PadRight",
+			tag:      `string:"pad_right=10:_"`,
+			initial:  "text",
+			expected: "text______",
+		},
+		{
+			name:     "PadRight_NoChar",
+			tag:      `string:"pad_right=10"`,
+			initial:  "text",
+			expected: "text      ",
+		},
+		{
+			name:     "PadRight_Longer",
+			tag:      `string:"pad_right=3:_"`,
+			initial:  "text",
+			expected: "text",
+		},
+		{
+			name:     "MultipleFormatters",
+			tag:      `string:"trim_space,upper,truncate=5"`,
+			initial:  "  hello world  ",
+			expected: "HELLO",
+		},
+		{
+			name:     "NoStringTag",
+			tag:      `other:"tag"`,
+			initial:  "no change",
+			expected: "no change",
 		},
 	}
 
-	for _, tc := range tests {
+	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			// Create a string pointer for the test
-			input := tc.input
-
-			// Apply the formatter
-			err := f.Format(tc.tag, &input)
-
-			// Check results
+			t.Parallel()
+			val := tc.initial
+			err := s.Format(reflect.StructTag(tc.tag), &val)
 			require.NoError(t, err)
-			assert.Equal(t, tc.expected, input, "String formatter should correctly apply transformations")
+			assert.Equal(t, tc.expected, val)
 		})
 	}
 }
 
-// TestString_Format_Failure tests failure scenarios for formatting
 func TestString_Format_Failure(t *testing.T) {
-	f := NewString()
+	t.Parallel()
 
-	tests := []struct {
-		name      string
-		tag       reflect.StructTag
-		input     any // Changed to interface{} to test non-string pointers
-		expectErr error
-	}{
-		{
-			name:      "Non-string pointer",
-			tag:       createTestTag("trim_space"),
-			input:     new(int),
-			expectErr: rerr.NotSupported,
-		},
-		{
-			name:      "Unknown formatter",
-			tag:       createTestTag("non_existent"),
-			input:     new(string),
-			expectErr: rerr.FormatterNotFound{Tag: TagString, Formatter: "non_existent"},
-		},
-		{
-			name:      "Unknown formatter in multi-formatter tag",
-			tag:       createTestTag("trim_space,non_existent"),
-			input:     new(string),
-			expectErr: rerr.FormatterNotFound{Tag: TagString, Formatter: "non_existent"},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Apply the formatter
-			err := f.Format(tc.tag, tc.input)
-
-			// Check results
-			require.Error(t, err)
-
-			var formatterErr rerr.FormatterNotFound
-			if errors.As(tc.expectErr, &formatterErr) {
-				var actual rerr.FormatterNotFound
-				if assert.ErrorAs(t, err, &actual) {
-					assert.Equal(t, formatterErr.Tag, actual.Tag)
-					assert.Equal(t, formatterErr.Formatter, actual.Formatter)
-				}
-			}
-		})
-	}
-}
-
-// TestWithStringFormatters tests the WithStringFormatters option
-func TestWithStringFormatters_Successfully(t *testing.T) {
-	// Create custom formatters map
-	customFormatters := StringsFormatters{
-		"reverse": func(s string) string {
-			runes := []rune(s)
-			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-				runes[i], runes[j] = runes[j], runes[i]
-			}
-			return string(runes)
-		},
-		"double": func(s string) string {
-			return s + s
-		},
-	}
-
-	// Test WithStringFormatters option
-	f := NewString(WithStringFormatters(customFormatters))
-
-	// Verify formatters are added and defaults are replaced
-	assert.NotContains(t, f.formatters, "trim_space", "Default formatters should be replaced")
-	assert.Contains(t, f.formatters, "reverse", "Custom formatter should be added")
-	assert.Contains(t, f.formatters, "double", "Custom formatter should be added")
-
-	// Test formatters work
-	input := "hello"
-
-	// Test reverse formatter
-	reverseTag := createTestTag("reverse")
-	reverseInput := input
-	err := f.Format(reverseTag, &reverseInput)
-	require.NoError(t, err)
-	assert.Equal(t, "olleh", reverseInput)
-
-	// Test double formatter
-	doubleTag := createTestTag("double")
-	doubleInput := input
-	err = f.Format(doubleTag, &doubleInput)
-	require.NoError(t, err)
-	assert.Equal(t, "hellohello", doubleInput)
-}
-
-// TestWithExtendedStringFormatters tests the WithExtendedStringFormatters option
-func TestWithExtendedStringFormatters_Successfully(t *testing.T) {
-	// Create base formatter with a custom formatter and the default trim_space
-	baseFormatters := StringsFormatters{
-		"base":       func(s string) string { return "base:" + s },
-		"trim_space": strings.TrimSpace, // Include built-in formatter explicitly
-	}
-
-	// Create extended formatters
-	extendedFormatters := StringsFormatters{
-		"extended": func(s string) string { return "extended:" + s },
-	}
-
-	// Test extending formatters
-	f := NewString(
-		WithStringFormatters(baseFormatters),
-		WithExtendedStringFormatters(extendedFormatters),
+	s := NewString(
+		WithStringFormatter("error_formatter", func(s string, _ string) (string, error) {
+			return "", assert.AnError
+		}),
 	)
 
-	// Verify all formatters are present
-	assert.Contains(t, f.formatters, "trim_space", "Base formatters should include trim_space")
-	assert.Contains(t, f.formatters, "base", "Base formatter should be present")
-	assert.Contains(t, f.formatters, "extended", "Extended formatter should be added")
+	testCases := []struct {
+		name         string
+		tag          string
+		initialValue any
+		errAs        error
+		errIs        error
+	}{
+		{
+			name:         "NotAStringPointer",
+			tag:          `string:"trim_space"`,
+			initialValue: new(int),
+			errIs:        rerr.NotSupported,
+		},
+		{
+			name:         "FormatterNotFound",
+			tag:          `string:"non_existent"`,
+			initialValue: new(string),
+			errAs:        &rerr.FormatterNotFound{},
+		},
+		{
+			name:         "FormatterReturnsError",
+			tag:          `string:"error_formatter"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "TrimPrefix_MissingArg",
+			tag:          `string:"trim_prefix="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "TrimSuffix_MissingArg",
+			tag:          `string:"trim_suffix="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Truncate_EmptyArg",
+			tag:          `string:"truncate="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Truncate_InvalidArg",
+			tag:          `string:"truncate=abc"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Truncate_NegativeLength",
+			tag:          `string:"truncate=-1"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Replace_MissingArgs",
+			tag:          `string:"replace=old"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Replace_InvalidCount",
+			tag:          `string:"replace=a:b:c"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Substring_EmptyArg",
+			tag:          `string:"substring="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Substring_InvalidStartIndex",
+			tag:          `string:"substring=a:5"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Substring_InvalidEndIndex",
+			tag:          `string:"substring=1:b"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "Substring_EmptyEnd",
+			tag:          `string:"substring=1:"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "PadLeft_EmptyArg",
+			tag:          `string:"pad_left="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "PadLeft_InvalidArg",
+			tag:          `string:"pad_left=abc"`,
+			initialValue: new(string),
+		},
+		{
+			name:         "PadRight_EmptyArg",
+			tag:          `string:"pad_right="`,
+			initialValue: new(string),
+		},
+		{
+			name:         "PadRight_InvalidArg",
+			tag:          `string:"pad_right=abc"`,
+			initialValue: new(string),
+		},
+	}
 
-	// Test the formatters work
-	input := "test"
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			val := tc.initialValue
+			err := s.Format(reflect.StructTag(tc.tag), val)
 
-	// Test base formatter
-	baseTag := createTestTag("base")
-	baseInput := input
-	err := f.Format(baseTag, &baseInput)
-	require.NoError(t, err)
-	assert.Equal(t, "base:test", baseInput)
-
-	// Test extended formatter
-	extendedTag := createTestTag("extended")
-	extendedInput := input
-	err = f.Format(extendedTag, &extendedInput)
-	require.NoError(t, err)
-	assert.Equal(t, "extended:test", extendedInput)
+			if tc.errIs != nil {
+				require.ErrorIs(t, err, tc.errIs)
+			} else if tc.errAs != nil {
+				require.ErrorAs(t, err, &tc.errAs)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
 }

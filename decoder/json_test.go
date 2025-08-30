@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,16 +19,20 @@ func TestNewJSON(t *testing.T) {
 	require.Equal(t, "test", j.ContentType())
 }
 
-func TestJSON_Decode(t *testing.T) {
+func TestJSON_Tag(t *testing.T) {
+	j := NewJSON()
+	assert.Equal(t, TagJSON, j.Tag())
+}
+
+func TestJSON_Decode_Successfully(t *testing.T) {
 	type args struct {
 		req  *http.Request
 		ptr  any
 		want any
 	}
 	tests := []struct {
-		name    string
-		args    func() args
-		wantErr bool
+		name string
+		args func() args
 	}{
 		{
 			name: "Success fill struct",
@@ -69,6 +74,29 @@ func TestJSON_Decode(t *testing.T) {
 				}
 			},
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			j := NewJSON()
+			args := tt.args()
+
+			err := j.Decode(args.req, args.ptr)
+			require.NoError(t, err)
+			require.Equal(t, args.want, args.ptr)
+		})
+	}
+}
+
+func TestJSON_Decode_Failure(t *testing.T) {
+	type args struct {
+		req *http.Request
+		ptr any
+	}
+	tests := []struct {
+		name string
+		args func() args
+	}{
 		{
 			name: "Error nil request body",
 			args: func() args {
@@ -79,7 +107,6 @@ func TestJSON_Decode(t *testing.T) {
 					req: req,
 				}
 			},
-			wantErr: true,
 		},
 		{
 			name: "Error invalid request body",
@@ -91,7 +118,6 @@ func TestJSON_Decode(t *testing.T) {
 					req: req,
 				}
 			},
-			wantErr: true,
 		},
 	}
 
@@ -100,15 +126,8 @@ func TestJSON_Decode(t *testing.T) {
 			j := NewJSON()
 			args := tt.args()
 
-			if err := j.Decode(args.req, args.ptr); !tt.wantErr && err != nil {
-				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			require.Equal(t, args.want, args.ptr)
+			err := j.Decode(args.req, args.ptr)
+			require.Error(t, err)
 		})
 	}
 }

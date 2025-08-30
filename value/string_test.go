@@ -40,30 +40,33 @@ func (f *failingUnmarshaler) UnmarshalText(text []byte) error {
 func TestSetString_Successfully(t *testing.T) {
 	// Create test structure
 	type TestStruct struct {
-		StrField          string
-		BoolField         bool
-		IntField          int
-		Int8Field         int8
-		Int16Field        int16
-		Int32Field        int32
-		Int64Field        int64
-		UintField         uint
-		Uint8Field        uint8
-		Uint16Field       uint16
-		Uint32Field       uint32
-		Uint64Field       uint64
-		Float32Field      float32
-		Float64Field      float64
-		Complex64Field    complex64
-		Complex128Field   complex128
-		ByteSlice         []byte
-		StringSlice       []string
-		IntSlice          []int
-		PtrField          *string
-		TextUnmarshaler   UnmarshallerText
-		BinaryUnmarshaler UnmarshallerBinary
-		TimeField         time.Time
-		InterfaceField    interface{}
+		StrField             string
+		BoolField            bool
+		IntField             int
+		Int8Field            int8
+		Int16Field           int16
+		Int32Field           int32
+		Int64Field           int64
+		UintField            uint
+		Uint8Field           uint8
+		Uint16Field          uint16
+		Uint32Field          uint32
+		Uint64Field          uint64
+		Float32Field         float32
+		Float64Field         float64
+		Complex64Field       complex64
+		Complex128Field      complex128
+		ByteSlice            []byte
+		StringSlice          []string
+		IntSlice             []int
+		PtrField             *string
+		TextUnmarshaler      UnmarshallerText
+		BinaryUnmarshaler    UnmarshallerBinary
+		TimeField            time.Time
+		InterfaceField       interface{}
+		MapStringStringField map[string]string
+		MapStringIntField    map[string]int
+		PtrIntField          *int
 	}
 
 	// Define test cases
@@ -133,6 +136,18 @@ func TestSetString_Successfully(t *testing.T) {
 		// Time
 		{name: "RFC3339 to time.Time", field: "TimeField", input: "2023-01-15T12:00:00Z", expected: mustParseTime(time.RFC3339, "2023-01-15T12:00:00Z")},
 		{name: "simple date to time.Time", field: "TimeField", input: "2023-01-15", expected: mustParseTime("2006-01-02", "2023-01-15")},
+		{name: "datetime (len 19) to time.Time", field: "TimeField", input: "2023-01-15 12:00:00", expected: mustParseTime("2006-01-02 15:04:05", "2023-01-15 12:00:00")},
+		{name: "RFC3339 with offset (len 25) to time.Time", field: "TimeField", input: "2023-01-15T12:00:00+01:00", expected: mustParseTime(time.RFC3339, "2023-01-15T12:00:00+01:00")},
+		{name: "RFC822 to time.Time", field: "TimeField", input: "15 Jan 23 12:00 UTC", expected: mustParseTime(time.RFC822, "15 Jan 23 12:00 UTC")},
+		{name: "RFC3339Nano to time.Time", field: "TimeField", input: "2023-01-15T12:00:00.123456789Z", expected: mustParseTime(time.RFC3339Nano, "2023-01-15T12:00:00.123456789Z")},
+
+		// Map
+		{name: "string to map[string]string", field: "MapStringStringField", input: "key1:value1,key2:value2", expected: map[string]string{"key1": "value1", "key2": "value2"}},
+		{name: "string to map[string]int", field: "MapStringIntField", input: "key1:1,key2:2", expected: map[string]int{"key1": 1, "key2": 2}},
+		{name: "empty string to map", field: "MapStringStringField", input: "", expected: map[string]string{}},
+
+		// Empty string to pointer
+		{name: "empty string to *int", field: "PtrIntField", input: "", expected: new(int)},
 	}
 
 	for _, tc := range tests {
@@ -175,15 +190,16 @@ func TestSetString_Successfully(t *testing.T) {
 func TestSetString_Failure(t *testing.T) {
 	// Create test structure
 	type TestStruct struct {
-		IntField           int
-		UintField          uint
-		FloatField         float64
-		ComplexField       complex128
-		TimeField          time.Time
-		MapStringIntField  map[string]int
-		MapIntStringField  map[int]string
-		ChannelField       chan int
-		FailingUnmarshaler failingUnmarshaler
+		IntField             int
+		UintField            uint
+		FloatField           float64
+		ComplexField         complex128
+		TimeField            time.Time
+		MapStringStringField map[string]string
+		MapStringIntField    map[string]int
+		MapIntStringField    map[int]string
+		ChannelField         chan int
+		FailingUnmarshaler   failingUnmarshaler
 	}
 
 	// Define test cases
@@ -246,6 +262,18 @@ func TestSetString_Failure(t *testing.T) {
 			name:     "invalid map key-value pair",
 			field:    "MapStringIntField",
 			input:    "key1=value1", // using = instead of :
+			errCheck: func(err error) bool { return err != nil },
+		},
+		{
+			name:     "malformed map string (no colon)",
+			field:    "MapStringStringField",
+			input:    "key1value1,key2:value2",
+			errCheck: func(err error) bool { return err != nil },
+		},
+		{
+			name:     "malformed map string (value not int)",
+			field:    "MapStringIntField",
+			input:    "key1:abc",
 			errCheck: func(err error) bool { return err != nil },
 		},
 

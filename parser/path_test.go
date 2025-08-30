@@ -142,3 +142,54 @@ func TestPath(t *testing.T) {
 		})
 	}
 }
+
+func TestServeMuxValueFromPath_Successfully(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func() *http.Request
+		paramName   string
+		expectedVal string
+		expectedOk  bool
+	}{
+		{
+			name: "value exists",
+			setup: func() *http.Request {
+				req := &http.Request{}
+				req.SetPathValue("user_id", "123")
+				return req
+			},
+			paramName:   "user_id",
+			expectedVal: "123",
+			expectedOk:  true,
+		},
+		{
+			name: "value does not exist",
+			setup: func() *http.Request {
+				return &http.Request{}
+			},
+			paramName:   "user_id",
+			expectedVal: "",
+			expectedOk:  false,
+		},
+		{
+			name: "value is empty",
+			setup: func() *http.Request {
+				req := &http.Request{}
+				req.SetPathValue("user_id", "")
+				return req
+			},
+			paramName:   "user_id",
+			expectedVal: "",
+			expectedOk:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := tt.setup()
+			val, ok := ServeMuxValueFromPath(req, tt.paramName)
+			require.Equal(t, tt.expectedVal, val)
+			require.Equal(t, tt.expectedOk, ok)
+		})
+	}
+}

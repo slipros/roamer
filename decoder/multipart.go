@@ -161,7 +161,7 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 		for i := range fields {
 			f := &fields[i]
 
-			if !f.IsExported || !f.HasTag || len(f.Decoders) == 0 || !slices.Contains(f.Decoders, TagMultipart) {
+			if len(f.Decoders) == 0 || !slices.Contains(f.Decoders, TagMultipart) {
 				continue
 			}
 

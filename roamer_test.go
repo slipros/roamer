@@ -738,3 +738,131 @@ func BenchmarkParse_SkipFilled(b *testing.B) {
 		}
 	}
 }
+
+func TestRoamer_Parse_DefaultValue_Successfully(t *testing.T) {
+	type validDefaultStruct struct {
+		String      string   `query:"s" default:"default string"`
+		Int         int      `query:"i" default:"123"`
+		Float       float64  `query:"f" default:"123.45"`
+		Bool        bool     `query:"b" default:"true"`
+		StringSlice []string `query:"ss" default:"a,b,c"`
+		IntSlice    []int    `query:"is" default:"1,2,3"`
+		NoTag       string   `default:"no tag"`
+		IntPtr      *int     `query:"iptr" default:"42"`
+	}
+
+	tests := []struct {
+		name string
+		url  string
+		ptr  any
+		want any
+	}{
+		{
+			name: "all values from default",
+			url:  "http://example.com",
+			ptr:  &validDefaultStruct{},
+			want: &validDefaultStruct{
+				String:      "default string",
+				Int:         123,
+				Float:       123.45,
+				Bool:        true,
+				StringSlice: []string{"a", "b", "c"},
+				IntSlice:    []int{1, 2, 3},
+				NoTag:       "no tag",
+				IntPtr:      func() *int { i := 42; return &i }(),
+			},
+		},
+		{
+			name: "all values from query, default ignored",
+			url:  "http://example.com?s=query&i=999&f=9.99&b=false&ss=x,y&is=8,9",
+			ptr:  &validDefaultStruct{},
+			want: &validDefaultStruct{
+				String:      "query",
+				Int:         999,
+				Float:       9.99,
+				Bool:        false,
+				StringSlice: []string{"x", "y"},
+				IntSlice:    []int{8, 9},
+				NoTag:       "no tag",                                 // No parser, so default is used
+				IntPtr:      func() *int { i := 42; return &i }(), // No query value, so default is used
+			},
+		},
+		{
+			name: "partial from query, partial from default",
+			url:  "http://example.com?s=query&b=false",
+			ptr:  &validDefaultStruct{},
+			want: &validDefaultStruct{
+				String:      "query",
+				Int:         123,
+				Float:       123.45,
+				Bool:        false,
+				StringSlice: []string{"a", "b", "c"},
+				IntSlice:    []int{1, 2, 3},
+				NoTag:       "no tag",
+				IntPtr:      func() *int { i := 42; return &i }(),
+			},
+		},
+		{
+			name: "pre-filled value is not overwritten by default",
+			url:  "http://example.com",
+			ptr: &validDefaultStruct{
+				Int: 999, // Pre-filled
+			},
+			want: &validDefaultStruct{
+				String:      "default string",
+				Int:         999, // Should not be changed from 999 to 123
+				Float:       123.45,
+				Bool:        true,
+				StringSlice: []string{"a", "b", "c"},
+				IntSlice:    []int{1, 2, 3},
+				NoTag:       "no tag",
+				IntPtr:      func() *int { i := 42; return &i }(),
+			},
+		},
+	}
+
+	r := NewRoamer(WithParsers(parser.NewQuery()))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, tt.url, nil)
+			require.NoError(t, err)
+
+			err = r.Parse(req, tt.ptr)
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, tt.ptr)
+		})
+	}
+}
+
+func TestRoamer_Parse_DefaultValue_Failure(t *testing.T) {
+	type invalidDefaultStruct struct {
+		InvalidInt int `query:"invalid" default:"abc"`
+	}
+
+	tests := []struct {
+		name string
+		url  string
+		ptr  any
+	}{
+		{
+			name: "invalid default value returns error",
+			url:  "http://example.com",
+			ptr:  &invalidDefaultStruct{},
+		},
+	}
+
+	r := NewRoamer(WithParsers(parser.NewQuery()))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, tt.url, nil)
+			require.NoError(t, err)
+
+			err = r.Parse(req, tt.ptr)
+
+			require.Error(t, err)
+		})
+	}
+}
