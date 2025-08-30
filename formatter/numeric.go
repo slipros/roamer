@@ -84,130 +84,78 @@ func wrapNumericFunc(fn func(ptr any) error) NumericFormatterFunc {
 }
 
 func applyMin(ptr any, arg string) error {
-	switch v := ptr.(type) {
-	case *int:
-		m, err := strconv.ParseInt(arg, 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < int(m) {
-			*v = int(m)
-		}
-	case *int8:
-		m, err := strconv.ParseInt(arg, 10, 8)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < int8(m) {
-			*v = int8(m)
-		}
-	case *int16:
-		m, err := strconv.ParseInt(arg, 10, 16)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < int16(m) {
-			*v = int16(m)
-		}
-	case *int32:
-		m, err := strconv.ParseInt(arg, 10, 32)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < int32(m) {
-			*v = int32(m)
-		}
-	case *int64:
-		m, err := strconv.ParseInt(arg, 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < m {
-			*v = m
-		}
-	case *float32:
-		m, err := strconv.ParseFloat(arg, 32)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < float32(m) {
-			*v = float32(m)
-		}
-	case *float64:
-		m, err := strconv.ParseFloat(arg, 64)
-		if err != nil {
-			return errors.Wrapf(err, "invalid min value: %s", arg)
-		}
-		if *v < m {
-			*v = m
-		}
-	default:
-		return errors.Wrapf(rerr.NotSupported, "min formatter for %T", ptr)
-	}
-
-	return nil
+	return applyMinMax(ptr, arg, true)
 }
 
 func applyMax(ptr any, arg string) error {
+	return applyMinMax(ptr, arg, false)
+}
+
+func applyMinMax(ptr any, arg string, isMin bool) error {
+	opName := "max"
+	if isMin {
+		opName = "min"
+	}
+
 	switch v := ptr.(type) {
 	case *int:
 		m, err := strconv.ParseInt(arg, 10, 64)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > int(m) {
+		if (isMin && *v < int(m)) || (!isMin && *v > int(m)) {
 			*v = int(m)
 		}
 	case *int8:
 		m, err := strconv.ParseInt(arg, 10, 8)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > int8(m) {
+		if (isMin && *v < int8(m)) || (!isMin && *v > int8(m)) {
 			*v = int8(m)
 		}
 	case *int16:
 		m, err := strconv.ParseInt(arg, 10, 16)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > int16(m) {
+		if (isMin && *v < int16(m)) || (!isMin && *v > int16(m)) {
 			*v = int16(m)
 		}
 	case *int32:
 		m, err := strconv.ParseInt(arg, 10, 32)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > int32(m) {
+		if (isMin && *v < int32(m)) || (!isMin && *v > int32(m)) {
 			*v = int32(m)
 		}
 	case *int64:
 		m, err := strconv.ParseInt(arg, 10, 64)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > m {
+		if (isMin && *v < m) || (!isMin && *v > m) {
 			*v = m
 		}
 	case *float32:
 		m, err := strconv.ParseFloat(arg, 32)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > float32(m) {
+		if (isMin && *v < float32(m)) || (!isMin && *v > float32(m)) {
 			*v = float32(m)
 		}
 	case *float64:
 		m, err := strconv.ParseFloat(arg, 64)
 		if err != nil {
-			return errors.Wrapf(err, "invalid max value: %s", arg)
+			return errors.Wrapf(err, "invalid %s value: %s", opName, arg)
 		}
-		if *v > m {
+		if (isMin && *v < m) || (!isMin && *v > m) {
 			*v = m
 		}
 	default:
-		return errors.Wrapf(rerr.NotSupported, "max formatter for %T", ptr)
+		return errors.Wrapf(rerr.NotSupported, "%s formatter for %T", opName, ptr)
 	}
 
 	return nil
@@ -247,39 +195,25 @@ func applyAbs(ptr any) error {
 }
 
 func applyRound(ptr any) error {
-	switch v := ptr.(type) {
-	case *float32:
-		*v = float32(math.Round(float64(*v)))
-	case *float64:
-		*v = math.Round(*v)
-	default:
-		return errors.Wrapf(rerr.NotSupported, "round formatter for %T", ptr)
-	}
-	return nil
+	return applyFloatFunc(ptr, "round", math.Round)
 }
 
 func applyCeil(ptr any) error {
-	switch v := ptr.(type) {
-	case *float32:
-		*v = float32(math.Ceil(float64(*v)))
-	case *float64:
-		*v = math.Ceil(*v)
-	default:
-		return errors.Wrapf(rerr.NotSupported, "ceil formatter for %T", ptr)
-	}
-
-	return nil
+	return applyFloatFunc(ptr, "ceil", math.Ceil)
 }
 
 func applyFloor(ptr any) error {
+	return applyFloatFunc(ptr, "floor", math.Floor)
+}
+
+func applyFloatFunc(ptr any, opName string, fn func(float64) float64) error {
 	switch v := ptr.(type) {
 	case *float32:
-		*v = float32(math.Floor(float64(*v)))
+		*v = float32(fn(float64(*v)))
 	case *float64:
-		*v = math.Floor(*v)
+		*v = fn(*v)
 	default:
-		return errors.Wrapf(rerr.NotSupported, "floor formatter for %T", ptr)
+		return errors.Wrapf(rerr.NotSupported, "%s formatter for %T", opName, ptr)
 	}
-
 	return nil
 }

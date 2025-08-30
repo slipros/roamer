@@ -122,30 +122,23 @@ func applyUnique(slice reflect.Value) error {
 func applySort(slice reflect.Value, desc bool) error {
 	switch slice.Type().Elem().Kind() {
 	case reflect.Int:
-		data := slice.Interface().([]int)
-		if desc {
-			sort.Sort(sort.Reverse(sort.IntSlice(data)))
-		} else {
-			sort.Ints(data)
-		}
+		sortSlice(sort.IntSlice(slice.Interface().([]int)), desc)
 	case reflect.String:
-		data := slice.Interface().([]string)
-		if desc {
-			sort.Sort(sort.Reverse(sort.StringSlice(data)))
-		} else {
-			sort.Strings(data)
-		}
+		sortSlice(sort.StringSlice(slice.Interface().([]string)), desc)
 	case reflect.Float64:
-		data := slice.Interface().([]float64)
-		if desc {
-			sort.Sort(sort.Reverse(sort.Float64Slice(data)))
-		} else {
-			sort.Float64s(data)
-		}
+		sortSlice(sort.Float64Slice(slice.Interface().([]float64)), desc)
 	default:
 		return errors.Wrapf(rerr.NotSupported, "sort formatter for %s", slice.Type())
 	}
 	return nil
+}
+
+func sortSlice(s sort.Interface, desc bool) {
+	if desc {
+		sort.Sort(sort.Reverse(s))
+		return
+	}
+	sort.Sort(s)
 }
 
 func applyCompact(slice reflect.Value) error {

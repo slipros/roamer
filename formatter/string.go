@@ -252,40 +252,23 @@ func substring(s string, arg string) (string, error) {
 
 // padLeft pads the string with specified character to reach target length
 func padLeft(s string, arg string) (string, error) {
-	args := SplitArgs(arg)
-	if len(args) == 0 || args[0] == "" {
-		return "", errors.New("pad_left requires at least one argument: target length")
-	}
-
-	length, err := strconv.Atoi(args[0])
-	if err != nil {
-		return "", errors.Wrapf(err, "invalid length for pad_left: %s", args[0])
-	}
-
-	padChar := " "
-	if len(args) >= 2 && len(args[1]) > 0 {
-		padChar = string([]rune(args[1])[0]) // take first character
-	}
-
-	runeCount := utf8.RuneCountInString(s)
-	if runeCount >= length {
-		return s, nil
-	}
-
-	padding := strings.Repeat(padChar, length-runeCount)
-	return padding + s, nil
+	return pad(s, arg, true)
 }
 
 // padRight pads the string with specified character to reach target length
 func padRight(s string, arg string) (string, error) {
+	return pad(s, arg, false)
+}
+
+func pad(s string, arg string, left bool) (string, error) {
 	args := SplitArgs(arg)
 	if len(args) == 0 || args[0] == "" {
-		return "", errors.New("pad_right requires at least one argument: target length")
+		return "", errors.New("pad requires at least one argument: target length")
 	}
 
 	length, err := strconv.Atoi(args[0])
 	if err != nil {
-		return "", errors.Wrapf(err, "invalid length for pad_right: %s", args[0])
+		return "", errors.Wrapf(err, "invalid length for pad: %s", args[0])
 	}
 
 	padChar := " "
@@ -299,6 +282,9 @@ func padRight(s string, arg string) (string, error) {
 	}
 
 	padding := strings.Repeat(padChar, length-runeCount)
+	if left {
+		return padding + s, nil
+	}
 	return s + padding, nil
 }
 
@@ -306,13 +292,14 @@ func toTitle(s string) string {
 	var result strings.Builder
 	capNext := true
 	for _, r := range s {
-		if unicode.IsSpace(r) {
+		switch {
+		case unicode.IsSpace(r):
 			result.WriteRune(r)
 			capNext = true
-		} else if capNext {
+		case capNext:
 			result.WriteRune(unicode.ToUpper(r))
 			capNext = false
-		} else {
+		default:
 			result.WriteRune(unicode.ToLower(r))
 		}
 	}
@@ -327,9 +314,9 @@ func toSnake(s string) string {
 				result.WriteRune('_')
 			}
 			result.WriteRune(unicode.ToLower(r))
-		} else {
-			result.WriteRune(r)
+			continue
 		}
+		result.WriteRune(r)
 	}
 	return result.String()
 }
@@ -338,12 +325,13 @@ func toCamel(s string) string {
 	var result strings.Builder
 	upper := true
 	for _, r := range s {
-		if r == '_' {
+		switch {
+		case r == '_':
 			upper = true
-		} else if upper {
+		case upper:
 			result.WriteRune(unicode.ToUpper(r))
 			upper = false
-		} else {
+		default:
 			result.WriteRune(r)
 		}
 	}
@@ -358,9 +346,9 @@ func toKebab(s string) string {
 				result.WriteRune('-')
 			}
 			result.WriteRune(unicode.ToLower(r))
-		} else {
-			result.WriteRune(r)
+			continue
 		}
+		result.WriteRune(r)
 	}
 	return result.String()
 }
