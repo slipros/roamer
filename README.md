@@ -738,6 +738,16 @@ r := roamer.NewRoamer(
 
 **Note**: When multiple formatters are applied to the same field, they are processed in the order the formatters are registered with roamer.
 
+## Architecture
+
+The architecture is robust, modular, and designed for performance and extensibility.
+
+1.  **Clear Separation of Concerns:** The core concepts of `Decoder` (for request bodies), `Parser` (for other request parts like headers, query, etc.), and `Formatter` (for post-processing values) create a clean and understandable system.
+2.  **High Extensibility:** The interface-based design allows users to easily add support for new data formats (e.g., MessagePack), data sources (e.g., gRPC metadata), or custom formatters without modifying the core library.
+3.  **Concurrency Safety:** The `Roamer` instance is thread-safe due to the use of `sync.Map` and `sync.Pool`. A single instance can be safely shared across multiple goroutines, which is essential for web server environments.
+4.  **Router Independence:** The library is decoupled from any specific HTTP router. The `parser.Path` component relies on a user-provided function to extract path parameters, making it universally compatible.
+5.  **Flexible Configuration:** The functional options pattern (`NewRoamer(opts ...OptionsFunc)`) provides a clean, readable, and extensible API for configuration.
+
 ## Extending Roamer
 
 Roamer is designed to be easily extended with custom parsers, decoders, and formatters. Here are examples of how to create each type of extension.
@@ -1237,6 +1247,7 @@ Roamer is primarily designed for HTTP requests, but its architecture is extensib
 ### How does roamer handle validation?
 
 Roamer focuses on parsing, not validation. For validation, consider combining roamer with a validation library such as:
+- [raoptimus/validator.go](https://github.com/raoptimus/validator.go)
 - [go-playground/validator](https://github.com/go-playground/validator)
 - [go-ozzo/ozzo-validation](https://github.com/go-ozzo/ozzo-validation)
 
@@ -1268,6 +1279,10 @@ Roamer is designed with performance in mind, using efficient reflection techniqu
 1. Using request structs that only include fields needed for specific endpoints
 2. Benchmarking your specific use case to identify bottlenecks
 3. Profiling memory usage and allocations in your specific context
+
+### Is roamer production-ready in terms of performance?
+
+Yes. A performance analysis was conducted, and the codebase is written to a very high standard with performance in mind. Key optimizations are already in place, demonstrating a strong understanding of potential bottlenecks. The overall design is efficient and minimizes unnecessary allocations. The analysis concluded that the project is in an excellent state regarding performance and memory allocations, and no changes were recommended.
 
 ### Can I use roamer with OpenAPI/Swagger specifications?
 

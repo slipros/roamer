@@ -13,8 +13,8 @@ import (
 
 const (
 	SplitSymbol                  = ","
-	ArgumentSplitSymbol          = "="
-	MultipleArgumentsSplitSymbol = ":"
+	SplitSymbolArgument          = "="
+	SplitSymbolMultipleArguments = ":"
 )
 
 // NumericFormatterFunc is a function type for numeric transformations.
@@ -31,7 +31,7 @@ type SliceFormatters map[string]SliceFormatterFunc
 
 // ParseFormatter parses formatter name and arguments from tag part.
 func ParseFormatter(tagPart string) (name, arg string) {
-	if idx := strings.Index(tagPart, ArgumentSplitSymbol); idx != -1 {
+	if idx := strings.Index(tagPart, SplitSymbolArgument); idx != -1 {
 		return strings.TrimSpace(tagPart[:idx]), tagPart[idx+1:]
 	}
 
@@ -40,5 +40,5 @@ func ParseFormatter(tagPart string) (name, arg string) {
 
 // SplitArgs splits a string of arguments into a slice of strings.
 func SplitArgs(args string) []string {
-	return strings.Split(args, MultipleArgumentsSplitSymbol)
+	return strings.Split(args, SplitSymbolMultipleArguments)
 }

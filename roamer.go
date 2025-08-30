@@ -46,7 +46,7 @@ type Roamer struct {
 	hasFormatters bool       // Whether any formatters are registered
 
 	parserCachePool sync.Pool
-	structureCache  cache.StructureCache
+	structureCache  *cache.StructureCache
 }
 
 // NewRoamer creates a configured Roamer instance with optional configuration.
@@ -67,8 +67,6 @@ type Roamer struct {
 //	    roamer.WithSkipFilled(false), // Parse all fields, even if not zero
 //	)
 func NewRoamer(opts ...OptionsFunc) *Roamer {
-	const parserCacheCapacity = 5
-
 	r := Roamer{
 		parsers:    make(Parsers),
 		decoders:   make(Decoders),
@@ -76,6 +74,7 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 		skipFilled: true,
 		parserCachePool: sync.Pool{
 			New: func() any {
+				const parserCacheCapacity = 5
 				return make(parser.Cache, parserCacheCapacity)
 			},
 		},
@@ -89,15 +88,28 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r.hasDecoders = len(r.decoders) > 0
 	r.hasFormatters = len(r.formatters) > 0
 
+	formatters := make([]string, 0, len(r.formatters))
+	reflectValueFormatters := make([]string, 0, len(r.formatters))
+	for tag, f := range r.formatters {
+		if _, ok := f.(ReflectValueFormatter); !ok {
+			formatters = append(formatters, tag)
+
+			continue
+		}
+
+		reflectValueFormatters = append(reflectValueFormatters, tag)
+	}
+
 	r.structureCache = cache.NewStructureCache(
 		r.decoders.Tags(),
 		maps.Keys(r.parsers),
-		maps.Keys(r.formatters),
+		formatters,
+		reflectValueFormatters,
 	)
 
 	for _, d := range r.decoders {
 		if i, ok := d.(RequireStructureCache); ok {
-			i.SetStructureCache(&r.structureCache)
+			i.SetStructureCache(r.structureCache)
 		}
 	}
 
@@ -233,19 +245,30 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 }
 
 func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) error {
+	for _, name := range field.ReflectValueFormatters {
+		f, ok := r.formatters[name].(ReflectValueFormatter)
+		if !ok {
+			continue
+		}
+
+		if err := f.FormatReflectValue(field.StructField.Tag, fieldValue); err != nil {
+			return err
+		}
+	}
+
 	ptr, ok := value.Pointer(fieldValue)
 	if !ok {
 		return nil
 	}
 
-	for _, formatterName := range field.Formatters {
-		f, ok := r.formatters[formatterName]
+	for _, name := range field.Formatters {
+		f, ok := r.formatters[name]
 		if !ok {
 			continue
 		}
 
 		if err := f.Format(field.StructField.Tag, ptr); err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 	}
 
