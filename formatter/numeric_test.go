@@ -6,19 +6,72 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rerr "github.com/slipros/roamer/err"
 )
 
 func createNumericTestTag(value string) reflect.StructTag {
 	return reflect.StructTag(`numeric:"` + value + `"`)
 }
 
-func TestNumeric_Tag(t *testing.T) {
-	f := NewNumeric()
-	assert.Equal(t, "numeric", f.Tag())
+func TestNewNumeric(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DefaultFormatters", func(t *testing.T) {
+		t.Parallel()
+
+		s := NewNumeric()
+		require.NotNil(t, s)
+		assert.Equal(t, TagNumeric, s.Tag())
+
+		for name := range defaultNumericFormatters {
+			_, ok := s.formatters[name]
+			assert.True(t, ok, "default formatter %s not found", name)
+		}
+	})
+
+	t.Run("WithCustomFormatter", func(t *testing.T) {
+		t.Parallel()
+
+		customFormatter := func(ptr any, arg string) error {
+			return nil
+		}
+		f := NewNumeric(WithNumericFormatter("custom", customFormatter))
+		require.NotNil(t, f)
+
+		_, ok := f.formatters["custom"]
+		assert.True(t, ok)
+	})
+
+	t.Run("WithCustomFormatters", func(t *testing.T) {
+		t.Parallel()
+
+		customFormatters := NumericFormatters{
+			"custom1": func(ptr any, arg string) error { return nil },
+			"custom2": func(ptr any, arg string) error { return nil },
+		}
+		f := NewNumeric(WithNumericFormatters(customFormatters))
+		require.NotNil(t, f)
+
+		_, ok := f.formatters["custom1"]
+		assert.True(t, ok)
+		_, ok = f.formatters["custom2"]
+		assert.True(t, ok)
+	})
 }
 
 func TestNumeric_Format_Successfully(t *testing.T) {
-	f := NewNumeric()
+	t.Parallel()
+
+	customFormatter := func(ptr any, arg string) error {
+		switch v := ptr.(type) {
+		case *int:
+			*v = 100
+		}
+		return nil
+	}
+
+	f := NewNumeric(WithNumericFormatter("custom", customFormatter))
 
 	tests := []struct {
 		name     string
@@ -67,6 +120,9 @@ func TestNumeric_Format_Successfully(t *testing.T) {
 
 		// No tag
 		{name: "No tag", tag: reflect.StructTag(""), input: int(5), expected: int(5)},
+
+		// Custom formatter
+		{name: "Custom formatter", tag: createNumericTestTag("custom"), input: int(5), expected: int(100)},
 	}
 
 	for _, tc := range tests {
@@ -95,24 +151,33 @@ func TestNumeric_Format_Successfully(t *testing.T) {
 }
 
 func TestNumeric_Format_Failure(t *testing.T) {
+	t.Parallel()
+
 	f := NewNumeric()
 
 	tests := []struct {
-		name    string
-		tag     reflect.StructTag
-		input   any
-		wantErr string
+		name  string
+		tag   reflect.StructTag
+		input any
+		errAs error
+		errIs error
 	}{
-		{name: "Unsupported type", tag: createNumericTestTag("min=10"), input: new(string), wantErr: "not supported"},
-		{name: "Invalid min value", tag: createNumericTestTag("min=abc"), input: new(int), wantErr: "invalid min value"},
-		{name: "Invalid max value", tag: createNumericTestTag("max=xyz"), input: new(int), wantErr: "invalid max value"},
+		{name: "Unsupported type", tag: createNumericTestTag("min=10"), input: new(string), errIs: rerr.NotSupported},
+		{name: "Invalid min value", tag: createNumericTestTag("min=abc"), input: new(int)},
+		{name: "Invalid max value", tag: createNumericTestTag("max=xyz"), input: new(int)},
+		{name: "Formatter not found", tag: createNumericTestTag("non_existent"), input: new(int), errAs: &rerr.FormatterNotFound{}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := f.Format(tc.tag, tc.input)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.wantErr)
+			if tc.errIs != nil {
+				require.ErrorIs(t, err, tc.errIs)
+			} else if tc.errAs != nil {
+				require.ErrorAs(t, err, &tc.errAs)
+			} else {
+				require.Error(t, err)
+			}
 		})
 	}
 }

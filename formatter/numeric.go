@@ -10,6 +10,16 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
+// defaultNumericFormatters defines the built-in numeric formatting functions.
+var defaultNumericFormatters = NumericFormatters{
+	"abs":   wrapNumericFunc(applyAbs),
+	"round": wrapNumericFunc(applyRound),
+	"ceil":  wrapNumericFunc(applyCeil),
+	"floor": wrapNumericFunc(applyFloor),
+	"min":   applyMin,
+	"max":   applyMax,
+}
+
 const (
 	// TagNumeric is the struct tag name used for numeric formatting.
 	TagNumeric = "numeric"
@@ -17,11 +27,25 @@ const (
 
 // Numeric is a formatter for numeric values.
 // It applies transformations to numeric fields based on the "numeric" struct tag.
-type Numeric struct{}
+type Numeric struct {
+	formatters NumericFormatters
+}
 
 // NewNumeric creates a Numeric formatter.
-func NewNumeric() *Numeric {
-	return &Numeric{}
+func NewNumeric(opts ...NumericOptionsFunc) *Numeric {
+	n := &Numeric{
+		formatters: make(NumericFormatters),
+	}
+
+	for name, fn := range defaultNumericFormatters {
+		n.formatters[name] = fn
+	}
+
+	for _, opt := range opts {
+		opt(n)
+	}
+
+	return n
 }
 
 // Tag returns the name of the struct tag that this formatter handles.
@@ -36,46 +60,27 @@ func (n *Numeric) Format(tag reflect.StructTag, ptr any) error {
 		return nil
 	}
 
-	rules := strings.Split(tagValue, SplitSymbol)
-	for _, rule := range rules {
-		name, arg := parseRule(rule)
-		switch name {
-		case "min":
-			if err := applyMin(ptr, arg); err != nil {
-				return err
-			}
-		case "max":
-			if err := applyMax(ptr, arg); err != nil {
-				return err
-			}
-		case "abs":
-			if err := applyAbs(ptr); err != nil {
-				return err
-			}
-		case "round":
-			if err := applyRound(ptr); err != nil {
-				return err
-			}
-		case "ceil":
-			if err := applyCeil(ptr); err != nil {
-				return err
-			}
-		case "floor":
-			if err := applyFloor(ptr); err != nil {
-				return err
-			}
+	for _, f := range strings.Split(tagValue, SplitSymbol) {
+		name, arg := ParseFormatter(f)
+
+		formatter, ok := n.formatters[name]
+		if !ok {
+			return errors.WithStack(rerr.FormatterNotFound{Tag: TagNumeric, Formatter: name})
+		}
+
+		if err := formatter(ptr, arg); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func parseRule(rule string) (name, arg string) {
-	rule = strings.TrimSpace(rule)
-	if idx := strings.Index(rule, "="); idx != -1 {
-		return rule[:idx], rule[idx+1:]
+// wrapNumericFunc wraps a simple numeric function to match NumericFormatterFunc signature
+func wrapNumericFunc(fn func(ptr any) error) NumericFormatterFunc {
+	return func(ptr any, _ string) error {
+		return fn(ptr)
 	}
-	return rule, ""
 }
 
 func applyMin(ptr any, arg string) error {
@@ -139,6 +144,7 @@ func applyMin(ptr any, arg string) error {
 	default:
 		return errors.Wrapf(rerr.NotSupported, "min formatter for %T", ptr)
 	}
+
 	return nil
 }
 
@@ -203,6 +209,7 @@ func applyMax(ptr any, arg string) error {
 	default:
 		return errors.Wrapf(rerr.NotSupported, "max formatter for %T", ptr)
 	}
+
 	return nil
 }
 
@@ -235,6 +242,7 @@ func applyAbs(ptr any) error {
 	default:
 		return errors.Wrapf(rerr.NotSupported, "abs formatter for %T", ptr)
 	}
+
 	return nil
 }
 
@@ -259,6 +267,7 @@ func applyCeil(ptr any) error {
 	default:
 		return errors.Wrapf(rerr.NotSupported, "ceil formatter for %T", ptr)
 	}
+
 	return nil
 }
 
@@ -271,5 +280,6 @@ func applyFloor(ptr any) error {
 	default:
 		return errors.Wrapf(rerr.NotSupported, "floor formatter for %T", ptr)
 	}
+
 	return nil
 }

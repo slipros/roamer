@@ -25,7 +25,7 @@ func TestStringFormatter_Format_Successfully(t *testing.T) {
 		},
 		{
 			name:       "multiple formatters",
-			formatter:  NewString(WithExtendedStringFormatters(StringsFormatters{"uppercase": strings.ToUpper})),
+			formatter:  NewString(WithStringsFormatters(StringsFormatters{"uppercase": wrapStringFunc(strings.ToUpper)})),
 			tag:        reflect.StructTag(`string:"trim_space,uppercase"`),
 			initialVal: "  test  ",
 			wantVal:    "TEST",

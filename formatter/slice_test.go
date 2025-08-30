@@ -6,19 +6,71 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	rerr "github.com/slipros/roamer/err"
 )
 
 func createSliceTestTag(value string) reflect.StructTag {
 	return reflect.StructTag(`slice:"` + value + `"`)
 }
 
-func TestSlice_Tag(t *testing.T) {
-	f := NewSlice()
-	assert.Equal(t, "slice", f.Tag())
+func TestNewSlice(t *testing.T) {
+	t.Parallel()
+
+	t.Run("DefaultFormatters", func(t *testing.T) {
+		t.Parallel()
+
+		s := NewSlice()
+		require.NotNil(t, s)
+		assert.Equal(t, TagSlice, s.Tag())
+
+		for name := range defaultSliceFormatters {
+			_, ok := s.formatters[name]
+			assert.True(t, ok, "default formatter %s not found", name)
+		}
+	})
+
+	t.Run("WithCustomFormatter", func(t *testing.T) {
+		t.Parallel()
+
+		customFormatter := func(slice reflect.Value, arg string) error {
+			return nil
+		}
+		f := NewSlice(WithSliceFormatter("custom", customFormatter))
+		require.NotNil(t, f)
+
+		_, ok := f.formatters["custom"]
+		assert.True(t, ok)
+	})
+
+	t.Run("WithCustomFormatters", func(t *testing.T) {
+		t.Parallel()
+
+		customFormatters := SliceFormatters{
+			"custom1": func(slice reflect.Value, arg string) error { return nil },
+			"custom2": func(slice reflect.Value, arg string) error { return nil },
+		}
+		f := NewSlice(WithSliceFormatters(customFormatters))
+		require.NotNil(t, f)
+
+		_, ok := f.formatters["custom1"]
+		assert.True(t, ok)
+		_, ok = f.formatters["custom2"]
+		assert.True(t, ok)
+	})
 }
 
 func TestSlice_Format_Successfully(t *testing.T) {
-	f := NewSlice()
+	t.Parallel()
+
+	customFormatter := func(slice reflect.Value, arg string) error {
+		newSlice := reflect.MakeSlice(slice.Type(), 0, slice.Len())
+		newSlice = reflect.Append(newSlice, reflect.ValueOf("custom"))
+		slice.Set(newSlice)
+		return nil
+	}
+
+	f := NewSlice(WithSliceFormatter("custom", customFormatter))
 
 	tests := []struct {
 		name     string
@@ -112,6 +164,14 @@ func TestSlice_Format_Successfully(t *testing.T) {
 			input:    &[]string{"a", "b", "c"},
 			expected: &[]string{"a", "b", "c"},
 		},
+
+		// Custom formatter
+		{
+			name:     "Custom formatter",
+			tag:      createSliceTestTag("custom"),
+			input:    &[]string{"a", "b", "c"},
+			expected: &[]string{"custom"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -124,24 +184,33 @@ func TestSlice_Format_Successfully(t *testing.T) {
 }
 
 func TestSlice_Format_Failure(t *testing.T) {
+	t.Parallel()
+
 	f := NewSlice()
 
 	tests := []struct {
-		name    string
-		tag     reflect.StructTag
-		input   any
-		wantErr string
+		name  string
+		tag   reflect.StructTag
+		input any
+		errAs error
+		errIs error
 	}{
-		{name: "Unsupported type", tag: createSliceTestTag("unique"), input: new(int), wantErr: "not supported"},
-		{name: "Not a slice pointer", tag: createSliceTestTag("unique"), input: "not a slice", wantErr: "not supported"},
-		{name: "Invalid limit value", tag: createSliceTestTag("limit=abc"), input: &[]string{"a", "b"}, wantErr: "invalid limit value"},
+		{name: "Unsupported type", tag: createSliceTestTag("unique"), input: new(int), errIs: rerr.NotSupported},
+		{name: "Not a slice pointer", tag: createSliceTestTag("unique"), input: "not a slice", errIs: rerr.NotSupported},
+		{name: "Invalid limit value", tag: createSliceTestTag("limit=abc"), input: &[]string{"a", "b"}},
+		{name: "Formatter not found", tag: createSliceTestTag("non_existent"), input: &[]string{}, errAs: &rerr.FormatterNotFound{}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := f.Format(tc.tag, tc.input)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tc.wantErr)
+			if tc.errIs != nil {
+				require.ErrorIs(t, err, tc.errIs)
+			} else if tc.errAs != nil {
+				require.ErrorAs(t, err, &tc.errAs)
+			} else {
+				require.Error(t, err)
+			}
 		})
 	}
 }

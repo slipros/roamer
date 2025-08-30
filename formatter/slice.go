@@ -10,17 +10,40 @@ import (
 	rerr "github.com/slipros/roamer/err"
 )
 
+// defaultSliceFormatters defines the built-in slice formatting functions.
+var defaultSliceFormatters = SliceFormatters{
+	"sort":      func(slice reflect.Value, _ string) error { return applySort(slice, false) },
+	"sort_desc": func(slice reflect.Value, _ string) error { return applySort(slice, true) },
+	"unique":    wrapSliceFunc(applyUnique),
+	"compact":   wrapSliceFunc(applyCompact),
+	"limit":     applyLimit,
+}
+
 const (
 	// TagSlice is the struct tag name used for slice formatting.
 	TagSlice = "slice"
 )
 
 // Slice is a formatter for slice values.
-type Slice struct{}
+type Slice struct {
+	formatters SliceFormatters
+}
 
 // NewSlice creates a Slice formatter.
-func NewSlice() *Slice {
-	return &Slice{}
+func NewSlice(opts ...SliceOptionsFunc) *Slice {
+	s := &Slice{
+		formatters: make(SliceFormatters),
+	}
+
+	for name, fn := range defaultSliceFormatters {
+		s.formatters[name] = fn
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
 // Tag returns the name of the struct tag that this formatter handles.
@@ -35,39 +58,45 @@ func (s *Slice) Format(tag reflect.StructTag, ptr any) error {
 		return nil
 	}
 
-	val := reflect.ValueOf(ptr)
-	if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Slice {
-		return errors.Wrapf(rerr.NotSupported, "slice formatter for %T", ptr)
+	return s.format(tagValue, reflect.ValueOf(ptr))
+}
+
+// FormatReflectValue applies slice formatters to a field value based on the struct tag.
+func (s *Slice) FormatReflectValue(tag reflect.StructTag, val reflect.Value) error {
+	tagValue, ok := tag.Lookup(TagSlice)
+	if !ok {
+		return nil
 	}
 
-	rules := strings.Split(tagValue, SplitSymbol)
-	for _, rule := range rules {
-		name, arg := parseRule(rule)
-		switch name {
-		case "unique":
-			if err := applyUnique(val.Elem()); err != nil {
-				return err
-			}
-		case "sort":
-			if err := applySort(val.Elem(), false); err != nil {
-				return err
-			}
-		case "sort_desc":
-			if err := applySort(val.Elem(), true); err != nil {
-				return err
-			}
-		case "compact":
-			if err := applyCompact(val.Elem()); err != nil {
-				return err
-			}
-		case "limit":
-			if err := applyLimit(val.Elem(), arg); err != nil {
-				return err
-			}
+	return s.format(tagValue, val)
+}
+
+func (s *Slice) format(tagValue string, val reflect.Value) error {
+	if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Slice {
+		return errors.Wrapf(rerr.NotSupported, "slice formatter for %s", val.Type().String())
+	}
+
+	for _, f := range strings.Split(tagValue, SplitSymbol) {
+		name, arg := ParseFormatter(f)
+
+		formatter, ok := s.formatters[name]
+		if !ok {
+			return errors.WithStack(rerr.FormatterNotFound{Tag: TagSlice, Formatter: name})
+		}
+
+		if err := formatter(val.Elem(), arg); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// wrapSliceFunc wraps a simple slice function to match SliceFormatterFunc signature
+func wrapSliceFunc(fn func(slice reflect.Value) error) SliceFormatterFunc {
+	return func(slice reflect.Value, _ string) error {
+		return fn(slice)
+	}
 }
 
 func applyUnique(slice reflect.Value) error {
@@ -75,7 +104,7 @@ func applyUnique(slice reflect.Value) error {
 		return nil
 	}
 
-	seen := make(map[any]struct{})
+	seen := make(map[any]struct{}, slice.Len())
 	newSlice := reflect.MakeSlice(slice.Type(), 0, slice.Len())
 
 	for i := 0; i < slice.Len(); i++ {
