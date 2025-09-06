@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: "en" }}">
+
+  {%- include head.html -%}
+
+  <body>
+
+    {%- include header.html -%}
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        {{ content }}
+      </div>
+    </main>
+
+    {%- include footer.html -%}
+
+    <!-- Enhanced JavaScript for documentation -->
+    <script>
+      // Add copy button to code blocks
+      document.addEventListener('DOMContentLoaded', function() {
+        const codeBlocks = document.querySelectorAll('pre code');
+        
+        codeBlocks.forEach(function(codeBlock) {
+          const pre = codeBlock.parentNode;
+          const button = document.createElement('button');
+          button.className = 'copy-button';
+          button.textContent = 'Copy';
+          button.style.cssText = `
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+          `;
+          
+          pre.style.position = 'relative';
+          pre.appendChild(button);
+          
+          pre.addEventListener('mouseenter', function() {
+            button.style.opacity = '1';
+          });
+          
+          pre.addEventListener('mouseleave', function() {
+            button.style.opacity = '0';
+          });
+          
+          button.addEventListener('click', function() {
+            const text = codeBlock.textContent;
+            navigator.clipboard.writeText(text).then(function() {
+              button.textContent = 'Copied!';
+              setTimeout(function() {
+                button.textContent = 'Copy';
+              }, 2000);
+            });
+          });
+        });
+      });
+
+      // Add anchor links to headings
+      document.addEventListener('DOMContentLoaded', function() {
+        const headings = document.querySelectorAll('h2, h3, h4, h5, h6');
+        
+        headings.forEach(function(heading) {
+          if (heading.id) {
+            const link = document.createElement('a');
+            link.href = '#' + heading.id;
+            link.className = 'anchor-link';
+            link.innerHTML = '#';
+            link.style.cssText = `
+              margin-left: 8px;
+              color: #0969da;
+              text-decoration: none;
+              opacity: 0;
+              transition: opacity 0.3s;
+            `;
+            
+            heading.appendChild(link);
+            
+            heading.addEventListener('mouseenter', function() {
+              link.style.opacity = '1';
+            });
+            
+            heading.addEventListener('mouseleave', function() {
+              link.style.opacity = '0';
+            });
+          }
+        });
+      });
+    </script>
+
+  </body>
+
+</html>

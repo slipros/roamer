@@ -1,0 +1,29 @@
+main:
+  - title: "Getting Started"
+    url: /getting-started/
+    description: "Installation and basic usage"
+  
+  - title: "Examples"
+    url: /examples/
+    description: "Comprehensive examples and use cases"
+  
+  - title: "API Reference"
+    url: /api-reference/
+    description: "Complete API documentation"
+  
+  - title: "Extending"
+    url: /extending/
+    description: "Create custom parsers, decoders, and formatters"
+
+social:
+  - title: "GitHub"
+    url: "https://github.com/slipros/roamer"
+    icon: "github"
+  
+  - title: "Go Package"
+    url: "https://pkg.go.dev/github.com/slipros/roamer"
+    icon: "golang"
+  
+  - title: "Issues"
+    url: "https://github.com/slipros/roamer/issues"
+    icon: "bug"

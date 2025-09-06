@@ -44,7 +44,7 @@ jobs:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
 
       - name: Run tests
-        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: go test -race -covermode=atomic -coverprofile=coverage.out $(go list ./... | grep -v '/mockroamer')
 
       - name: Convert coverage.out to coverage.lcov
         uses: jandelgado/gcov2lcov-action@v1
