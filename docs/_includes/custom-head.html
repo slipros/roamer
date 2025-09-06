@@ -1,0 +1,135 @@
+<!-- Custom head content for enhanced documentation -->
+
+<!-- Mermaid.js for diagrams -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    mermaid.initialize({ 
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#0366d6',
+        primaryTextColor: '#24292e',
+        primaryBorderColor: '#e1e4e8',
+        lineColor: '#d0d7de',
+        secondaryColor: '#f6f8fa',
+        tertiaryColor: '#ffffff'
+      }
+    });
+  });
+</script>
+
+<!-- Enhanced syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+
+<!-- Custom CSS for better documentation styling -->
+<style>
+  /* Code blocks styling */
+  .highlight {
+    background-color: #f6f8fa;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  
+  /* Inline code styling */
+  code {
+    background-color: #f6f8fa;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 85%;
+  }
+  
+  /* Table styling */
+  table {
+    border-collapse: collapse;
+    margin: 16px 0;
+    width: 100%;
+  }
+  
+  table th,
+  table td {
+    border: 1px solid #d0d7de;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  
+  table th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+  }
+  
+  table tr:nth-child(even) {
+    background-color: #f6f8fa;
+  }
+  
+  /* Alert boxes */
+  .alert {
+    padding: 16px;
+    margin: 16px 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+  }
+  
+  .alert-info {
+    color: #0969da;
+    background-color: #ddf4ff;
+    border-color: #54aeff;
+  }
+  
+  .alert-warning {
+    color: #9a6700;
+    background-color: #fff8c5;
+    border-color: #d1b650;
+  }
+  
+  .alert-danger {
+    color: #d1242f;
+    background-color: #ffebe9;
+    border-color: #fd8182;
+  }
+  
+  /* Navigation improvements */
+  .site-nav .page-link {
+    margin-left: 20px;
+  }
+  
+  /* Badge styling for version info */
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 12px;
+    background-color: #0969da;
+    color: white;
+    margin-left: 8px;
+  }
+  
+  /* Improve mermaid diagram visibility */
+  .mermaid {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  /* Mobile responsiveness improvements */
+  @media (max-width: 768px) {
+    .highlight {
+      padding: 12px;
+      margin: 12px 0;
+    }
+    
+    table {
+      font-size: 14px;
+    }
+    
+    .site-nav .page-link {
+      margin-left: 10px;
+    }
+  }
+</style>

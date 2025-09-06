@@ -1,0 +1,72 @@
+# Site settings
+title: Roamer
+description: >-
+  A flexible, extensible HTTP request parser for Go. 
+  Parse data from headers, cookies, query parameters, 
+  path variables, and request body using struct tags.
+baseurl: "/roamer"
+url: "https://slipros.github.io"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+header_pages:
+  - index.md
+  - getting-started.md
+  - examples.md
+  - api-reference.md
+  - extending.md
+
+# Collections
+collections:
+  examples:
+    output: true
+    permalink: /:collection/:name/
+
+# Exclude from processing
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Code highlighting
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: false
+
+# SEO
+author: slipros
+twitter:
+  username: slipros
+social:
+  name: Roamer
+  links:
+    - https://github.com/slipros/roamer
+
+# GitHub
+repository: slipros/roamer
+github_username: slipros
+
+# Google Analytics (uncomment and configure if needed)
+# google_analytics: UA-NNNNNNNN-N
