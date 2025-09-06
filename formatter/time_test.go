@@ -148,6 +148,34 @@ func TestTime_Format_Successfully(t *testing.T) {
 			expectedZone: "UTC",
 			expectedTime: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
+		{
+			name:         "No time tag",
+			tag:          reflect.StructTag(`other:"tag"`),
+			input:        originalTime,
+			expectedZone: "PDT",
+			expectedTime: originalTime,
+		},
+		{
+			name:         "Truncate to second",
+			tag:          createTimeTestTag("truncate=second"),
+			input:        originalTime,
+			expectedZone: "PDT",
+			expectedTime: time.Date(2024, 8, 28, 10, 30, 45, 0, pst),
+		},
+		{
+			name:         "Truncate with duration string",
+			tag:          createTimeTestTag("truncate=1h30m"),
+			input:        time.Date(2024, 8, 28, 10, 30, 45, 0, pst),
+			expectedZone: "PDT",
+			expectedTime: time.Date(2024, 8, 28, 9, 30, 0, 0, pst), // 10:30:45 truncated to 10:30
+		},
+		{
+			name:         "Truncate with 1h duration string",
+			tag:          createTimeTestTag("truncate=1h"),
+			input:        time.Date(2024, 8, 28, 10, 30, 45, 0, pst),
+			expectedZone: "PDT",
+			expectedTime: time.Date(2024, 8, 28, 10, 0, 0, 0, pst),
+		},
 	}
 
 	for _, tc := range tests {
