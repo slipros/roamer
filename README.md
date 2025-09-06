@@ -14,7 +14,7 @@ graph TD
         A[HTTP Request]
     end
 
-    subgraph "1. Data Sources"
+    subgraph "Data Sources"
         B1[Headers]
         B2[Cookies]
         B3[Query Params]
@@ -22,7 +22,7 @@ graph TD
         B5[Request Body]
     end
 
-    subgraph "2. Roamer Core Engine"
+    subgraph "Roamer Core Engine"
         direction LR
         P[Parsers]
         D[Decoders]
@@ -43,9 +43,9 @@ graph TD
 
     F -- formatted values --> E
 
-    classDef source fill:#fef9e7,stroke:#d4ac0d,stroke-width:2px
-    classDef core fill:#d4f1f9,stroke:#0097c0,stroke-width:2px
-    classDef io fill:#f5f5f5,stroke:#333,stroke-width:2px
+    classDef source stroke:#d4ac0d,stroke-width:4px
+    classDef core stroke:#0097c0,stroke-width:4px
+    classDef io stroke:#333,stroke-width:4px
     class A,E io
     class B1,B2,B3,B4,B5 source
     class P,D,F core
