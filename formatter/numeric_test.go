@@ -123,6 +123,19 @@ func TestNumeric_Format_Successfully(t *testing.T) {
 
 		// Custom formatter
 		{name: "Custom formatter", tag: createNumericTestTag("custom"), input: int(5), expected: int(100)},
+		// applyMinMax
+		{name: "Min/Max int8 within", tag: createNumericTestTag("min=10,max=100"), input: int8(50), expected: int8(50)},
+		{name: "Min/Max int16 below", tag: createNumericTestTag("min=10,max=100"), input: int16(5), expected: int16(10)},
+		{name: "Min/Max int64 above", tag: createNumericTestTag("min=10,max=100"), input: int64(150), expected: int64(100)},
+		{name: "Min/Max float32 above", tag: createNumericTestTag("min=10.5,max=100.5"), input: float32(150.5), expected: float32(100.5)},
+
+		// applyAbs
+		{name: "Abs int8 negative", tag: createNumericTestTag("abs"), input: int8(-5), expected: int8(5)},
+		{name: "Abs int16 negative", tag: createNumericTestTag("abs"), input: int16(-5), expected: int16(5)},
+		{name: "Abs int64 negative", tag: createNumericTestTag("abs"), input: int64(-5), expected: int64(5)},
+
+		// applyFloatFunc
+		{name: "Round float32 up", tag: createNumericTestTag("round"), input: float32(5.7), expected: float32(6)},
 	}
 
 	for _, tc := range tests {
@@ -135,6 +148,18 @@ func TestNumeric_Format_Successfully(t *testing.T) {
 			case float64:
 				val := v
 				ptr = &val
+			case int8:
+				val := v
+				ptr = &val
+			case int16:
+				val := v
+				ptr = &val
+			case int64:
+				val := v
+				ptr = &val
+			case float32:
+				val := v
+				ptr = &val
 			}
 
 			err := f.Format(tc.tag, ptr)
@@ -145,6 +170,14 @@ func TestNumeric_Format_Successfully(t *testing.T) {
 				assert.Equal(t, v, *ptr.(*int))
 			case float64:
 				assert.Equal(t, v, *ptr.(*float64))
+			case int8:
+				assert.Equal(t, v, *ptr.(*int8))
+			case int16:
+				assert.Equal(t, v, *ptr.(*int16))
+			case int64:
+				assert.Equal(t, v, *ptr.(*int64))
+			case float32:
+				assert.Equal(t, v, *ptr.(*float32))
 			}
 		})
 	}
@@ -166,6 +199,12 @@ func TestNumeric_Format_Failure(t *testing.T) {
 		{name: "Invalid min value", tag: createNumericTestTag("min=abc"), input: new(int)},
 		{name: "Invalid max value", tag: createNumericTestTag("max=xyz"), input: new(int)},
 		{name: "Formatter not found", tag: createNumericTestTag("non_existent"), input: new(int), errAs: &rerr.FormatterNotFound{}},
+		{name: "Min invalid value", tag: createNumericTestTag("min=abc"), input: new(int8)},
+		{name: "Max invalid value", tag: createNumericTestTag("max=xyz"), input: new(int16)},
+		{name: "Abs unsupported type", tag: createNumericTestTag("abs"), input: new(string), errIs: rerr.NotSupported},
+		{name: "Float func unsupported type", tag: createNumericTestTag("round"), input: new(int), errIs: rerr.NotSupported},
+		{name: "Min invalid value large number", tag: createNumericTestTag("min=99999999999999999999999999999999999999"), input: new(int8)},
+		{name: "Min out of range", tag: createNumericTestTag("min=128"), input: new(int8)},
 	}
 
 	for _, tc := range tests {

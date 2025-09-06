@@ -172,11 +172,55 @@ func TestSlice_Format_Successfully(t *testing.T) {
 			input:    &[]string{"a", "b", "c"},
 			expected: &[]string{"custom"},
 		},
+		// applySort
+		{name: "Sort float64 asc", tag: createSliceTestTag("sort"), input: &[]float64{3.3, 1.1, 2.2}, expected: &[]float64{1.1, 2.2, 3.3}},
+		{name: "Sort float64 desc", tag: createSliceTestTag("sort_desc"), input: &[]float64{3.3, 1.1, 2.2}, expected: &[]float64{3.3, 2.2, 1.1}},
+
+		// applyCompact
+		{name: "Compact empty slice", tag: createSliceTestTag("compact"), input: &[]string{}, expected: &[]string{}},
+
+		// applyLimit
+		{name: "Limit with negative value", tag: createSliceTestTag("limit=-1"), input: &[]string{"a", "b", "c"}, expected: &[]string{}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := f.Format(tc.tag, tc.input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, tc.input)
+		})
+	}
+}
+
+func TestSlice_FormatReflectValue_Successfully(t *testing.T) {
+	t.Parallel()
+
+	f := NewSlice()
+
+	tests := []struct {
+		name     string
+		tag      reflect.StructTag
+		input    any
+		expected any
+	}{
+		{
+			name:     "Unique strings",
+			tag:      createSliceTestTag("unique"),
+			input:    &[]string{"a", "b", "a", "c", "b"},
+			expected: &[]string{"a", "b", "c"},
+		},
+		{
+			name:     "No tag",
+			tag:      reflect.StructTag(""),
+			input:    &[]string{"a", "b", "c"},
+			expected: &[]string{"a", "b", "c"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			val := reflect.ValueOf(tc.input)
+			err := f.FormatReflectValue(tc.tag, val)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, tc.input)
 		})
@@ -199,6 +243,9 @@ func TestSlice_Format_Failure(t *testing.T) {
 		{name: "Not a slice pointer", tag: createSliceTestTag("unique"), input: "not a slice", errIs: rerr.NotSupported},
 		{name: "Invalid limit value", tag: createSliceTestTag("limit=abc"), input: &[]string{"a", "b"}},
 		{name: "Formatter not found", tag: createSliceTestTag("non_existent"), input: &[]string{}, errAs: &rerr.FormatterNotFound{}},
+		{name: "Not a pointer", tag: createSliceTestTag("unique"), input: []string{}, errIs: rerr.NotSupported},
+		{name: "Sort unsupported type", tag: createSliceTestTag("sort"), input: &[]bool{true, false}, errIs: rerr.NotSupported},
+		{name: "Not a slice pointer but with tag", tag: createSliceTestTag("unique"), input: new(int), errIs: rerr.NotSupported},
 	}
 
 	for _, tc := range tests {
