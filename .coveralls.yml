@@ -1,0 +1,6 @@
+service_name: github-actions
+coverage_clover: coverage.out
+json_path: coverage.json
+
+skip_files:
+  - "mockroamer/*"
