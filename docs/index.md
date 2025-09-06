@@ -99,48 +99,18 @@ func main() {
 
 ## Architecture Overview
 
-```mermaid
-graph TD
-    subgraph "Input"
-        A[HTTP Request]
-    end
+![Roamer Architecture](assets/roamer-architecture.svg)
 
-    subgraph "1. Data Sources"
-        B1[Headers]
-        B2[Cookies]
-        B3[Query Params]
-        B4[Path Variables]
-        B5[Request Body]
-    end
+The diagram above illustrates how Roamer processes HTTP requests through a simple, linear flow:
 
-    subgraph "2. Roamer Core Engine"
-        direction LR
-        P[Parsers]
-        D[Decoders]
-        F[Formatters]
-    end
-
-    subgraph "Output"
-        E[Populated Go Struct]
-    end
-
-    A --> B1 & B2 & B3 & B4 & B5
-
-    B1 & B2 & B3 & B4 -- values for --> P
-    B5 -- content for --> D
-
-    P -- parsed data --> F
-    D -- decoded data --> F
-
-    F -- formatted values --> E
-
-    classDef source fill:#fef9e7,stroke:#d4ac0d,stroke-width:2px
-    classDef core fill:#d4f1f9,stroke:#0097c0,stroke-width:2px
-    classDef io fill:#f5f5f5,stroke:#333,stroke-width:2px
-    class A,E io
-    class B1,B2,B3,B4,B5 source
-    class P,D,F core
-```
+1. **HTTP Request** - Incoming request with various data sources
+2. **Data Sources** - Extract data from headers, cookies, query parameters, path parameters, request body, and custom sources
+3. **Middleware** - HTTP middleware integration point for seamless request processing
+4. **Roamer Core** - Three main components work together:
+   - **Decoders**: Handle request body parsing (JSON, XML, Form, Multipart, Custom)
+   - **Parsers**: Extract data from request components (Headers, Cookies, Query, Path, Custom)  
+   - **Formatters**: Post-process and validate extracted values (String, Custom)
+5. **Go Struct** - Final output as a populated struct with tag annotations for type-safe data binding
 
 ## Getting Started
 
