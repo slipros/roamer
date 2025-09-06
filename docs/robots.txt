@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://roamer.slipros.dev/sitemap.xml
+Sitemap: https://slipros.github.io/roamer/sitemap.xml
