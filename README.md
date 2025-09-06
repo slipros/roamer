@@ -2,13 +2,54 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/slipros/roamer)](https://goreportcard.com/report/github.com/slipros/roamer)
 [![Build Status](https://github.com/slipros/roamer/actions/workflows/test.yml/badge.svg)](https://github.com/slipros/roamer/actions)
-[![Coverage Status](https://coveralls.io/repos/github/SLIpros/roamer/badge.svg?branch=main)](https://coveralls.io/github/SLIpros/roamer?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/slipros/roamer/badge.svg)](https://coveralls.io/github/slipros/roamer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
 [![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 Roamer is a flexible, extensible HTTP request parser for Go that makes handling and extracting data from HTTP requests effortless. It provides a declarative way to map HTTP request data to Go structs using struct tags, with support for multiple data sources and content types.
 
-![Roamer Workflow](/docs/images/workflow.svg)
+```mermaid
+graph TD
+    subgraph "Input"
+        A[HTTP Request]
+    end
+
+    subgraph "1. Data Sources"
+        B1[Headers]
+        B2[Cookies]
+        B3[Query Params]
+        B4[Path Variables]
+        B5[Request Body]
+    end
+
+    subgraph "2. Roamer Core Engine"
+        direction LR
+        P[Parsers]
+        D[Decoders]
+        F[Formatters]
+    end
+
+    subgraph "Output"
+        E[Populated Go Struct]
+    end
+
+    A --> B1 & B2 & B3 & B4 & B5
+
+    B1 & B2 & B3 & B4 -- values for --> P
+    B5 -- content for --> D
+
+    P -- parsed data --> F
+    D -- decoded data --> F
+
+    F -- formatted values --> E
+
+    classDef source fill:#fef9e7,stroke:#d4ac0d,stroke-width:2px
+    classDef core fill:#d4f1f9,stroke:#0097c0,stroke-width:2px
+    classDef io fill:#f5f5f5,stroke:#333,stroke-width:2px
+    class A,E io
+    class B1,B2,B3,B4,B5 source
+    class P,D,F core
+```
 
 ## Features
 
