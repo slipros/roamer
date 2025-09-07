@@ -73,7 +73,7 @@ func (t *Time) Format(tag reflect.StructTag, ptr any) error {
 
 		formatter, ok := t.formatters[name]
 		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagTime, Formatter: name})
+			return errors.WithStack(rerr.FormatterNotFoundError{Tag: TagTime, Formatter: name})
 		}
 
 		if err := formatter(v, arg); err != nil {

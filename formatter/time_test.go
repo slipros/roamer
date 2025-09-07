@@ -208,7 +208,7 @@ func TestTime_Format_Failure(t *testing.T) {
 		{name: "Unsupported type", tag: createTimeTestTag("timezone=UTC"), input: new(int), errIs: rerr.NotSupported},
 		{name: "Invalid timezone", tag: createTimeTestTag("timezone=Invalid/Timezone"), input: new(time.Time)},
 		{name: "Invalid truncate duration", tag: createTimeTestTag("truncate=invalid"), input: new(time.Time)},
-		{name: "Formatter not found", tag: createTimeTestTag("non_existent"), input: new(time.Time), errAs: &rerr.FormatterNotFound{}},
+		{name: "Formatter not found", tag: createTimeTestTag("non_existent"), input: new(time.Time), errAs: &rerr.FormatterNotFoundError{}},
 	}
 
 	for _, tc := range tests {

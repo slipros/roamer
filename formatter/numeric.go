@@ -65,7 +65,7 @@ func (n *Numeric) Format(tag reflect.StructTag, ptr any) error {
 
 		formatter, ok := n.formatters[name]
 		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagNumeric, Formatter: name})
+			return errors.WithStack(rerr.FormatterNotFoundError{Tag: TagNumeric, Formatter: name})
 		}
 
 		if err := formatter(ptr, arg); err != nil {

@@ -92,9 +92,9 @@ func (s SliceIterationError) Unwrap() error {
 	return s.Err
 }
 
-// FormatterNotFound occurs when a tag references a non-existent formatter.
+// FormatterNotFoundError occurs when a tag references a non-existent formatter.
 // This happens when a struct uses a formatter that hasn't been registered.
-type FormatterNotFound struct {
+type FormatterNotFoundError struct {
 	// Tag is the struct tag name that references the formatter.
 	Tag string
 
@@ -104,6 +104,6 @@ type FormatterNotFound struct {
 
 // Error returns a string representation of the formatter not found error.
 // This method implements the error interface.
-func (f FormatterNotFound) Error() string {
+func (f FormatterNotFoundError) Error() string {
 	return "formatter '" + f.Formatter + "' not found for tag '" + f.Tag + "'"
 }

@@ -315,10 +315,10 @@ func TestString_Format_Failure(t *testing.T) {
 			errIs:        rerr.NotSupported,
 		},
 		{
-			name:         "FormatterNotFound",
+			name:         "FormatterNotFoundError",
 			tag:          `string:"non_existent"`,
 			initialValue: new(string),
-			errAs:        &rerr.FormatterNotFound{},
+			errAs:        &rerr.FormatterNotFoundError{},
 		},
 		{
 			name:         "FormatterReturnsError",

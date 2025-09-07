@@ -124,7 +124,7 @@ func (s *String) Format(tag reflect.StructTag, ptr any) error {
 
 		formatter, ok := s.formatters[name]
 		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagString, Formatter: name})
+			return errors.WithStack(rerr.FormatterNotFoundError{Tag: TagString, Formatter: name})
 		}
 
 		var err error

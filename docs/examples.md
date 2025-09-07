@@ -80,10 +80,16 @@ func main() {
         }
         
         w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(response)
+        if err := json.NewEncoder(w).Encode(response); err != nil {
+            http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+            return
+        }
     })
     
-    http.ListenAndServe(":8080", nil)
+    log.Println("Server starting on :8080")
+    if err := http.ListenAndServe(":8080", nil); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 ```
 
@@ -140,7 +146,7 @@ func main() {
     router := chi.NewRouter()
     router.Use(middleware.Logger)
     
-    r := roamer.NewRoamer(
+    roamerInstance := roamer.NewRoamer(
         roamer.WithDecoders(decoder.NewJSON()),
         roamer.WithParsers(
             parser.NewQuery(),
@@ -149,11 +155,14 @@ func main() {
     )
     
     router.Route("/products", func(r chi.Router) {
-        r.With(roamer.Middleware[ProductRequest](r)).Post("/{id}", handleCreateProduct)
-        r.With(roamer.Middleware[ProductRequest](r)).Get("/{id}", handleGetProduct)
+        r.With(roamer.Middleware[ProductRequest](roamerInstance)).Post("/{id}", handleCreateProduct)
+        r.With(roamer.Middleware[ProductRequest](roamerInstance)).Get("/{id}", handleGetProduct)
     })
     
-    http.ListenAndServe(":8080", router)
+    log.Println("Server starting on :8080")
+    if err := http.ListenAndServe(":8080", router); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 
 func handleCreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +181,10 @@ func handleCreateProduct(w http.ResponseWriter, r *http.Request) {
     }
     
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 
 func handleGetProduct(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +204,10 @@ func handleGetProduct(w http.ResponseWriter, r *http.Request) {
     }
     
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 ```
 
@@ -237,7 +252,10 @@ func main() {
     router.Handle("/orders/{id}", 
         roamer.Middleware[OrderRequest](r)(http.HandlerFunc(handleGetOrder))).Methods("GET")
     
-    http.ListenAndServe(":8080", router)
+    log.Println("Server starting on :8080")
+    if err := http.ListenAndServe(":8080", router); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 
 func handleGetOrder(w http.ResponseWriter, r *http.Request) {
@@ -255,7 +273,10 @@ func handleGetOrder(w http.ResponseWriter, r *http.Request) {
     }
     
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 ```
 
@@ -310,7 +331,10 @@ func main() {
         roamer.Middleware[ItemRequest](r),
     )(http.HandlerFunc(handleCreateItem)))
     
-    http.ListenAndServe(":8080", router)
+    log.Println("Server starting on :8080")
+    if err := http.ListenAndServe(":8080", router); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 
 func handleCreateItem(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +352,10 @@ func handleCreateItem(w http.ResponseWriter, r *http.Request) {
     }
     
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(response)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 ```
 
@@ -732,14 +759,20 @@ func main() {
         fmt.Printf("User: %+v\n", userReq)
         
         w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(map[string]string{
+        if err := json.NewEncoder(w).Encode(map[string]string{
             "username":    userReq.Username,
             "email":       userReq.Email,
             "api_version": userReq.APIVersion,
-        })
+        }); err != nil {
+            http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+            return
+        }
     })
     
-    http.ListenAndServe(":8080", nil)
+    log.Println("Server starting on :8080")
+    if err := http.ListenAndServe(":8080", nil); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 ```
 

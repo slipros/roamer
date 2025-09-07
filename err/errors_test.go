@@ -17,8 +17,8 @@ func TestErrors_Successfully(t *testing.T) {
 		wantUnwrap error
 	}{
 		{
-			name:       "FormatterNotFound error",
-			err:        FormatterNotFound{Tag: "test_tag", Formatter: "test_formatter"},
+			name:       "FormatterNotFoundError error",
+			err:        FormatterNotFoundError{Tag: "test_tag", Formatter: "test_formatter"},
 			wantMsg:    "formatter 'test_formatter' not found for tag 'test_tag'",
 			wantUnwrap: nil,
 		},

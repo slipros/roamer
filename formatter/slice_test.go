@@ -242,7 +242,7 @@ func TestSlice_Format_Failure(t *testing.T) {
 		{name: "Unsupported type", tag: createSliceTestTag("unique"), input: new(int), errIs: rerr.NotSupported},
 		{name: "Not a slice pointer", tag: createSliceTestTag("unique"), input: "not a slice", errIs: rerr.NotSupported},
 		{name: "Invalid limit value", tag: createSliceTestTag("limit=abc"), input: &[]string{"a", "b"}},
-		{name: "Formatter not found", tag: createSliceTestTag("non_existent"), input: &[]string{}, errAs: &rerr.FormatterNotFound{}},
+		{name: "Formatter not found", tag: createSliceTestTag("non_existent"), input: &[]string{}, errAs: &rerr.FormatterNotFoundError{}},
 		{name: "Not a pointer", tag: createSliceTestTag("unique"), input: []string{}, errIs: rerr.NotSupported},
 		{name: "Sort unsupported type", tag: createSliceTestTag("sort"), input: &[]bool{true, false}, errIs: rerr.NotSupported},
 		{name: "Not a slice pointer but with tag", tag: createSliceTestTag("unique"), input: new(int), errIs: rerr.NotSupported},
