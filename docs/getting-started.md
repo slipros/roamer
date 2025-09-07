@@ -93,12 +93,15 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request) {
     
     // Send response
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "status": "created",
         "name": userReq.Name,
         "email": userReq.Email,
         "source": userReq.Source,
-    })
+    }); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 ```
 
@@ -153,16 +156,21 @@ func main() {
         fmt.Printf("Creating user: %+v\n", userReq)
         
         w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(map[string]interface{}{
+        if err := json.NewEncoder(w).Encode(map[string]interface{}{
             "status": "created",
             "name": userReq.Name,
             "email": userReq.Email,
             "source": userReq.Source,
-        })
+        }); err != nil {
+            http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+            return
+        }
     })
     
     log.Println("Server starting on :8080")
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    if err := http.ListenAndServe(":8080", nil); err != nil {
+        log.Fatalf("Server failed to start: %v", err)
+    }
 }
 ```
 

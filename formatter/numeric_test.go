@@ -198,7 +198,7 @@ func TestNumeric_Format_Failure(t *testing.T) {
 		{name: "Unsupported type", tag: createNumericTestTag("min=10"), input: new(string), errIs: rerr.NotSupported},
 		{name: "Invalid min value", tag: createNumericTestTag("min=abc"), input: new(int)},
 		{name: "Invalid max value", tag: createNumericTestTag("max=xyz"), input: new(int)},
-		{name: "Formatter not found", tag: createNumericTestTag("non_existent"), input: new(int), errAs: &rerr.FormatterNotFound{}},
+		{name: "Formatter not found", tag: createNumericTestTag("non_existent"), input: new(int), errAs: &rerr.FormatterNotFoundError{}},
 		{name: "Min invalid value", tag: createNumericTestTag("min=abc"), input: new(int8)},
 		{name: "Max invalid value", tag: createNumericTestTag("max=xyz"), input: new(int16)},
 		{name: "Abs unsupported type", tag: createNumericTestTag("abs"), input: new(string), errIs: rerr.NotSupported},

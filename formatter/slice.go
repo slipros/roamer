@@ -81,7 +81,7 @@ func (s *Slice) format(tagValue string, val reflect.Value) error {
 
 		formatter, ok := s.formatters[name]
 		if !ok {
-			return errors.WithStack(rerr.FormatterNotFound{Tag: TagSlice, Formatter: name})
+			return errors.WithStack(rerr.FormatterNotFoundError{Tag: TagSlice, Formatter: name})
 		}
 
 		if err := formatter(val.Elem(), arg); err != nil {

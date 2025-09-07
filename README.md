@@ -4,6 +4,7 @@
 [![Build Status](https://github.com/slipros/roamer/actions/workflows/test.yml/badge.svg)](https://github.com/slipros/roamer/actions)
 [![Coverage Status](https://coveralls.io/repos/github/slipros/roamer/badge.svg)](https://coveralls.io/github/slipros/roamer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/slipros/roamer)](https://github.com/slipros/roamer)
 [![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 Roamer is a flexible, extensible HTTP request parser for Go that makes handling and extracting data from HTTP requests effortless. It provides a declarative way to map HTTP request data to Go structs using struct tags, with support for multiple data sources and content types.
@@ -20,6 +21,7 @@ graph TD
         B3[Query Params]
         B4[Path Variables]
         B5[Request Body]
+        B6[Custom]
     end
 
     subgraph "Roamer Core Engine"
@@ -33,9 +35,9 @@ graph TD
         E[Populated Go Struct]
     end
 
-    A --> B1 & B2 & B3 & B4 & B5
+    A --> B1 & B2 & B3 & B4 & B5 & B6
 
-    B1 & B2 & B3 & B4 -- values for --> P
+    B1 & B2 & B3 & B4 & B6 -- values for --> P
     B5 -- content for --> D
 
     P -- parsed data --> F
@@ -47,13 +49,13 @@ graph TD
     classDef core stroke:#0097c0,stroke-width:4px
     classDef io stroke:#333,stroke-width:4px
     class A,E io
-    class B1,B2,B3,B4,B5 source
+    class B1,B2,B3,B4,B5,B6 source
     class P,D,F core
 ```
 
 ## Features
 
-- **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, and path variables
+- **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, path variables, and custom sources (including request context)
 - **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
 - **Default Values**: Set default values for fields using the `default` tag if no value is found in the request.
 - **Formatters**: Format parsed data (e.g., trim spaces from strings, apply numeric constraints, handle time zones, manipulate slices)
@@ -161,10 +163,16 @@ func main() {
 		
 		// Return the response
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
 	})
 	
-	http.ListenAndServe(":8080", nil)
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 ```
 
@@ -208,7 +216,11 @@ func main() {
 	
 	// Create an HTTP handler with middleware
 	http.Handle("/users", roamer.Middleware[CreateUserRequest](r)(http.HandlerFunc(handleCreateUser)))
-	http.ListenAndServe(":8080", nil)
+	
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleCreateUser(w http.ResponseWriter, req *http.Request) {
@@ -232,7 +244,10 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request) {
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
@@ -302,7 +317,7 @@ func main() {
 	router.Use(middleware.Logger)
 	
 	// Initialize roamer with Chi path parser
-	r := roamer.NewRoamer(
+	roamerInstance := roamer.NewRoamer(
 		roamer.WithDecoders(decoder.NewJSON()),
 		roamer.WithParsers(
 			parser.NewHeader(),
@@ -313,10 +328,13 @@ func main() {
 	
 	// Apply middleware and define routes
 	router.Route("/products", func(r chi.Router) {
-		r.With(roamer.Middleware[CreateProductRequest](r)).Post("/{id}", handleCreateProduct)
+		r.With(roamer.Middleware[CreateProductRequest](roamerInstance)).Post("/{id}", handleCreateProduct)
 	})
 	
-	http.ListenAndServe(":8080", router)
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleCreateProduct(w http.ResponseWriter, req *http.Request) {
@@ -338,7 +356,10 @@ func handleCreateProduct(w http.ResponseWriter, req *http.Request) {
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
@@ -387,7 +408,10 @@ func main() {
 	// Apply middleware and define routes
 	router.Handle("/orders/{id}", roamer.Middleware[GetOrderRequest](r)(http.HandlerFunc(handleGetOrder))).Methods("GET")
 	
-	http.ListenAndServe(":8080", router)
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleGetOrder(w http.ResponseWriter, req *http.Request) {
@@ -408,7 +432,10 @@ func handleGetOrder(w http.ResponseWriter, req *http.Request) {
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
@@ -469,7 +496,10 @@ func main() {
 		roamer.Middleware[CreateItemRequest](r),
 	)(http.HandlerFunc(handleCreateItem)))
 	
-	http.ListenAndServe(":8080", router)
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleCreateItem(w http.ResponseWriter, req *http.Request) {
@@ -490,7 +520,10 @@ func handleCreateItem(w http.ResponseWriter, req *http.Request) {
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
@@ -641,8 +674,8 @@ The String formatter provides text processing operations:
 
 ```go
 type UserRequest struct {
-    Name     string `json:"name" string:"trim_space,lower_case"`
-    Username string `query:"username" string:"trim_space,slug"`
+    Name     string `json:"name" string:"trim_space,title"`
+    Username string `query:"username" string:"trim_space,snake"`
     Bio      string `json:"bio" string:"trim_space"`
 }
 
@@ -656,9 +689,25 @@ r := roamer.NewRoamer(
 
 Available string operations:
 - `trim_space` - Remove leading and trailing whitespace
-- `lower_case` - Convert to lowercase 
-- `upper_case` - Convert to uppercase
-- `slug` - Convert to URL-friendly slug format
+- `lower` - Convert to lowercase 
+- `upper` - Convert to uppercase
+- `title` - Convert to title case (capitalize first letter of each word)
+- `snake` - Convert to snake_case format
+- `camel` - Convert to camelCase format
+- `kebab` - Convert to kebab-case format
+- `base64_encode` - Encode string to base64
+- `base64_decode` - Decode base64 string
+- `url_encode` - URL encode string
+- `url_decode` - URL decode string
+- `sanitize_html` - Basic HTML sanitization (escape < and >)
+- `reverse` - Reverse string characters
+- `trim_prefix=PREFIX` - Remove specified prefix from string
+- `trim_suffix=SUFFIX` - Remove specified suffix from string
+- `truncate=N` - Truncate string to N characters
+- `replace=OLD:NEW` or `replace=OLD:NEW:COUNT` - Replace occurrences of OLD with NEW (optionally limit to COUNT replacements)
+- `substring=START` or `substring=START:END` - Extract substring from START to END (or to end of string)
+- `pad_left=LENGTH` or `pad_left=LENGTH:CHAR` - Pad string to LENGTH on the left (with CHAR or space)
+- `pad_right=LENGTH` or `pad_right=LENGTH:CHAR` - Pad string to LENGTH on the right (with CHAR or space)
 
 ### Numeric Formatter
 
@@ -748,7 +797,7 @@ You can use multiple formatters together in a single roamer instance:
 ```go
 type ComprehensiveRequest struct {
     // String formatting
-    Name     string `json:"name" string:"trim_space,lower_case"`
+    Name     string `json:"name" string:"trim_space,title"`
     
     // Numeric constraints
     Age      int     `json:"age" numeric:"min=18,max=120"`
@@ -758,7 +807,7 @@ type ComprehensiveRequest struct {
     BirthDate time.Time `json:"birth_date" time:"timezone=UTC,start_of_day"`
     
     // Slice operations
-    Skills    []string `json:"skills" slice:"unique,sort" string:"trim_space,lower_case"`
+    Skills    []string `json:"skills" slice:"unique,sort" string:"trim_space,lower"`
     Scores    []int    `query:"scores" slice:"compact,sort_desc,limit=10" numeric:"min=0,max=100"`
 }
 
@@ -1162,7 +1211,7 @@ type CreateProductRequest struct {
 	ID string `path:"id"`
 	
 	// Query parameters
-	Category    string    `query:"category" string:"trim_space,lower_case"`
+	Category    string    `query:"category" string:"trim_space,lower"`
 	Tags        []string  `query:"tags" slice:"unique,compact,sort"`
 	CustomType  *Custom   `query:"custom_type"`
 }
@@ -1189,7 +1238,7 @@ func main() {
 	router.Use(middleware.Logger, middleware.Recoverer)
 	
 	// Initialize roamer
-	r := roamer.NewRoamer(
+	roamerInstance := roamer.NewRoamer(
 		roamer.WithDecoders(decoder.NewJSON()),
 		roamer.WithParsers(
 			parser.NewHeader(),
@@ -1207,15 +1256,17 @@ func main() {
 	// Define routes with appropriate request structs for each endpoint
 	router.Route("/api/products", func(r chi.Router) {
 		// Use CreateProductRequest for POST
-		r.With(roamer.Middleware[CreateProductRequest](r)).Post("/{id}", handleProductCreate)
+		r.With(roamer.Middleware[CreateProductRequest](roamerInstance)).Post("/{id}", handleProductCreate)
 		
 		// Use GetProductRequest for GET - only parses what's needed
-		r.With(roamer.Middleware[GetProductRequest](r)).Get("/{id}", handleProductGet)
+		r.With(roamer.Middleware[GetProductRequest](roamerInstance)).Get("/{id}", handleProductGet)
 	})
 	
 	// Start server
 	log.Println("Server starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleProductCreate(w http.ResponseWriter, r *http.Request) {
@@ -1243,7 +1294,10 @@ func handleProductCreate(w http.ResponseWriter, r *http.Request) {
 	// Return the response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func handleProductGet(w http.ResponseWriter, r *http.Request) {
@@ -1266,7 +1320,10 @@ func handleProductGet(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
