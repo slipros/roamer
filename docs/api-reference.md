@@ -240,15 +240,15 @@ func NewString() *String
 
 **Operations:**
 - `trim_space` - Remove leading and trailing whitespace
-- `lower_case` - Convert to lowercase
-- `upper_case` - Convert to uppercase
+- `lower` - Convert to lowercase
+- `upper` - Convert to uppercase
 - `slug` - Convert to URL-friendly slug
 
 **Example:**
 ```go
 type Request struct {
     Name     string `json:"name" string:"trim_space,title_case"`
-    Username string `json:"username" string:"trim_space,lower_case,slug"`
+    Username string `json:"username" string:"trim_space,lower,slug"`
 }
 ```
 
@@ -390,7 +390,7 @@ You can apply multiple formatters to the same field:
 
 ```go
 type Request struct {
-    Tags []string `query:"tags" slice:"unique,sort" string:"trim_space,lower_case"`
+    Tags []string `query:"tags" slice:"unique,sort" string:"trim_space,lower"`
 }
 ```
 

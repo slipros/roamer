@@ -14,7 +14,12 @@ func TestNewStructureCache(t *testing.T) {
 	formatters := []string{"string"}
 	reflectValueFormatters := []string{"time"}
 
-	sc := NewStructureCache(decoders, parsers, formatters, reflectValueFormatters)
+	sc := NewStructure(
+		WithDecoders(decoders),
+		WithParsers(parsers),
+		WithFormatters(formatters),
+		WithReflectValueFormatters(reflectValueFormatters),
+	)
 
 	require.NotNil(t, sc)
 	assert.Equal(t, decoders, sc.decoders)
@@ -93,7 +98,11 @@ func TestStructureCache_Fields_Successfully(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := NewStructureCache(tt.decoders, tt.parsers, tt.formatters, []string{})
+			sc := NewStructure(
+				WithDecoders(tt.decoders),
+				WithParsers(tt.parsers),
+				WithFormatters(tt.formatters),
+			)
 
 			// First call - should analyze and cache
 			fields1 := sc.Fields(tt.targetType)

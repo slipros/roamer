@@ -71,6 +71,8 @@ func (s *Slice) FormatReflectValue(tag reflect.StructTag, val reflect.Value) err
 	return s.format(tagValue, val)
 }
 
+// format applies slice formatters based on tag value to a reflect.Value.
+// This is a helper method used by both Format and FormatReflectValue.
 func (s *Slice) format(tagValue string, val reflect.Value) error {
 	if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Slice {
 		return errors.Wrapf(rerr.NotSupported, "slice formatter for %s", val.Type().String())
@@ -92,13 +94,16 @@ func (s *Slice) format(tagValue string, val reflect.Value) error {
 	return nil
 }
 
-// wrapSliceFunc wraps a simple slice function to match SliceFormatterFunc signature
+// wrapSliceFunc wraps a simple slice function to match SliceFormatterFunc signature.
+// This utility function adapts functions that only need the slice reflect.Value
+// to the interface that expects both slice and argument parameters.
 func wrapSliceFunc(fn func(slice reflect.Value) error) SliceFormatterFunc {
 	return func(slice reflect.Value, _ string) error {
 		return fn(slice)
 	}
 }
 
+// applyUnique removes duplicate elements from a slice, keeping the first occurrence of each.
 func applyUnique(slice reflect.Value) error {
 	if slice.Len() == 0 {
 		return nil
@@ -119,6 +124,8 @@ func applyUnique(slice reflect.Value) error {
 	return nil
 }
 
+// applySort sorts a slice in ascending or descending order.
+// Supports int, string, and float64 slice types.
 func applySort(slice reflect.Value, desc bool) error {
 	switch slice.Type().Elem().Kind() {
 	case reflect.Int:
@@ -133,6 +140,7 @@ func applySort(slice reflect.Value, desc bool) error {
 	return nil
 }
 
+// sortSlice sorts a slice using the sort.Interface in ascending or descending order.
 func sortSlice(s sort.Interface, desc bool) {
 	if desc {
 		sort.Sort(sort.Reverse(s))
@@ -141,6 +149,7 @@ func sortSlice(s sort.Interface, desc bool) {
 	sort.Sort(s)
 }
 
+// applyCompact removes zero-value elements from a slice.
 func applyCompact(slice reflect.Value) error {
 	if slice.Len() == 0 {
 		return nil
@@ -159,6 +168,7 @@ func applyCompact(slice reflect.Value) error {
 	return nil
 }
 
+// applyLimit truncates a slice to a maximum number of elements.
 func applyLimit(slice reflect.Value, arg string) error {
 	limit, err := strconv.Atoi(arg)
 	if err != nil {

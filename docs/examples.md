@@ -30,6 +30,7 @@ package main
 
 import (
     "encoding/json"
+    "log"
     "net/http"
     "time"
 
@@ -41,7 +42,7 @@ import (
 
 type CreateUserRequest struct {
     Name  string `json:"name" string:"trim_space"`
-    Email string `json:"email" string:"trim_space,lower_case"`
+    Email string `json:"email" string:"trim_space,lower"`
     Age   int    `query:"age" numeric:"min=18,max=120"`
 }
 
@@ -118,6 +119,7 @@ package main
 
 import (
     "encoding/json"
+    "log"
     "net/http"
 
     "github.com/go-chi/chi/v5"
@@ -218,6 +220,7 @@ package main
 
 import (
     "encoding/json"
+    "log"
     "net/http"
 
     "github.com/gorilla/mux"
@@ -287,6 +290,7 @@ package main
 
 import (
     "encoding/json"
+    "log"
     "net/http"
 
     "github.com/julienschmidt/httprouter"
@@ -449,7 +453,7 @@ func handleFileUpload(w http.ResponseWriter, req *http.Request) {
 ```go
 type UserRequest struct {
     Name     string `json:"name" string:"trim_space,title_case"`
-    Username string `json:"username" string:"trim_space,lower_case,slug"`
+    Username string `json:"username" string:"trim_space,lower,slug"`
     Bio      string `json:"bio" string:"trim_space"`
 }
 
@@ -524,7 +528,7 @@ r := roamer.NewRoamer(
 ```go
 type CreateUserRequest struct {
     Name  string `json:"name" string:"trim_space"`
-    Email string `json:"email" string:"trim_space,lower_case"`
+    Email string `json:"email" string:"trim_space,lower"`
     Age   int    `json:"age" numeric:"min=18"`
 }
 
@@ -684,6 +688,7 @@ package main
 import (
     "encoding/json"
     "fmt"
+    "log"
     "net/http"
     "regexp"
     "reflect"

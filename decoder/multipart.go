@@ -53,7 +53,7 @@ type MultipartFormData struct {
 	skipFilled  bool   // Whether to skip fields that are already filled
 	maxMemory   int64  // The maximum memory in bytes to use for parsing
 
-	structureCache *cache.StructureCache
+	structureCache *cache.Structure
 }
 
 // NewMultipartFormData creates a decoder for multipart/form-data content,
@@ -99,18 +99,27 @@ func NewMultipartFormData(opts ...MultipartFormDataOptionsFunc) *MultipartFormDa
 // Returns:
 //   - error: Error if decoding fails, nil if successful.
 func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
+	if m.structureCache == nil {
+		return errors.Wrap(rerr.NilValue, "structure cache")
+	}
+
+	t := reflect.TypeOf(ptr)
+	if t == nil || t.Kind() != reflect.Pointer {
+		return errors.Wrapf(rerr.NotPtr, "`%T`", ptr)
+	}
+
+	t = t.Elem()
+	if t.Kind() != reflect.Struct {
+		return errors.WithStack(rerr.NotSupported)
+	}
+
 	if err := r.ParseMultipartForm(m.maxMemory); err != nil {
 		return errors.WithMessage(err, "parse multipart form")
 	}
 
 	v := reflect.Indirect(reflect.ValueOf(ptr))
 
-	switch v.Kind() {
-	case reflect.Struct:
-		return m.parseStruct(r, &v)
-	default:
-		return errors.WithStack(rerr.NotSupported)
-	}
+	return m.parseStruct(r, &v)
 }
 
 // ContentType returns the Content-Type header value that this decoder handles.
@@ -128,7 +137,7 @@ func (m *MultipartFormData) Tag() string {
 
 // SetStructureCache assigns a structure cache to the decoder for improved performance.
 // The cache stores precomputed field information to avoid reflection overhead on each request.
-func (m *MultipartFormData) SetStructureCache(cache *cache.StructureCache) {
+func (m *MultipartFormData) SetStructureCache(cache *cache.Structure) {
 	m.structureCache = cache
 }
 
@@ -154,43 +163,20 @@ func (m *MultipartFormData) setSkipFilled(skip bool) {
 // Returns:
 //   - error: An error if parsing fails, or nil if successful.
 func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err error) {
-	t := v.Type()
+	fields := m.structureCache.Fields(v.Type())
+	for i := range fields {
+		f := &fields[i]
 
-	if m.structureCache != nil {
-		fields := m.structureCache.Fields(t)
-		for i := range fields {
-			f := &fields[i]
-
-			if len(f.Decoders) == 0 || !slices.Contains(f.Decoders, TagMultipart) {
-				continue
-			}
-
-			tagValue, ok := f.StructField.Tag.Lookup(TagMultipart)
-			if !ok {
-				continue
-			}
-
-			if err := m.parseField(r, v, f.Index, f.Name, tagValue); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	for i := range v.NumField() {
-		f := t.Field(i)
-
-		if !f.IsExported() || len(f.Tag) == 0 {
+		if len(f.Decoders) == 0 || !slices.Contains(f.Decoders, TagMultipart) {
 			continue
 		}
 
-		tagValue, ok := f.Tag.Lookup(TagMultipart)
+		tagValue, ok := f.StructField.Tag.Lookup(TagMultipart)
 		if !ok {
 			continue
 		}
 
-		if err := m.parseField(r, v, i, f.Name, tagValue); err != nil {
+		if err := m.parseField(r, v, f.Index, f.Name, tagValue); err != nil {
 			return err
 		}
 	}
@@ -198,16 +184,18 @@ func (m *MultipartFormData) parseStruct(r *http.Request, v *reflect.Value) (err 
 	return nil
 }
 
+// parseField parses a single field from multipart form data.
+// It handles both form values and file uploads based on the tag value.
 func (m *MultipartFormData) parseField(
 	r *http.Request,
-	v *reflect.Value,
+	base *reflect.Value,
 	fieldIndex int,
 	fieldName string,
 	tagValue string,
 ) error {
 	if len(r.Form) > 0 {
 		if formValue, ok := m.parseFormValue(r.Form, tagValue); ok {
-			fieldValue := v.Field(fieldIndex)
+			fieldValue := base.Field(fieldIndex)
 			if m.skipFilled && !fieldValue.IsZero() {
 				return nil
 			}
@@ -226,21 +214,24 @@ func (m *MultipartFormData) parseField(
 
 	switch tagValue {
 	case tagValueAllFiles:
-		files := make(MultipartFiles, 0, len(r.MultipartForm.File))
+		var index int
+		files := make(MultipartFiles, len(r.MultipartForm.File))
 		for k := range r.MultipartForm.File {
 			file, header, err := r.FormFile(k)
 			if err != nil {
 				return errors.WithMessagef(err, "parse form file for key %q", k)
 			}
 
-			files = append(files, MultipartFile{
+			files[index] = MultipartFile{
 				Key:    k,
 				File:   file,
 				Header: header,
-			})
+			}
+
+			index++
 		}
 
-		if err := m.setFileValue(v.Field(fieldIndex), files); err != nil {
+		if err := m.setFileValue(base.Field(fieldIndex), files); err != nil {
 			return errors.WithMessagef(err, "set `%s` multipart value to field `%s`",
 				tagValue, fieldName)
 		}
@@ -254,7 +245,7 @@ func (m *MultipartFormData) parseField(
 			return errors.WithMessagef(err, "parse form file for key %q", tagValue)
 		}
 
-		fieldValue := v.Field(fieldIndex)
+		fieldValue := base.Field(fieldIndex)
 		if m.skipFilled && !fieldValue.IsZero() {
 			return nil
 		}

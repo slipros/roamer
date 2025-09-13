@@ -74,52 +74,41 @@ func SetSliceString(field reflect.Value, arr []string, options ...SliceOption) e
 	case reflect.Slice:
 		elemType := fieldType.Elem()
 
-		// Handle string slices (including custom types)
-		if elemType.Kind() == reflect.String {
+		switch elemType.Kind() {
+		case reflect.String:
 			// Create a new slice of the correct type and convert each element
 			slice := reflect.MakeSlice(fieldType, len(arr), len(arr))
 			for i, v := range arr {
 				slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
 			}
-			field.Set(slice)
-			return nil
-		}
 
-		// Handle numeric slice types
-		if isNumericKind(elemType.Kind()) {
-			slice := reflect.MakeSlice(fieldType, 0, len(arr))
-			for _, strVal := range arr {
+			field.Set(slice)
+
+			return nil
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64, reflect.Bool:
+
+			slice := reflect.MakeSlice(fieldType, len(arr), len(arr))
+			for i, strVal := range arr {
 				elemValue := reflect.New(elemType).Elem()
 				if err := SetString(elemValue, strVal); err != nil {
 					return errors.Wrapf(err, "failed to convert string '%s' to %s", strVal, elemType.String())
 				}
-				slice = reflect.Append(slice, elemValue)
+				slice.Index(i).Set(elemValue)
 			}
-			field.Set(slice)
-			return nil
-		}
 
-		// Handle boolean slices
-		if elemType.Kind() == reflect.Bool {
-			slice := reflect.MakeSlice(fieldType, 0, len(arr))
-			for _, strVal := range arr {
-				elemValue := reflect.New(elemType).Elem()
-				if err := SetString(elemValue, strVal); err != nil {
-					return errors.Wrapf(err, "failed to convert string '%s' to bool", strVal)
-				}
-				slice = reflect.Append(slice, elemValue)
-			}
 			field.Set(slice)
-			return nil
-		}
 
-		// Handle []interface{} or any slice that accepts strings
-		if elemType.Kind() == reflect.Interface {
+			return nil
+		case reflect.Interface:
 			slice := reflect.MakeSlice(fieldType, len(arr), len(arr))
 			for i, v := range arr {
 				slice.Index(i).Set(reflect.ValueOf(v))
 			}
+
 			field.Set(slice)
+
 			return nil
 		}
 
@@ -132,16 +121,4 @@ func SetSliceString(field reflect.Value, arr []string, options ...SliceOption) e
 	// If the field doesn't match any of the above types, return an error
 	return errors.Wrapf(rerr.NotSupported,
 		"cannot convert []string to field of type %s", fieldType.String())
-}
-
-// isNumericKind returns true if the kind is a numeric type
-func isNumericKind(kind reflect.Kind) bool {
-	switch kind {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64:
-		return true
-	default:
-		return false
-	}
 }

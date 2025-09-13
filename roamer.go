@@ -30,23 +30,73 @@ type AfterParser interface {
 
 // RequireStructureCache is an interface for components that require
 // a structure cache for efficient field analysis and caching.
+//
+// Components implementing this interface will receive a structure cache
+// instance during Roamer initialization, allowing them to optimize
+// reflection operations by caching struct field metadata.
+//
+// This interface is typically implemented by decoders that need to
+// perform repetitive struct field analysis for the same types.
 type RequireStructureCache interface {
-	SetStructureCache(cache *cache.StructureCache)
+	// SetStructureCache provides the component with a structure cache instance.
+	// This method is called once during Roamer initialization to pass
+	// the cache to components that need it for performance optimization.
+	//
+	// Parameters:
+	//   - cache: The structure cache instance for storing field metadata.
+	SetStructureCache(cache *cache.Structure)
+}
+
+// Parse is a generic function that extracts data from an HTTP request into a value of type T.
+// This is a convenience wrapper around the Roamer.Parse method that returns the parsed value
+// directly instead of requiring a pointer parameter.
+//
+// The function creates a zero value of type T, parses the request data into it,
+// and returns both the result and any error that occurred during parsing.
+//
+// Example:
+//
+//	type UserData struct {
+//	    ID        int    `query:"id"`
+//	    Name      string `json:"name"`
+//	    UserAgent string `header:"User-Agent"`
+//	}
+//
+//	// Parse request data directly into a value
+//	userData, err := roamer.Parse[UserData](roamer, request)
+//	if err != nil {
+//	    return err
+//	}
+//	// Use userData...
+//
+// Parameters:
+//   - r: The configured Roamer instance to use for parsing.
+//   - req: The HTTP request to parse data from.
+//
+// Returns:
+//   - T: The parsed data structure of the specified type.
+//   - error: An error if parsing fails, or nil if successful.
+func Parse[T any](r *Roamer, req *http.Request) (T, error) {
+	var result T
+	err := r.Parse(req, &result)
+	return result, err
 }
 
 // Roamer is a flexible HTTP request parser that extracts data from various parts
 // of an HTTP request into Go structures using struct tags.
 type Roamer struct {
-	parsers       Parsers    // Collection of registered parsers
-	decoders      Decoders   // Collection of registered decoders
-	formatters    Formatters // Collection of registered formatters
-	skipFilled    bool       // Whether to skip fields that are already filled
-	hasParsers    bool       // Whether any parsers are registered
-	hasDecoders   bool       // Whether any decoders are registered
-	hasFormatters bool       // Whether any formatters are registered
+	parsers                Parsers                // Collection of registered parsers
+	decoders               Decoders               // Collection of registered decoders
+	formatters             Formatters             // Collection of registered formatters
+	reflectValueFormatters ReflectValueFormatters // Collection of registered reflectValueFormatters
+
+	skipFilled    bool // Whether to skip fields that are already filled
+	hasParsers    bool // Whether any parsers are registered
+	hasDecoders   bool // Whether any decoders are registered
+	hasFormatters bool // Whether any formatters are registered
 
 	parserCachePool sync.Pool
-	structureCache  *cache.StructureCache
+	structureCache  *cache.Structure
 }
 
 // NewRoamer creates a configured Roamer instance with optional configuration.
@@ -68,14 +118,15 @@ type Roamer struct {
 //	)
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
-		parsers:    make(Parsers),
-		decoders:   make(Decoders),
-		formatters: make(Formatters),
-		skipFilled: true,
+		parsers:                make(Parsers),
+		decoders:               make(Decoders),
+		formatters:             make(Formatters),
+		reflectValueFormatters: make(ReflectValueFormatters),
+		skipFilled:             true,
 		parserCachePool: sync.Pool{
 			New: func() any {
-				const parserCacheCapacity = 5
-				return make(parser.Cache, parserCacheCapacity)
+				const capacity = 5
+				return make(map[string]any, capacity)
 			},
 		},
 	}
@@ -88,23 +139,11 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r.hasDecoders = len(r.decoders) > 0
 	r.hasFormatters = len(r.formatters) > 0
 
-	formatters := make([]string, 0, len(r.formatters))
-	reflectValueFormatters := make([]string, 0, len(r.formatters))
-	for tag, f := range r.formatters {
-		if _, ok := f.(ReflectValueFormatter); !ok {
-			formatters = append(formatters, tag)
-
-			continue
-		}
-
-		reflectValueFormatters = append(reflectValueFormatters, tag)
-	}
-
-	r.structureCache = cache.NewStructureCache(
-		r.decoders.Tags(),
-		maps.Keys(r.parsers),
-		formatters,
-		reflectValueFormatters,
+	r.structureCache = cache.NewStructure(
+		cache.WithDecoders(r.decoders.Tags()),
+		cache.WithParsers(maps.Keys(r.parsers)),
+		cache.WithFormatters(maps.Keys(r.formatters)),
+		cache.WithReflectValueFormatters(maps.Keys(r.reflectValueFormatters)),
 	)
 
 	for _, d := range r.decoders {
@@ -193,8 +232,9 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		f := &fields[i]
 
 		fieldValue := v.Field(f.Index)
+		isZero := fieldValue.IsZero()
 
-		if r.skipFilled && !fieldValue.IsZero() {
+		if r.skipFilled && !isZero {
 			if r.hasFormatters && len(f.Formatters) > 0 {
 				if err := r.applyFormatters(f, fieldValue); err != nil {
 					return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
@@ -228,7 +268,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 			}
 		}
 
-		if !parsedSuccessfully && f.HasDefault && fieldValue.IsZero() {
+		if !parsedSuccessfully && f.HasDefault && isZero {
 			if err := value.Set(fieldValue, f.DefaultValue); err != nil {
 				return errors.Wrapf(err, "set default value for field `%s`", f.Name)
 			}
@@ -246,7 +286,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 
 func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) error {
 	for _, name := range field.ReflectValueFormatters {
-		f, ok := r.formatters[name].(ReflectValueFormatter)
+		f, ok := r.reflectValueFormatters[name]
 		if !ok {
 			continue
 		}
@@ -278,7 +318,7 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 // parseBody extracts data from the HTTP request body into the provided pointer
 // using the appropriate decoder based on the request's Content-Type header.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
-	if !r.hasDecoders || req.ContentLength == 0 || req.Method == http.MethodGet {
+	if !r.hasDecoders || req.ContentLength == 0 || req.Method == http.MethodGet || req.Body == nil {
 		return nil
 	}
 

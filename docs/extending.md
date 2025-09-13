@@ -489,11 +489,12 @@ package main
 import (
     "encoding/csv"
     "fmt"
+    "log"
     "net/http"
     "reflect"
     "strconv"
     "strings"
-    
+
     "github.com/slipros/roamer"
     "github.com/slipros/roamer/parser"
 )
