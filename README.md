@@ -839,7 +839,7 @@ r := roamer.NewRoamer(
 The architecture is robust, modular, and designed for performance and extensibility.
 
 1.  **Clear Separation of Concerns:** The core concepts of `Decoder` (for request bodies), `Parser` (for other request parts like headers, query, etc.), and `Formatter` (for post-processing values) create a clean and understandable system.
-2.  **High Extensibility:** The interface-based design allows users to easily add support for new data formats (e.g., MessagePack), data sources (e.g., gRPC metadata), or custom formatters without modifying the core library.
+2.  **High Extensibility:** The interface-based design allows users to easily add support for new data formats (e.g., MessagePack), data sources (e.g., context), or custom formatters without modifying the core library.
 3.  **Concurrency Safety:** The `Roamer` instance is thread-safe due to the use of `sync.Map` and `sync.Pool`. A single instance can be safely shared across multiple goroutines, which is essential for web server environments.
 4.  **Router Independence:** The library is decoupled from any specific HTTP router. The `parser.Path` component relies on a user-provided function to extract path parameters, making it universally compatible.
 5.  **Flexible Configuration:** The functional options pattern (`NewRoamer(opts ...OptionsFunc)`) provides a clean, readable, and extensible API for configuration.
