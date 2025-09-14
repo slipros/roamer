@@ -48,7 +48,7 @@ Let's create a simple API endpoint that handles user creation:
 type CreateUserRequest struct {
     // From JSON body
     Name  string `json:"name" string:"trim_space"`
-    Email string `json:"email" string:"trim_space,lower_case"`
+    Email string `json:"email" string:"trim_space,lower"`
     Age   int    `json:"age" numeric:"min=0,max=120"`
     
     // From query parameters
@@ -124,7 +124,7 @@ import (
 
 type CreateUserRequest struct {
     Name      string `json:"name" string:"trim_space"`
-    Email     string `json:"email" string:"trim_space,lower_case"`
+    Email     string `json:"email" string:"trim_space,lower"`
     Age       int    `json:"age" numeric:"min=0,max=120"`
     Source    string `query:"source" default:"web"`
     UserAgent string `header:"User-Agent"`
@@ -232,7 +232,7 @@ Here are the most commonly used struct tags in Roamer:
 | `cookie:"name"` | Parse from cookie | `cookie:"session_id"` |
 | `path:"param"` | Parse from path variable | `path:"id"` |
 | `default:"value"` | Default value if not found | `default:"1"` |
-| `string:"operation"` | String formatting | `string:"trim_space,lower_case"` |
+| `string:"operation"` | String formatting | `string:"trim_space,lower"` |
 | `numeric:"constraint"` | Numeric constraints | `numeric:"min=0,max=100"` |
 
 ## Next Steps

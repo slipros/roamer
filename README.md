@@ -91,6 +91,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -183,6 +184,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -285,6 +287,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -370,6 +373,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -446,6 +450,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -535,8 +540,9 @@ Roamer is designed to work with any router by implementing a simple path parser 
 package main
 
 import (
+	"log"
 	"net/http"
-	
+
 	"github.com/slipros/roamer"
 	"github.com/slipros/roamer/parser"
 	"your/custom/router"  // Your custom router package

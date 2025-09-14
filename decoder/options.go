@@ -39,7 +39,7 @@ func WithContentType[T contentTypeSetter](contentType string) func(T) {
 // Example:
 //
 //	// Overwrite all fields, even if already filled
-//	jsonDecoder := decoder.NewJSON(
+//	formDecoder := decoder.NewFormURL(
 //	    decoder.WithSkipFilled(false),
 //	)
 func WithSkipFilled[T skipFilledSetter](skip bool) func(T) {

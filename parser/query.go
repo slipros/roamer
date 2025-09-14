@@ -113,12 +113,16 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 
 	query, ok := cache[cacheKeyQuery].(url.Values)
 	if !ok {
-		query = r.URL.Query()
+		query = q.parseQuery(r.URL.RawQuery)
 		cache[cacheKeyQuery] = query
 	}
 
 	values, ok := query[tagValue]
 	if !ok {
+		return "", false
+	}
+
+	if len(values) == 0 {
 		return "", false
 	}
 
@@ -139,4 +143,55 @@ func (q *Query) Parse(r *http.Request, tag reflect.StructTag, cache Cache) (any,
 // For the Query parser, this is "query".
 func (q *Query) Tag() string {
 	return TagQuery
+}
+
+// parseQuery provides an optimized URL query parsing implementation
+// that reduces allocations for common cases.
+func (q *Query) parseQuery(query string) url.Values {
+	if query == "" {
+		return make(url.Values)
+	}
+
+	// Estimate the number of parameters to pre-allocate the map
+	paramCount := 1 + strings.Count(query, "&")
+	result := make(url.Values, paramCount)
+
+	// Parse parameters manually to avoid intermediate allocations
+	for query != "" {
+		var param string
+		if i := strings.IndexByte(query, '&'); i >= 0 {
+			param, query = query[:i], query[i+1:]
+		} else {
+			param, query = query, ""
+		}
+
+		if param == "" {
+			continue
+		}
+
+		var key, value string
+		if i := strings.IndexByte(param, '='); i >= 0 {
+			key, value = param[:i], param[i+1:]
+
+			// URL decode only if necessary (contains %)
+			if strings.IndexByte(value, '%') >= 0 {
+				if decoded, err := url.QueryUnescape(value); err == nil {
+					value = decoded
+				}
+			}
+		} else {
+			key = param
+		}
+
+		// URL decode key only if necessary
+		if strings.IndexByte(key, '%') >= 0 {
+			if decoded, err := url.QueryUnescape(key); err == nil {
+				key = decoded
+			}
+		}
+
+		result[key] = append(result[key], value)
+	}
+
+	return result
 }

@@ -145,7 +145,9 @@ func (s *String) Tag() string {
 	return TagString
 }
 
-// wrapStringFunc wraps a simple string function to match StringFormatterFunc signature
+// wrapStringFunc wraps a simple string function to match StringFormatterFunc signature.
+// This utility function adapts functions that only need the input string
+// to the interface that expects both input and argument parameters.
 func wrapStringFunc(fn func(string) string) StringFormatterFunc {
 	return func(s string, _ string) (string, error) {
 		return fn(s), nil
@@ -260,6 +262,8 @@ func padRight(s string, arg string) (string, error) {
 	return pad(s, arg, false)
 }
 
+// pad pads a string to a target length with a specified character.
+// If left is true, pads to the left; otherwise pads to the right.
 func pad(s string, arg string, left bool) (string, error) {
 	args := SplitArgs(arg)
 	if len(args) == 0 || args[0] == "" {
@@ -288,6 +292,7 @@ func pad(s string, arg string, left bool) (string, error) {
 	return s + padding, nil
 }
 
+// toTitle converts a string to title case where the first letter of each word is capitalized.
 func toTitle(s string) string {
 	var result strings.Builder
 	capNext := true
@@ -306,6 +311,7 @@ func toTitle(s string) string {
 	return result.String()
 }
 
+// toSnake converts a camelCase or PascalCase string to snake_case.
 func toSnake(s string) string {
 	var result strings.Builder
 	for i, r := range s {
@@ -321,6 +327,7 @@ func toSnake(s string) string {
 	return result.String()
 }
 
+// toCamel converts a snake_case string to camelCase.
 func toCamel(s string) string {
 	var result strings.Builder
 	upper := true
@@ -338,6 +345,7 @@ func toCamel(s string) string {
 	return result.String()
 }
 
+// toKebab converts a camelCase or PascalCase string to kebab-case.
 func toKebab(s string) string {
 	var result strings.Builder
 	for i, r := range s {
@@ -353,10 +361,12 @@ func toKebab(s string) string {
 	return result.String()
 }
 
+// base64Encode encodes a string to base64 format.
 func base64Encode(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
 
+// base64Decode decodes a base64-encoded string, returning the original string on error.
 func base64Decode(s string) string {
 	decoded, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
@@ -365,10 +375,12 @@ func base64Decode(s string) string {
 	return string(decoded)
 }
 
+// urlEncode percent-encodes a string for safe use in URLs.
 func urlEncode(s string) string {
 	return url.QueryEscape(s)
 }
 
+// urlDecode decodes a percent-encoded URL string, returning the original string on error.
 func urlDecode(s string) string {
 	decoded, err := url.QueryUnescape(s)
 	if err != nil {
@@ -377,11 +389,14 @@ func urlDecode(s string) string {
 	return decoded
 }
 
+// sanitizeHTML performs basic HTML sanitization by escaping < and > characters.
+// For robust protection, a library like bluemonday is recommended.
 func sanitizeHTML(s string) string {
 	// A very basic sanitizer. For robust protection, a library like bluemonday is recommended.
 	return strings.ReplaceAll(strings.ReplaceAll(s, "<", "&lt;"), ">", "&gt;")
 }
 
+// reverse reverses the order of characters in a string, properly handling Unicode.
 func reverse(s string) string {
 	runes := []rune(s)
 	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {

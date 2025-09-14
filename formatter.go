@@ -37,9 +37,23 @@ type Formatter interface {
 //
 //go:generate mockery --name=ReflectValueFormatter --outpkg=mockroamer --output=./mockroamer
 type ReflectValueFormatter interface {
+	// FormatReflectValue transforms a field value directly using a reflect.Value.
+	// This method is called instead of Format when a formatter implements this interface,
+	// allowing for more efficient operations by avoiding interface{} conversions.
+	//
+	// Parameters:
+	//   - tag: The struct tag containing formatting instructions.
+	//   - val: The reflect.Value to be formatted directly.
+	//
+	// Returns:
+	//   - error: An error if formatting fails, or nil if successful.
 	FormatReflectValue(tag reflect.StructTag, val reflect.Value) error
 }
 
 // Formatters is a map of registered formatters where keys are the tag names
 // returned by the Formatter.Tag() method.
 type Formatters map[string]Formatter
+
+// ReflectValueFormatters is a map of registered reflect value formatters where keys are
+// the tag names returned by the Formatter.Tag() method.
+type ReflectValueFormatters map[string]ReflectValueFormatter

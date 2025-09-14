@@ -19,27 +19,28 @@ type Field struct {
 	ReflectValueFormatters []string
 }
 
-// StructureCache provides thread-safe caching of struct field analysis
+// Structure provides thread-safe caching of struct field analysis
 // to avoid repeated reflection operations on the same types.
-type StructureCache struct {
+type Structure struct {
 	cache                                                 sync.Map
 	decoders, parsers, formatters, reflectValueFormatters []string
 }
 
-// NewStructureCache creates a new structure cache with the specified
+// NewStructure creates a new structure cache with the specified
 // decoders, parsers, and formatters for field analysis.
-func NewStructureCache(decoders, parsers, formatters, reflectValueFormatters []string) *StructureCache {
-	return &StructureCache{
-		decoders:               decoders,
-		parsers:                parsers,
-		formatters:             formatters,
-		reflectValueFormatters: reflectValueFormatters,
+func NewStructure(opts ...StructureOptionsFunc) *Structure {
+	var s Structure
+
+	for _, opt := range opts {
+		opt(&s)
 	}
+
+	return &s
 }
 
 // Fields returns the cached field analysis for the given type.
 // If not cached, it performs the analysis and caches the result.
-func (s *StructureCache) Fields(t reflect.Type) []Field {
+func (s *Structure) Fields(t reflect.Type) []Field {
 	if value, ok := s.cache.Load(t); ok {
 		return value.([]Field)
 	}
@@ -56,7 +57,7 @@ func (s *StructureCache) Fields(t reflect.Type) []Field {
 
 // analyzeStruct performs reflection-based analysis of a struct type
 // to extract field metadata and applicable tags.
-func (s *StructureCache) analyzeStruct(t reflect.Type) []Field {
+func (s *Structure) analyzeStruct(t reflect.Type) []Field {
 	fields := make([]Field, 0, t.NumField())
 
 	for i := 0; i < t.NumField(); i++ {
@@ -86,7 +87,7 @@ func (s *StructureCache) analyzeStruct(t reflect.Type) []Field {
 
 // tagLookup checks which of the given tag names are present in the struct tag
 // and returns a slice of the found tag names.
-func (s *StructureCache) tagLookup(tag reflect.StructTag, values []string) []string {
+func (s *Structure) tagLookup(tag reflect.StructTag, values []string) []string {
 	exists := make([]string, 0, len(values))
 	for _, v := range values {
 		if _, ok := tag.Lookup(v); !ok {

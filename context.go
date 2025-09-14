@@ -51,7 +51,7 @@ func ParsedDataFromContext[T any](ctx context.Context, ptr *T) error {
 	}
 
 	v, ok := ctx.Value(ContextKeyParsedData).(*T)
-	if !ok {
+	if !ok || v == nil {
 		return errors.WithStack(rerr.NoData)
 	}
 

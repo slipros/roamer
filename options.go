@@ -63,6 +63,12 @@ func WithDecoders(decoders ...Decoder) OptionsFunc {
 func WithFormatters(formatters ...Formatter) OptionsFunc {
 	return func(r *Roamer) {
 		for _, f := range formatters {
+			if i, ok := f.(ReflectValueFormatter); ok {
+				r.reflectValueFormatters[f.Tag()] = i
+
+				continue
+			}
+
 			r.formatters[f.Tag()] = f
 		}
 	}

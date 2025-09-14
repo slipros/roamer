@@ -17,10 +17,6 @@ const (
 	TagJSON = "json"
 )
 
-// json is a jsoniter instance configured to be compatible with the standard library.
-// This provides better performance while maintaining compatibility with encoding/json.
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
-
 // JSONOptionsFunc is a function type for configuring a JSON decoder.
 // It follows the functional options pattern to provide a clean and extensible API.
 type JSONOptionsFunc = func(*JSON)
@@ -28,6 +24,7 @@ type JSONOptionsFunc = func(*JSON)
 // JSON is a decoder for handling JSON request bodies.
 // It uses the jsoniter library for better performance compared to the standard library.
 type JSON struct {
+	decoder     jsoniter.API
 	contentType string // The Content-Type header value that this decoder handles
 }
 
@@ -49,6 +46,7 @@ type JSON struct {
 //	}
 func NewJSON(opts ...JSONOptionsFunc) *JSON {
 	j := JSON{
+		decoder:     jsoniter.ConfigCompatibleWithStandardLibrary,
 		contentType: ContentTypeJSON,
 	}
 
@@ -72,7 +70,7 @@ func NewJSON(opts ...JSONOptionsFunc) *JSON {
 // Returns:
 //   - error: An error if decoding fails, or nil if successful.
 func (j *JSON) Decode(r *http.Request, ptr any) error {
-	if err := json.NewDecoder(r.Body).Decode(ptr); err != nil {
+	if err := j.decoder.NewDecoder(r.Body).Decode(ptr); err != nil {
 		if !errors.Is(err, io.EOF) {
 			return err
 		}

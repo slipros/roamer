@@ -24,6 +24,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -59,7 +60,10 @@ func main() {
 	})
 	
 	// Start server
-	http.ListenAndServe(":3000", router)
+	log.Println("Server starting on :3000")
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleUserAction(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +96,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -126,7 +131,10 @@ func main() {
 	router.Post("/user/{user_id}", handleUser)
 	
 	// Start server
-	http.ListenAndServe(":3000", router)
+	log.Println("Server starting on :3000")
+	if err := http.ListenAndServe(":3000", router); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func handleUser(w http.ResponseWriter, r *http.Request) {

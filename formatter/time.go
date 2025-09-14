@@ -18,9 +18,20 @@ var defaultTimeFormatters = TimeFormatters{
 }
 
 // TimeFormatterFunc is a function type for time transformations.
+// Functions of this type receive a pointer to a time.Time value and an optional
+// argument string, then perform transformations on the time data.
+//
+// Parameters:
+//   - t: Pointer to the time.Time value to be formatted.
+//   - arg: Optional argument string containing formatting parameters.
+//
+// Returns:
+//   - error: An error if formatting fails, or nil if successful.
 type TimeFormatterFunc = func(t *time.Time, arg string) error
 
 // TimeFormatters is a map of named time formatting functions.
+// Keys are formatter names (used in struct tags), values are the
+// corresponding formatter functions.
 type TimeFormatters map[string]TimeFormatterFunc
 
 const (
@@ -84,13 +95,16 @@ func (t *Time) Format(tag reflect.StructTag, ptr any) error {
 	return nil
 }
 
-// wrapTimeFunc wraps a simple time function to match TimeFormatterFunc signature
+// wrapTimeFunc wraps a simple time function to match TimeFormatterFunc signature.
+// This utility function adapts functions that only need the time pointer
+// to the interface that expects both time pointer and argument parameters.
 func wrapTimeFunc(fn func(t *time.Time) error) TimeFormatterFunc {
 	return func(t *time.Time, _ string) error {
 		return fn(t)
 	}
 }
 
+// applyTimezone converts a time to a different timezone.
 func applyTimezone(t *time.Time, arg string) error {
 	loc, err := time.LoadLocation(arg)
 	if err != nil {
@@ -100,6 +114,7 @@ func applyTimezone(t *time.Time, arg string) error {
 	return nil
 }
 
+// applyTruncate truncates time to the specified duration precision.
 func applyTruncate(t *time.Time, arg string) error {
 	d, err := parseDuration(arg)
 	if err != nil {
@@ -109,17 +124,21 @@ func applyTruncate(t *time.Time, arg string) error {
 	return nil
 }
 
+// applyStartOfDay sets time to the start of the day (00:00:00).
 func applyStartOfDay(t *time.Time) error {
 	*t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 	return nil
 }
 
+// applyEndOfDay sets time to the end of the day (23:59:59.999999999).
 func applyEndOfDay(t *time.Time) error {
 	y, m, d := t.Date()
 	*t = time.Date(y, m, d, 23, 59, 59, int(time.Second-time.Nanosecond), t.Location())
 	return nil
 }
 
+// parseDuration parses a duration string, supporting both named durations
+// (hour, minute, second) and standard Go duration format (e.g., "1h30m").
 func parseDuration(arg string) (time.Duration, error) {
 	switch arg {
 	case "hour":

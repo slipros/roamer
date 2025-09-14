@@ -5,6 +5,7 @@ package value
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 
@@ -184,20 +185,28 @@ func Set(field reflect.Value, value any) error {
 		}
 	}
 
+	// Handle http.Cookie objects specially to extract just the value
+	// This allows cookie values to be converted to appropriate types (int, string, etc.)
+	// while maintaining backward compatibility for code that expects *http.Cookie
+	if cookie, ok := value.(*http.Cookie); ok {
+		return SetString(field, cookie.Value)
+	}
+
 	// Handle types that implement fmt.Stringer
 	if stringer, ok := value.(fmt.Stringer); ok {
 		return SetString(field, stringer.String())
 	}
 
 	// Handle general assignable types
-	valueType := reflect.TypeOf(value)
 	valueValue := reflect.ValueOf(value)
+	valueType := valueValue.Type()
 
 	// Handle pointers for general types
 	if valueType.Kind() == reflect.Pointer {
 		// Check if the pointer is nil
 		if valueValue.IsNil() {
 			field.Set(reflect.Zero(field.Type()))
+
 			return nil
 		}
 
@@ -206,44 +215,71 @@ func Set(field reflect.Value, value any) error {
 		valueValue = valueValue.Elem()
 	}
 
-	// Check if the target field's type can be assigned from the value's type
-	if field.Type().AssignableTo(valueType) {
+	fieldType := field.Type()
+
+	// Check if the value's type can be assigned to the target field's type
+	if valueType.AssignableTo(fieldType) {
 		field.Set(valueValue)
+
 		return nil
 	}
 
-	// Try if the target field's type is convertible from the value's type
-	if valueType.ConvertibleTo(field.Type()) {
-		field.Set(valueValue.Convert(field.Type()))
+	// Try if the value's type is convertible to the target field's type
+	if valueType.ConvertibleTo(fieldType) {
+		// Perform safe conversion with panic recovery
+		var convertErr error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					convertErr = errors.Errorf("conversion panic: %v", r)
+				}
+			}()
+
+			convertedValue := valueValue.Convert(fieldType)
+			field.Set(convertedValue)
+		}()
+
+		if convertErr != nil {
+			return convertErr
+		}
+
 		return nil
 	}
 
 	// If we reach here, the value couldn't be set
-	return errors.Wrapf(rerr.NotSupported,
-		"cannot set value of type %T to field of type %s", value, field.Type())
+	return errors.Wrapf(rerr.NotSupported, "cannot set value of type %T to field of type %s", value, fieldType)
 }
 
-// handleInterfaceSlice handles conversion from []any to a target slice type
+// handleInterfaceSlice handles conversion from []any to a target slice type.
+// This function creates a new slice of the appropriate target type and converts
+// each element from the interface{} slice to the target element type.
+//
+// Parameters:
+//   - field: The target slice field to populate (must be of slice kind).
+//   - values: Slice of interface{} values to convert and assign.
+//
+// Returns:
+//   - error: An error if conversion fails for any element, or nil if successful.
 func handleInterfaceSlice(field reflect.Value, values []any) error {
 	if field.Kind() != reflect.Slice {
-		return errors.Wrapf(rerr.NotSupported,
-			"cannot set []any to non-slice field of type %s", field.Type())
+		return errors.Wrapf(rerr.NotSupported, "cannot set []any to non-slice field of type %s", field.Type())
 	}
 
 	// Create a new slice of the appropriate type
 	elemType := field.Type().Elem()
-	slice := reflect.MakeSlice(field.Type(), 0, len(values))
+	slice := reflect.MakeSlice(field.Type(), len(values), len(values))
 
-	// Convert each element and append to the slice
-	for _, val := range values {
+	// Convert each element and set directly by index
+	for i, val := range values {
 		elem := reflect.New(elemType).Elem()
 		if err := Set(elem, val); err != nil {
-			return errors.Wrapf(err,
-				"failed to convert element of []any to %s", elemType)
+			return errors.Wrapf(err, "failed to convert element of []any to %s", elemType)
 		}
-		slice = reflect.Append(slice, elem)
+
+		slice.Index(i).Set(elem)
 	}
 
 	field.Set(slice)
+
 	return nil
 }
