@@ -783,7 +783,7 @@ func TestRoamer_Parse_DefaultValue_Successfully(t *testing.T) {
 				Bool:        false,
 				StringSlice: []string{"x", "y"},
 				IntSlice:    []int{8, 9},
-				NoTag:       "no tag",                                 // No parser, so default is used
+				NoTag:       "no tag",                             // No parser, so default is used
 				IntPtr:      func() *int { i := 42; return &i }(), // No query value, so default is used
 			},
 		},
