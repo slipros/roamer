@@ -466,7 +466,7 @@ func TestSetFloat_Failure(t *testing.T) {
 		Map       map[string]string
 		Slice     []string
 		Float32   float32
-		Interface interface{}
+		Interface any
 	}
 
 	tests := []struct {
@@ -643,7 +643,7 @@ func BenchmarkSetFloat(b *testing.B) {
 		PtrInt      *int
 		PtrString   *string
 		PtrFloat    *float64
-		Interface   interface{}
+		Interface   any
 		NilPtrInt   *int
 		NilPtrFloat *float64
 	}

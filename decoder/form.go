@@ -221,7 +221,7 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 //
 // The function supports different map types:
 //   - map[string]string: Single form values
-//   - map[string]interface{}: Both single and multiple form values
+//   - map[string]any: Both single and multiple form values
 //   - map[string][]string: Direct form data
 //
 // Parameters:

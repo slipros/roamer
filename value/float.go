@@ -190,7 +190,7 @@ func SetFloat[F constraints.Float](field reflect.Value, number F) error {
 		return nil
 
 	case reflect.Interface:
-		// For interface{} fields, use the original float type (either float32 or float64)
+		// For any fields, use the original float type (either float32 or float64)
 		field.Set(reflect.ValueOf(number))
 		return nil
 

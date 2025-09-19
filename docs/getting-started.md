@@ -93,7 +93,7 @@ func handleCreateUser(w http.ResponseWriter, req *http.Request) {
     
     // Send response
     w.Header().Set("Content-Type", "application/json")
-    if err := json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]any{
         "status": "created",
         "name": userReq.Name,
         "email": userReq.Email,
@@ -156,7 +156,7 @@ func main() {
         fmt.Printf("Creating user: %+v\n", userReq)
         
         w.Header().Set("Content-Type", "application/json")
-        if err := json.NewEncoder(w).Encode(map[string]interface{}{
+        if err := json.NewEncoder(w).Encode(map[string]any{
             "status": "created",
             "name": userReq.Name,
             "email": userReq.Email,

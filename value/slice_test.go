@@ -12,7 +12,7 @@ func TestSetSliceString_Successfully(t *testing.T) {
 	tests := []struct {
 		name     string
 		setup    func() (reflect.Value, []string)
-		expected interface{}
+		expected any
 		options  []SliceOption
 	}{
 		{
@@ -57,7 +57,7 @@ func TestSetSliceString_Successfully(t *testing.T) {
 			expected: []any{"tag1", "tag2", "tag3"},
 		},
 		{
-			name: "string slice to any (interface{})",
+			name: "string slice to any (any)",
 			setup: func() (reflect.Value, []string) {
 				var s struct {
 					Tags any

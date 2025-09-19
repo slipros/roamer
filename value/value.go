@@ -252,11 +252,11 @@ func Set(field reflect.Value, value any) error {
 
 // handleInterfaceSlice handles conversion from []any to a target slice type.
 // This function creates a new slice of the appropriate target type and converts
-// each element from the interface{} slice to the target element type.
+// each element from the any slice to the target element type.
 //
 // Parameters:
 //   - field: The target slice field to populate (must be of slice kind).
-//   - values: Slice of interface{} values to convert and assign.
+//   - values: Slice of any values to convert and assign.
 //
 // Returns:
 //   - error: An error if conversion fails for any element, or nil if successful.

@@ -40,7 +40,7 @@ Create a new Roamer instance with the specified options.
 #### Methods
 
 ```go
-func (r *Roamer) Parse(req *http.Request, ptr interface{}) error
+func (r *Roamer) Parse(req *http.Request, ptr any) error
 ```
 
 Parse an HTTP request into the provided struct pointer.
@@ -54,7 +54,7 @@ Parse an HTTP request into the provided struct pointer.
 ### Context Functions
 
 ```go
-func ParsedDataFromContext(ctx context.Context, ptr interface{}) error
+func ParsedDataFromContext(ctx context.Context, ptr any) error
 ```
 
 Extract parsed data from request context (used with middleware).

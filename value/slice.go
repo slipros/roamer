@@ -113,7 +113,7 @@ func SetSliceString(field reflect.Value, arr []string, options ...SliceOption) e
 		}
 
 	case reflect.Interface:
-		// For interface{} fields, prefer setting as []string directly
+		// For any fields, prefer setting as []string directly
 		field.Set(reflect.ValueOf(arr))
 		return nil
 	}

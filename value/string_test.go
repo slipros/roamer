@@ -64,7 +64,7 @@ func TestSetString_Successfully(t *testing.T) {
 		TextUnmarshaler      UnmarshallerText
 		BinaryUnmarshaler    UnmarshallerBinary
 		TimeField            time.Time
-		InterfaceField       interface{}
+		InterfaceField       any
 		MapStringStringField map[string]string
 		MapStringIntField    map[string]int
 		PtrIntField          *int
@@ -73,9 +73,9 @@ func TestSetString_Successfully(t *testing.T) {
 	// Define test cases
 	tests := []struct {
 		name     string
-		field    string      // field name to set
-		input    string      // input string
-		expected interface{} // expected value
+		field    string // field name to set
+		input    string // input string
+		expected any    // expected value
 	}{
 		// String values
 		{name: "string to string", field: "StrField", input: "test_string", expected: "test_string"},
@@ -626,7 +626,7 @@ func TestSetSliceFromString_EdgeCases(t *testing.T) {
 		name        string
 		setupField  func() reflect.Value
 		input       string
-		expected    interface{}
+		expected    any
 		expectError bool
 		errorCheck  func(error) bool
 	}{
@@ -1173,7 +1173,7 @@ func TestSetSliceFromString_TypeSafety_NumericSlice(t *testing.T) {
 		name        string
 		setupField  func() reflect.Value
 		input       string
-		expected    interface{}
+		expected    any
 		expectError bool
 	}{
 		// Int slice tests
@@ -1450,7 +1450,7 @@ func TestSetSliceFromString_TypeSafety_SingleElement(t *testing.T) {
 		name       string
 		setupField func() reflect.Value
 		input      string
-		expected   interface{}
+		expected   any
 	}{
 		{
 			name: "single string element",
@@ -1637,7 +1637,7 @@ func TestSetIntFromString_OverflowFix(t *testing.T) {
 		field       string
 		input       string
 		expectError bool
-		expected    interface{}
+		expected    any
 		description string
 	}{
 		// Valid boundary values that should work
@@ -1909,7 +1909,7 @@ func TestSetIntFromString_OptimizationPath(t *testing.T) {
 		field          string
 		input          string
 		expectError    bool
-		expected       interface{}
+		expected       any
 		shouldUseOptim bool
 		description    string
 	}{

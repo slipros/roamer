@@ -29,7 +29,7 @@ func TestRoamer_Parse_Concurrent_Basic(t *testing.T) {
 	)
 
 	// Create test JSON data
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"name":  "John Doe",
 		"email": "john@example.com",
 		"age":   30,
@@ -106,13 +106,13 @@ func TestRoamer_Parse_Concurrent_RaceConditions(t *testing.T) {
 	// Define request types for creating fresh requests in each goroutine
 	requestTypes := []struct {
 		reqType  string
-		jsonData map[string]interface{}
+		jsonData map[string]any
 	}{
-		{"json", map[string]interface{}{"field": "value1"}},
+		{"json", map[string]any{"field": "value1"}},
 		{"query", nil},
 		{"headers", nil},
 		{"cookies", nil},
-		{"mixed", map[string]interface{}{"data": "mixed"}},
+		{"mixed", map[string]any{"data": "mixed"}},
 	}
 
 	type TestStruct struct {
@@ -176,13 +176,13 @@ func TestRoamer_Parse_Concurrent_MemoryLeaks(t *testing.T) {
 	runtime.ReadMemStats(&initialStats)
 
 	// Create test request
-	jsonData := make(map[string]interface{})
+	jsonData := make(map[string]any)
 	for i := 0; i < 100; i++ {
 		jsonData[fmt.Sprintf("field_%d", i)] = fmt.Sprintf("value_%d", i)
 	}
 
 	type LargeStruct struct {
-		Fields map[string]interface{} `json:",inline"`
+		Fields map[string]any `json:",inline"`
 	}
 
 	const numGoroutines = 50
@@ -245,7 +245,7 @@ func TestRoamer_Parse_Concurrent_ContextCancellation(t *testing.T) {
 		Data string `json:"data"`
 	}
 
-	jsonData := map[string]interface{}{"data": "test"}
+	jsonData := map[string]any{"data": "test"}
 	jsonBytes, _ := json.Marshal(jsonData)
 
 	const numGoroutines = 20
@@ -324,13 +324,13 @@ func TestRoamer_Parse_Concurrent_StructureCache(t *testing.T) {
 	}
 
 	// Factory functions to create fresh struct instances
-	structFactories := []func() interface{}{
-		func() interface{} { return &Struct1{} },
-		func() interface{} { return &Struct2{} },
-		func() interface{} { return &Struct3{} },
+	structFactories := []func() any{
+		func() any { return &Struct1{} },
+		func() any { return &Struct2{} },
+		func() any { return &Struct3{} },
 	}
 
-	jsonDataSets := []map[string]interface{}{
+	jsonDataSets := []map[string]any{
 		{"field1": "value1", "field2": 42},
 		{"data": "test", "value": 3.14, "active": true},
 		{"name": "John", "email": "john@example.com", "created": time.Now().Format(time.RFC3339), "tags": []string{"user", "active"}},
@@ -438,7 +438,7 @@ func TestRoamer_Parse_Concurrent_FormatterAccess(t *testing.T) {
 			defer wg.Done()
 
 			for i := 0; i < 15; i++ {
-				jsonData := map[string]interface{}{
+				jsonData := map[string]any{
 					"lower":   fmt.Sprintf("  UPPER_TEXT_%d_%d  ", id, i),
 					"upper":   fmt.Sprintf("  lower_text_%d_%d  ", id, i),
 					"trimmed": fmt.Sprintf("  trimmed_text_%d_%d  ", id, i),
@@ -470,7 +470,7 @@ func TestRoamer_Parse_Concurrent_FormatterAccess(t *testing.T) {
 
 // Helper functions for concurrent testing
 
-func createConcurrentTestRequest(t *testing.T, requestType string, jsonData map[string]interface{}) *http.Request {
+func createConcurrentTestRequest(t *testing.T, requestType string, jsonData map[string]any) *http.Request {
 	t.Helper()
 
 	var req *http.Request
@@ -518,7 +518,7 @@ func BenchmarkRoamer_Parse_Concurrent(b *testing.B) {
 		Auth  string `header:"Authorization"`
 	}
 
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"name":  "John Doe",
 		"email": "john@example.com",
 	}
@@ -568,7 +568,7 @@ func BenchmarkRoamer_Parse_Concurrent_Contention(b *testing.B) {
 		F15 string `cookie:"c2"`
 	}
 
-	complexData := map[string]interface{}{
+	complexData := map[string]any{
 		"f1": "LOWER", "f2": "upper", "f3": "  trimmed  ",
 		"f4": "field4", "f5": "field5", "f6": 42, "f7": 84,
 		"f8": true, "f9": false,

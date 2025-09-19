@@ -39,7 +39,7 @@ type Formatter interface {
 type ReflectValueFormatter interface {
 	// FormatReflectValue transforms a field value directly using a reflect.Value.
 	// This method is called instead of Format when a formatter implements this interface,
-	// allowing for more efficient operations by avoiding interface{} conversions.
+	// allowing for more efficient operations by avoiding any conversions.
 	//
 	// Parameters:
 	//   - tag: The struct tag containing formatting instructions.

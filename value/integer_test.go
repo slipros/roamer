@@ -570,7 +570,7 @@ func BenchmarkSetInteger(b *testing.B) {
 		Complex     complex128
 		PtrInt      *int
 		PtrString   *string
-		Interface   interface{}
+		Interface   any
 		NilPtrInt   *int
 		NilPtrBool  *bool
 		NilPtrFloat *float64

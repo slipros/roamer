@@ -124,7 +124,7 @@ func SetInteger[I constraints.Integer](field reflect.Value, number I) error {
 		return nil
 
 	case reflect.Interface:
-		// For interface{} fields, just set the integer value
+		// For any fields, just set the integer value
 		if isSigned {
 			field.Set(reflect.ValueOf(int64Val))
 		} else {

@@ -34,11 +34,11 @@ func Pointer(value reflect.Value) (any, bool) {
 		}
 	}
 
-	// Make sure we can convert to an interface{} value
+	// Make sure we can convert to an any value
 	if !value.CanInterface() {
 		return nil, false
 	}
 
-	// Return the pointer as an interface{} value
+	// Return the pointer as an any value
 	return value.Interface(), true
 }

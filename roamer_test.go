@@ -219,7 +219,7 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 				req.Header.Set("Content-Length", strconv.Itoa(len(testJSON)))
 
 				// Create map to fill
-				target := make(map[string]interface{})
+				target := make(map[string]any)
 
 				// Configure roamer with JSON decoder
 				return fields{
@@ -232,7 +232,7 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 					}
 			},
 			verify: func(t *testing.T, result any) {
-				target, ok := result.(*map[string]interface{})
+				target, ok := result.(*map[string]any)
 				require.True(t, ok)
 				assert.Equal(t, "test", (*target)["string"])
 				assert.Equal(t, float64(123), (*target)["int"]) // JSON numbers are decoded to float64
@@ -471,9 +471,9 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 // Benchmark helper types and functions
 // RequestPayload represents a standard payload for benchmark requests
 type RequestPayload struct {
-	Strings []string               `json:"strings"`
-	Numbers []int                  `json:"numbers"`
-	Map     map[string]interface{} `json:"map"`
+	Strings []string       `json:"strings"`
+	Numbers []int          `json:"numbers"`
+	Map     map[string]any `json:"map"`
 }
 
 // SmallStruct for small payload benchmarks
@@ -496,29 +496,29 @@ type MediumStruct struct {
 
 // LargeStruct for large payload benchmarks
 type LargeStruct struct {
-	String        string                 `json:"string" header:"X-String" query:"string" string:"trim_space"`
-	Int           int                    `json:"int" header:"X-Int" query:"int"`
-	Int8          int8                   `query:"int8"`
-	Int16         int16                  `query:"int16"`
-	Int32         int32                  `query:"int32"`
-	Int64         int64                  `query:"int64"`
-	Uint          uint                   `query:"uint"`
-	Uint8         uint8                  `query:"uint8"`
-	Uint16        uint16                 `query:"uint16"`
-	Uint32        uint32                 `query:"uint32"`
-	Uint64        uint64                 `query:"uint64"`
-	Float32       float32                `query:"float32"`
-	Float64       float64                `query:"float64"`
-	Bool          bool                   `query:"bool"`
-	Time          time.Time              `query:"time"`
-	Url           url.URL                `query:"url"`
-	UserAgent     string                 `header:"User-Agent"`
-	Accept        string                 `header:"Accept"`
-	RefererHeader string                 `header:"Referer"`
-	CustomHeader  string                 `header:"X-Custom-Header"`
-	StringsArray  []string               `json:"strings"`
-	NumbersArray  []int                  `json:"numbers"`
-	MapData       map[string]interface{} `json:"map"`
+	String        string         `json:"string" header:"X-String" query:"string" string:"trim_space"`
+	Int           int            `json:"int" header:"X-Int" query:"int"`
+	Int8          int8           `query:"int8"`
+	Int16         int16          `query:"int16"`
+	Int32         int32          `query:"int32"`
+	Int64         int64          `query:"int64"`
+	Uint          uint           `query:"uint"`
+	Uint8         uint8          `query:"uint8"`
+	Uint16        uint16         `query:"uint16"`
+	Uint32        uint32         `query:"uint32"`
+	Uint64        uint64         `query:"uint64"`
+	Float32       float32        `query:"float32"`
+	Float64       float64        `query:"float64"`
+	Bool          bool           `query:"bool"`
+	Time          time.Time      `query:"time"`
+	Url           url.URL        `query:"url"`
+	UserAgent     string         `header:"User-Agent"`
+	Accept        string         `header:"Accept"`
+	RefererHeader string         `header:"Referer"`
+	CustomHeader  string         `header:"X-Custom-Header"`
+	StringsArray  []string       `json:"strings"`
+	NumbersArray  []int          `json:"numbers"`
+	MapData       map[string]any `json:"map"`
 }
 
 // Helper function to generate JSON body
@@ -574,7 +574,7 @@ func prepareTestHTTPRequest(b *testing.B, method string, withJSON, withHeaders, 
 		bLen, bReader, err := toJSON(RequestPayload{
 			Strings: []string{"string1", "string2", "string3"},
 			Numbers: []int{1, 2, 3, 4, 5},
-			Map: map[string]interface{}{
+			Map: map[string]any{
 				"key1": "value1",
 				"key2": 42,
 				"key3": true,
