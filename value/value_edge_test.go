@@ -820,12 +820,12 @@ func TestSet_EdgeCases_ReflectValue(t *testing.T) {
 		{
 			name: "reflect_value_of_interface",
 			setup: func() (reflect.Value, any) {
-				var target interface{} = "original"
+				var target any = "original"
 				ptr := &target
 				return reflect.ValueOf(ptr).Elem(), "new_value"
 			},
 			expectError: false,
-			description: "Setting interface{} should work",
+			description: "Setting any should work",
 		},
 		{
 			name: "reflect_value_type_mismatch",

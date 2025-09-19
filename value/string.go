@@ -2,6 +2,7 @@ package value
 
 import (
 	"encoding"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -161,9 +162,36 @@ func setIntFromString(field reflect.Value, str string, bitSize int) error {
 		for i := 0; i < len(str); i++ {
 			val = val*10 + int64(str[i]-'0')
 		}
+
+		// Check for overflow before setting the value
+		if bitSize > 0 {
+			// Get the valid range for the target type
+			var minVal, maxVal int64
+			switch bitSize {
+			case 8:
+				minVal, maxVal = math.MinInt8, math.MaxInt8
+			case 16:
+				minVal, maxVal = math.MinInt16, math.MaxInt16
+			case 32:
+				minVal, maxVal = math.MinInt32, math.MaxInt32
+			case 64:
+				minVal, maxVal = math.MinInt64, math.MaxInt64
+			default:
+				// For int (bitSize 0), fall back to strconv for proper handling
+				goto useStrconv
+			}
+
+			// Check if the parsed value is within the valid range
+			if val < minVal || val > maxVal {
+				return errors.Errorf("cannot convert string '%s' to int: value %d out of range for %d-bit integer", str, val, bitSize)
+			}
+		}
+
 		field.SetInt(val)
 		return nil
 	}
+
+useStrconv:
 
 	// Fall back to strconv for complex cases
 	parsed, err := strconv.ParseInt(str, base, bitSize)
@@ -257,15 +285,22 @@ func setSliceFromString(field reflect.Value, str string) error {
 				continue
 			}
 
-			slice = reflect.Append(slice, reflect.ValueOf(trimmed))
+			// Create a properly typed reflect.Value for string element
+			stringValue := reflect.ValueOf(trimmed).Convert(elemType)
+			slice = reflect.Append(slice, stringValue)
 		}
+
 		field.Set(slice)
+
 		return nil
 	}
 
 	// For other slice types, try to parse the string as a comma-separated list
 	if strings.Contains(str, ",") {
 		parts := strings.Split(str, ",")
+		// Create a new slice with initial capacity
+		slice := reflect.MakeSlice(field.Type(), 0, len(parts))
+
 		for _, part := range parts {
 			trimmed := strings.TrimSpace(part)
 			if trimmed == "" {
@@ -276,23 +311,31 @@ func setSliceFromString(field reflect.Value, str string) error {
 			newElem := reflect.New(elemType).Elem()
 
 			// Try to set the new element with the string value
-			if err := SetString(newElem, trimmed); err == nil {
-				field.Set(reflect.Append(field, newElem))
-			} else {
-				return errors.Wrapf(err, "cannot convert '%s' to element of %s", trimmed, field.Type())
+			if err := SetString(newElem, trimmed); err != nil {
+				return err
 			}
+
+			slice = reflect.Append(slice, newElem)
 		}
+
+		field.Set(slice)
+
 		return nil
 	}
 
 	// Try to set a single element
 	newElem := reflect.New(elemType).Elem()
-	if err := SetString(newElem, str); err == nil {
-		field.Set(reflect.Append(field, newElem))
-		return nil
+	if err := SetString(newElem, str); err != nil {
+		return err
 	}
 
-	return errors.Wrapf(rerr.NotSupported, "cannot convert string to %s", field.Type())
+	// Create a new slice with the single element
+	slice := reflect.MakeSlice(field.Type(), 0, 1)
+	slice = reflect.Append(slice, newElem)
+
+	field.Set(slice)
+
+	return nil
 }
 
 // setUintFromString converts a string to an unsigned integer and sets the field value.

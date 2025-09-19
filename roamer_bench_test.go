@@ -118,7 +118,7 @@ func BenchmarkParse_SkipFilledAdvanced(b *testing.B) {
 func BenchmarkParse_StructComplexity(b *testing.B) {
 	tests := []struct {
 		name   string
-		target interface{}
+		target any
 		setup  func() *http.Request
 	}{
 		{
@@ -186,13 +186,13 @@ func BenchmarkParse_MemoryAllocation(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			req := createScalableTestRequest(b, tt.queryParams, tt.headers, tt.jsonFields)
-			var target map[string]interface{}
+			var target map[string]any
 
 			b.ReportAllocs()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				target = make(map[string]interface{})
+				target = make(map[string]any)
 				if err := roamer.Parse(req, &target); err != nil {
 					// Map parsing might fail, that's ok for memory allocation testing
 				}
@@ -260,7 +260,7 @@ func createComprehensiveTestRequest(b *testing.B) *http.Request {
 	b.Helper()
 
 	// Create JSON body
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"name":   "John Doe",
 		"email":  "john@example.com",
 		"age":    30,
@@ -310,7 +310,7 @@ func createComprehensiveTestRequest(b *testing.B) *http.Request {
 func createSimpleTestRequest(b *testing.B, fieldCount int) *http.Request {
 	b.Helper()
 
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"string": "test_value",
 		"int":    123,
 	}
@@ -333,7 +333,7 @@ func createSimpleTestRequest(b *testing.B, fieldCount int) *http.Request {
 func createMediumTestRequest(b *testing.B) *http.Request {
 	b.Helper()
 
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"strings": []string{"str1", "str2", "str3"},
 	}
 
@@ -359,7 +359,7 @@ func createMediumTestRequest(b *testing.B) *http.Request {
 func createLargeTestRequest(b *testing.B) *http.Request {
 	b.Helper()
 
-	jsonData := map[string]interface{}{
+	jsonData := map[string]any{
 		"string":       "large_test_value",
 		"int":          999,
 		"stringslice":  []string{"a", "b", "c", "d", "e"},
@@ -401,7 +401,7 @@ func createScalableTestRequest(b *testing.B, queryParams, headers, jsonFields in
 	b.Helper()
 
 	// Create JSON with specified number of fields
-	jsonData := make(map[string]interface{})
+	jsonData := make(map[string]any)
 	for i := 0; i < jsonFields; i++ {
 		jsonData[fmt.Sprintf("json_field_%d", i)] = fmt.Sprintf("json_value_%d", i)
 	}

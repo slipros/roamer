@@ -62,7 +62,7 @@ func TestMiddleware_Successfully(t *testing.T) {
 				mockDecoder.EXPECT().Tag().Return(decoder.TagJSON).Maybe()
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*roamer.testData")).
-					Run(func(r *http.Request, ptr interface{}) {
+					Run(func(r *http.Request, ptr any) {
 						dataPtr, ok := ptr.(*testData)
 						if ok {
 							dataPtr.Field = "json-value"
@@ -207,7 +207,7 @@ func TestSliceMiddleware_Successfully(t *testing.T) {
 
 				mockDecoder.EXPECT().
 					Decode(mock.AnythingOfType("*http.Request"), mock.AnythingOfType("*[]string")).
-					Run(func(r *http.Request, ptr interface{}) {
+					Run(func(r *http.Request, ptr any) {
 						slicePtr, ok := ptr.(*[]string)
 						if ok {
 							*slicePtr = []string{"value1", "value2"}

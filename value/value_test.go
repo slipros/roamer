@@ -788,15 +788,15 @@ func TestSet_EdgeCases(t *testing.T) {
 			value:     (*string)(nil),
 			expected:  "",
 		},
-		// Test interface{} with various types
+		// Test any with various types
 		{
 			name: "complex type to interface field",
 			targetStructFn: func() any {
-				return &struct{ Value interface{} }{}
+				return &struct{ Value any }{}
 			},
 			fieldName: "Value",
-			value:     map[string]interface{}{"key": "value", "nested": map[string]string{"inner": "data"}},
-			expected:  map[string]interface{}{"key": "value", "nested": map[string]string{"inner": "data"}},
+			value:     map[string]any{"key": "value", "nested": map[string]string{"inner": "data"}},
+			expected:  map[string]any{"key": "value", "nested": map[string]string{"inner": "data"}},
 		},
 		// Test channel type (should fail)
 		{
@@ -809,11 +809,11 @@ func TestSet_EdgeCases(t *testing.T) {
 			expectError:   true,
 			errorContains: "not supported",
 		},
-		// Test function type (interface{} accepts anything, so this succeeds)
+		// Test function type (any accepts anything, so this succeeds)
 		{
 			name: "function type to interface field",
 			targetStructFn: func() any {
-				return &struct{ Value interface{} }{}
+				return &struct{ Value any }{}
 			},
 			fieldName:   "Value",
 			value:       func() string { return "test" },
@@ -946,7 +946,7 @@ func TestSet_ConcurrentAccess(t *testing.T) {
 					fieldName := fmt.Sprintf("Field%d", (id%4)+1)
 					field := targetValue.FieldByName(fieldName)
 
-					var value interface{}
+					var value any
 					switch fieldName {
 					case "Field1":
 						value = fmt.Sprintf("string-%d-%d", id, j)
@@ -1102,13 +1102,13 @@ func TestHandleInterfaceSlice_Successfully(t *testing.T) {
 			expected:  []string{},
 		},
 		{
-			name: "[]any to []interface{} with mixed types",
+			name: "[]any to []any with mixed types",
 			targetStructFn: func() any {
-				return &struct{ Value []interface{} }{}
+				return &struct{ Value []any }{}
 			},
 			fieldName: "Value",
 			value:     []any{"string", "number", "boolean", "float"},
-			expected:  []interface{}{"string", "number", "boolean", "float"},
+			expected:  []any{"string", "number", "boolean", "float"},
 		},
 		{
 			name: "[]any to []*string with string pointers",
@@ -1161,9 +1161,9 @@ func TestHandleInterfaceSlice_Successfully(t *testing.T) {
 				actualVal, ok := actual.([]bool)
 				require.True(t, ok, "Expected []bool, got %T", actual)
 				require.Equal(t, expectedVal, actualVal)
-			case []interface{}:
-				actualVal, ok := actual.([]interface{})
-				require.True(t, ok, "Expected []interface{}, got %T", actual)
+			case []any:
+				actualVal, ok := actual.([]any)
+				require.True(t, ok, "Expected []any, got %T", actual)
 				require.Equal(t, expectedVal, actualVal)
 			case []*string:
 				actualVal, ok := actual.([]*string)
@@ -1498,9 +1498,9 @@ func TestSet_ComplexDataTypes(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name: "nested struct assignable to interface{}",
+			name: "nested struct assignable to any",
 			targetStructFn: func() any {
-				return &struct{ Value interface{} }{}
+				return &struct{ Value any }{}
 			},
 			fieldName: "Value",
 			value: struct {
@@ -1514,9 +1514,9 @@ func TestSet_ComplexDataTypes(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "slice of structs to interface{}",
+			name: "slice of structs to any",
 			targetStructFn: func() any {
-				return &struct{ Value interface{} }{}
+				return &struct{ Value any }{}
 			},
 			fieldName: "Value",
 			value: []struct {
@@ -1530,13 +1530,13 @@ func TestSet_ComplexDataTypes(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "map with interface{} values",
+			name: "map with any values",
 			targetStructFn: func() any {
-				return &struct{ Value map[string]interface{} }{}
+				return &struct{ Value map[string]any }{}
 			},
 			fieldName:   "Value",
-			value:       map[string]interface{}{"name": "Alice", "age": 25, "active": true},
-			expected:    map[string]interface{}{"name": "Alice", "age": 25, "active": true},
+			value:       map[string]any{"name": "Alice", "age": 25, "active": true},
+			expected:    map[string]any{"name": "Alice", "age": 25, "active": true},
 			expectError: false,
 		},
 	}
@@ -1862,7 +1862,7 @@ func TestSet_RaceConditionSafety(t *testing.T) {
 					// Set different fields with different types
 					fields := []struct {
 						name  string
-						value interface{}
+						value any
 					}{
 						{"StringField", fmt.Sprintf("str-%d-%d", id, j)},
 						{"IntField", id*1000 + j},
@@ -1924,16 +1924,16 @@ func TestSet_LargeDataHandling(t *testing.T) {
 	})
 
 	t.Run("deeply nested map", func(t *testing.T) {
-		target := &struct{ Value interface{} }{}
+		target := &struct{ Value any }{}
 		field := reflect.ValueOf(target).Elem().FieldByName("Value")
 
 		// Create a deeply nested map structure
-		deepMap := make(map[string]interface{})
+		deepMap := make(map[string]any)
 		current := deepMap
 
 		// Create 10 levels of nesting
 		for i := 0; i < 10; i++ {
-			next := make(map[string]interface{})
+			next := make(map[string]any)
 			current[fmt.Sprintf("level_%d", i)] = next
 			current = next
 		}
