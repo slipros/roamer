@@ -776,13 +776,13 @@ func TestSetSliceFromString_EdgeCases(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "overflow int8 values (known bug: silently overflows)",
+			name: "overflow int8 values (now properly returns error)",
 			setupField: func() reflect.Value {
 				var s struct{ IntSlice []int8 }
 				return reflect.ValueOf(&s).Elem().FieldByName("IntSlice")
 			},
-			input:    "1,128,3",          // 128 overflows to -128 for int8 (known bug)
-			expected: []int8{1, -128, 3}, // Documents current buggy behavior
+			input:       "1,128,3", // 128 is out of range for int8 (-128 to 127)
+			expectError: true,      // Fixed: now properly returns an error instead of silent overflow
 		},
 		{
 			name: "underflow int8 values",
@@ -1316,14 +1316,13 @@ func TestSetSliceFromString_TypeSafety_NumericSlice(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "int8 slice - overflow (known bug: silently overflows instead of error)",
+			name: "int8 slice - overflow (now properly returns error)",
 			setupField: func() reflect.Value {
 				var s struct{ IntSlice []int8 }
 				return reflect.ValueOf(&s).Elem().FieldByName("IntSlice")
 			},
-			input:    "1,128",         // 128 overflows to -128 for int8, but no error is returned (bug)
-			expected: []int8{1, -128}, // This is the current buggy behavior
-			// NOTE: This should return an error but currently doesn't due to optimization in setIntFromString
+			input:       "1,128", // 128 is out of range for int8 (-128 to 127)
+			expectError: true,    // Fixed: now properly returns an error instead of silent overflow
 		},
 		{
 			name: "uint slice - negative number",
@@ -1616,6 +1615,684 @@ func TestSetSliceFromString_PanicPrevention(t *testing.T) {
 
 			// We expect this to succeed without panic
 			assert.NoError(t, err, "SetString should succeed without panic: %s", tc.testDesc)
+		})
+	}
+}
+
+// TestSetIntFromString_OverflowFix tests the integer overflow bug fix in setIntFromString function.
+// This test ensures that the fix properly validates integer ranges and returns errors instead of
+// allowing silent overflow that was happening before the fix.
+func TestSetIntFromString_OverflowFix(t *testing.T) {
+	// Test struct with all integer types
+	type TestStruct struct {
+		Int8Field  int8
+		Int16Field int16
+		Int32Field int32
+		Int64Field int64
+		IntField   int
+	}
+
+	tests := []struct {
+		name        string
+		field       string
+		input       string
+		expectError bool
+		expected    interface{}
+		description string
+	}{
+		// Valid boundary values that should work
+		{
+			name:        "int8 max value (127)",
+			field:       "Int8Field",
+			input:       "127",
+			expectError: false,
+			expected:    int8(127),
+			description: "Maximum valid int8 value should be accepted",
+		},
+		{
+			name:        "int8 min value (-128)",
+			field:       "Int8Field",
+			input:       "-128",
+			expectError: false,
+			expected:    int8(-128),
+			description: "Minimum valid int8 value should be accepted",
+		},
+		{
+			name:        "int16 max value (32767)",
+			field:       "Int16Field",
+			input:       "32767",
+			expectError: false,
+			expected:    int16(32767),
+			description: "Maximum valid int16 value should be accepted",
+		},
+		{
+			name:        "int16 min value (-32768)",
+			field:       "Int16Field",
+			input:       "-32768",
+			expectError: false,
+			expected:    int16(-32768),
+			description: "Minimum valid int16 value should be accepted",
+		},
+		{
+			name:        "int32 max value (2147483647)",
+			field:       "Int32Field",
+			input:       "2147483647",
+			expectError: false,
+			expected:    int32(2147483647),
+			description: "Maximum valid int32 value should be accepted",
+		},
+		{
+			name:        "int32 min value (-2147483648)",
+			field:       "Int32Field",
+			input:       "-2147483648",
+			expectError: false,
+			expected:    int32(-2147483648),
+			description: "Minimum valid int32 value should be accepted",
+		},
+		{
+			name:        "int64 max value (9223372036854775807)",
+			field:       "Int64Field",
+			input:       "9223372036854775807",
+			expectError: false,
+			expected:    int64(9223372036854775807),
+			description: "Maximum valid int64 value should be accepted",
+		},
+		{
+			name:        "int64 min value (-9223372036854775808)",
+			field:       "Int64Field",
+			input:       "-9223372036854775808",
+			expectError: false,
+			expected:    int64(-9223372036854775808),
+			description: "Minimum valid int64 value should be accepted",
+		},
+
+		// Overflow scenarios that should now return errors (previously caused silent wraparound)
+		{
+			name:        "int8 overflow (128) - fixed bug",
+			field:       "Int8Field",
+			input:       "128",
+			expectError: true,
+			description: "Value 128 should error for int8 (was -128 due to overflow before fix)",
+		},
+		{
+			name:        "int8 underflow (-129) - fixed bug",
+			field:       "Int8Field",
+			input:       "-129",
+			expectError: true,
+			description: "Value -129 should error for int8 (was 127 due to underflow before fix)",
+		},
+		{
+			name:        "int8 large overflow (256) - fixed bug",
+			field:       "Int8Field",
+			input:       "256",
+			expectError: true,
+			description: "Value 256 should error for int8 (was 0 due to overflow before fix)",
+		},
+		{
+			name:        "int8 extreme overflow (999) - fixed bug",
+			field:       "Int8Field",
+			input:       "999",
+			expectError: true,
+			description: "Value 999 should error for int8 (was wrapped value before fix)",
+		},
+		{
+			name:        "int16 overflow (32768) - fixed bug",
+			field:       "Int16Field",
+			input:       "32768",
+			expectError: true,
+			description: "Value 32768 should error for int16 (was -32768 due to overflow before fix)",
+		},
+		{
+			name:        "int16 underflow (-32769) - fixed bug",
+			field:       "Int16Field",
+			input:       "-32769",
+			expectError: true,
+			description: "Value -32769 should error for int16 (was 32767 due to underflow before fix)",
+		},
+		{
+			name:        "int16 large overflow (65536) - fixed bug",
+			field:       "Int16Field",
+			input:       "65536",
+			expectError: true,
+			description: "Value 65536 should error for int16 (was 0 due to overflow before fix)",
+		},
+		{
+			name:        "int32 overflow (2147483648) - fixed bug",
+			field:       "Int32Field",
+			input:       "2147483648",
+			expectError: true,
+			description: "Value 2147483648 should error for int32 (was -2147483648 due to overflow before fix)",
+		},
+		{
+			name:        "int32 underflow (-2147483649) - fixed bug",
+			field:       "Int32Field",
+			input:       "-2147483649",
+			expectError: true,
+			description: "Value -2147483649 should error for int32 (was 2147483647 due to underflow before fix)",
+		},
+		{
+			name:        "int64 overflow (9223372036854775808) - fixed bug",
+			field:       "Int64Field",
+			input:       "9223372036854775808",
+			expectError: true,
+			description: "Value 9223372036854775808 should error for int64 (was -9223372036854775808 due to overflow before fix)",
+		},
+
+		// Test values that use the optimization path (≤3 digits) vs strconv fallback
+		{
+			name:        "single digit optimization path",
+			field:       "Int8Field",
+			input:       "7",
+			expectError: false,
+			expected:    int8(7),
+			description: "Single digit should use fast path optimization",
+		},
+		{
+			name:        "double digit optimization path",
+			field:       "Int8Field",
+			input:       "42",
+			expectError: false,
+			expected:    int8(42),
+			description: "Double digit should use optimization path",
+		},
+		{
+			name:        "triple digit optimization path - valid",
+			field:       "Int8Field",
+			input:       "100",
+			expectError: false,
+			expected:    int8(100),
+			description: "Triple digit valid value should use optimization path",
+		},
+		{
+			name:        "triple digit optimization path - overflow",
+			field:       "Int8Field",
+			input:       "200",
+			expectError: true,
+			description: "Triple digit overflow should be caught in optimization path",
+		},
+		{
+			name:        "four digit strconv fallback path",
+			field:       "Int16Field",
+			input:       "1234",
+			expectError: false,
+			expected:    int16(1234),
+			description: "Four digit should use strconv fallback path",
+		},
+		{
+			name:        "four digit strconv fallback overflow",
+			field:       "Int8Field",
+			input:       "1234",
+			expectError: true,
+			description: "Four digit overflow should be caught in strconv fallback path",
+		},
+
+		// Test edge cases around optimization boundaries
+		{
+			name:        "exactly 3 digits - max valid int8",
+			field:       "Int8Field",
+			input:       "127",
+			expectError: false,
+			expected:    int8(127),
+			description: "Exactly 3 digits at boundary should work",
+		},
+		{
+			name:        "exactly 3 digits - overflow by 1",
+			field:       "Int8Field",
+			input:       "128",
+			expectError: true,
+			description: "Exactly 3 digits with overflow by 1 should error",
+		},
+
+		// Test zero and positive/negative boundaries
+		{
+			name:        "zero value",
+			field:       "Int8Field",
+			input:       "0",
+			expectError: false,
+			expected:    int8(0),
+			description: "Zero should work correctly",
+		},
+		{
+			name:        "positive one",
+			field:       "Int8Field",
+			input:       "1",
+			expectError: false,
+			expected:    int8(1),
+			description: "Positive one should work correctly",
+		},
+		{
+			name:        "negative one via strconv (4+ digits)",
+			field:       "Int16Field",
+			input:       "-1",
+			expectError: false,
+			expected:    int16(-1),
+			description: "Negative values should use strconv path",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var testObj TestStruct
+			val := reflect.ValueOf(&testObj).Elem()
+			field := val.FieldByName(tc.field)
+			require.True(t, field.IsValid(), "Field %s not found", tc.field)
+
+			err := SetString(field, tc.input)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+				if err != nil {
+					// Verify it's an overflow-related error
+					assert.Contains(t, err.Error(), "out of range", "Error should mention 'out of range' for overflow: %s", tc.description)
+				}
+			} else {
+				require.NoError(t, err, "Should not error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+				actual := field.Interface()
+				assert.Equal(t, tc.expected, actual, "Value mismatch for %s: %s", tc.field, tc.description)
+			}
+		})
+	}
+}
+
+// TestSetIntFromString_OptimizationPath tests that the optimization path (≤3 digits)
+// works correctly and properly validates overflow conditions.
+func TestSetIntFromString_OptimizationPath(t *testing.T) {
+	type TestStruct struct {
+		Int8Field  int8
+		Int16Field int16
+		Int32Field int32
+		Int64Field int64
+	}
+
+	tests := []struct {
+		name           string
+		field          string
+		input          string
+		expectError    bool
+		expected       interface{}
+		shouldUseOptim bool
+		description    string
+	}{
+		// Single digit tests (should use optimization)
+		{
+			name:           "single digit 0",
+			field:          "Int8Field",
+			input:          "0",
+			expectError:    false,
+			expected:       int8(0),
+			shouldUseOptim: true,
+			description:    "Single digit 0 should use fast path",
+		},
+		{
+			name:           "single digit 9",
+			field:          "Int8Field",
+			input:          "9",
+			expectError:    false,
+			expected:       int8(9),
+			shouldUseOptim: true,
+			description:    "Single digit 9 should use fast path",
+		},
+
+		// Two digit tests (should use optimization for base 10)
+		{
+			name:           "two digits valid",
+			field:          "Int8Field",
+			input:          "42",
+			expectError:    false,
+			expected:       int8(42),
+			shouldUseOptim: true,
+			description:    "Two digits should use optimization path",
+		},
+		{
+			name:           "two digits at int8 boundary",
+			field:          "Int8Field",
+			input:          "99",
+			expectError:    false,
+			expected:       int8(99),
+			shouldUseOptim: true,
+			description:    "Two digits within range should use optimization",
+		},
+
+		// Three digit tests (should use optimization for base 10)
+		{
+			name:           "three digits valid for int8",
+			field:          "Int8Field",
+			input:          "100",
+			expectError:    false,
+			expected:       int8(100),
+			shouldUseOptim: true,
+			description:    "Three digits valid value should use optimization",
+		},
+		{
+			name:           "three digits max int8",
+			field:          "Int8Field",
+			input:          "127",
+			expectError:    false,
+			expected:       int8(127),
+			shouldUseOptim: true,
+			description:    "Three digits at max should use optimization",
+		},
+		{
+			name:           "three digits overflow int8",
+			field:          "Int8Field",
+			input:          "128",
+			expectError:    true,
+			shouldUseOptim: true,
+			description:    "Three digits overflow should be caught in optimization path",
+		},
+		{
+			name:           "three digits large overflow int8",
+			field:          "Int8Field",
+			input:          "999",
+			expectError:    true,
+			shouldUseOptim: true,
+			description:    "Three digits large overflow should be caught in optimization path",
+		},
+
+		// Three digit tests for larger types
+		{
+			name:           "three digits valid for int16",
+			field:          "Int16Field",
+			input:          "999",
+			expectError:    false,
+			expected:       int16(999),
+			shouldUseOptim: true,
+			description:    "Three digits should work for larger int types",
+		},
+		{
+			name:           "three digits valid for int32",
+			field:          "Int32Field",
+			input:          "999",
+			expectError:    false,
+			expected:       int32(999),
+			shouldUseOptim: true,
+			description:    "Three digits should work for int32",
+		},
+		{
+			name:           "three digits valid for int64",
+			field:          "Int64Field",
+			input:          "999",
+			expectError:    false,
+			expected:       int64(999),
+			shouldUseOptim: true,
+			description:    "Three digits should work for int64",
+		},
+
+		// Four digit tests (should use strconv fallback)
+		{
+			name:           "four digits fallback to strconv",
+			field:          "Int16Field",
+			input:          "1000",
+			expectError:    false,
+			expected:       int16(1000),
+			shouldUseOptim: false,
+			description:    "Four digits should use strconv fallback",
+		},
+		{
+			name:           "four digits overflow via strconv",
+			field:          "Int8Field",
+			input:          "1000",
+			expectError:    true,
+			shouldUseOptim: false,
+			description:    "Four digits overflow should be caught via strconv",
+		},
+
+		// Special format tests (should not use optimization)
+		{
+			name:           "hex format",
+			field:          "Int16Field",
+			input:          "0xFF",
+			expectError:    false,
+			expected:       int16(255),
+			shouldUseOptim: false,
+			description:    "Hex format should use strconv fallback",
+		},
+		{
+			name:           "octal format",
+			field:          "Int16Field",
+			input:          "010",
+			expectError:    false,
+			expected:       int16(8),
+			shouldUseOptim: false,
+			description:    "Octal format should use strconv fallback",
+		},
+		{
+			name:           "negative number",
+			field:          "Int16Field",
+			input:          "-42",
+			expectError:    false,
+			expected:       int16(-42),
+			shouldUseOptim: false,
+			description:    "Negative number should use strconv fallback",
+		},
+
+		// Leading zeros (should not use optimization due to octal detection)
+		{
+			name:           "leading zero octal detection",
+			field:          "Int16Field",
+			input:          "012",
+			expectError:    false,
+			expected:       int16(10), // 012 octal = 10 decimal
+			shouldUseOptim: false,
+			description:    "Leading zero should trigger octal detection and use strconv",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var testObj TestStruct
+			val := reflect.ValueOf(&testObj).Elem()
+			field := val.FieldByName(tc.field)
+			require.True(t, field.IsValid(), "Field %s not found", tc.field)
+
+			err := SetString(field, tc.input)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+			} else {
+				require.NoError(t, err, "Should not error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+				actual := field.Interface()
+				assert.Equal(t, tc.expected, actual, "Value mismatch for %s: %s", tc.field, tc.description)
+			}
+		})
+	}
+}
+
+// BenchmarkSetIntFromString_OverflowFix tests that the overflow fix doesn't
+// significantly impact performance for common cases.
+func BenchmarkSetIntFromString_OverflowFix(b *testing.B) {
+	type TestStruct struct {
+		Int8Field  int8
+		Int16Field int16
+		Int32Field int32
+		Int64Field int64
+		IntField   int
+	}
+
+	benchmarks := []struct {
+		name  string
+		field string
+		input string
+		desc  string
+	}{
+		// Optimization path tests
+		{"SingleDigit_Int8", "Int8Field", "7", "Single digit using fast path"},
+		{"DoubleDigit_Int8", "Int8Field", "42", "Double digit using optimization"},
+		{"TripleDigit_Int8_Valid", "Int8Field", "100", "Triple digit valid using optimization"},
+		{"TripleDigit_Int8_Max", "Int8Field", "127", "Triple digit at max using optimization"},
+
+		// Different int sizes with optimization path
+		{"TripleDigit_Int16", "Int16Field", "999", "Triple digit for int16"},
+		{"TripleDigit_Int32", "Int32Field", "999", "Triple digit for int32"},
+		{"TripleDigit_Int64", "Int64Field", "999", "Triple digit for int64"},
+
+		// Strconv fallback path tests
+		{"FourDigit_Int16", "Int16Field", "1000", "Four digit using strconv fallback"},
+		{"FourDigit_Int32", "Int32Field", "1000", "Four digit for int32"},
+		{"LargeNumber_Int32", "Int32Field", "123456", "Large number using strconv"},
+		{"MaxInt32", "Int32Field", "2147483647", "Maximum int32 value"},
+
+		// Special formats (strconv path)
+		{"Hex_Int16", "Int16Field", "0xFF", "Hexadecimal format"},
+		{"Negative_Int16", "Int16Field", "-42", "Negative number"},
+		{"Octal_Int16", "Int16Field", "010", "Octal format"},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			var testObj TestStruct
+			val := reflect.ValueOf(&testObj).Elem()
+			field := val.FieldByName(bm.field)
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = SetString(field, bm.input)
+			}
+		})
+	}
+}
+
+// TestSetIntFromString_EdgeCases tests edge cases that could trigger the overflow bug.
+func TestSetIntFromString_EdgeCases(t *testing.T) {
+	type TestStruct struct {
+		Int8Field  int8
+		Int16Field int16
+		Int32Field int32
+		Int64Field int64
+	}
+
+	tests := []struct {
+		name        string
+		field       string
+		input       string
+		expectError bool
+		description string
+	}{
+		// Boundary testing - exactly at limits
+		{
+			name:        "int8_exactly_at_max",
+			field:       "Int8Field",
+			input:       "127",
+			expectError: false,
+			description: "Exactly at int8 maximum should work",
+		},
+		{
+			name:        "int8_exactly_at_min",
+			field:       "Int8Field",
+			input:       "-128",
+			expectError: false,
+			description: "Exactly at int8 minimum should work",
+		},
+		{
+			name:        "int8_one_over_max",
+			field:       "Int8Field",
+			input:       "128",
+			expectError: true,
+			description: "One over int8 maximum should error",
+		},
+		{
+			name:        "int8_one_under_min",
+			field:       "Int8Field",
+			input:       "-129",
+			expectError: true,
+			description: "One under int8 minimum should error",
+		},
+
+		// Powers of 2 testing (common overflow scenarios)
+		{
+			name:        "int8_power_of_2_overflow",
+			field:       "Int8Field",
+			input:       "256", // 2^8
+			expectError: true,
+			description: "2^8 should overflow int8",
+		},
+		{
+			name:        "int16_power_of_2_overflow",
+			field:       "Int16Field",
+			input:       "65536", // 2^16
+			expectError: true,
+			description: "2^16 should overflow int16",
+		},
+		{
+			name:        "int32_power_of_2_overflow",
+			field:       "Int32Field",
+			input:       "4294967296", // 2^32
+			expectError: true,
+			description: "2^32 should overflow int32",
+		},
+
+		// Common problematic values
+		{
+			name:        "int8_common_overflow_200",
+			field:       "Int8Field",
+			input:       "200",
+			expectError: true,
+			description: "200 is a common value that overflows int8",
+		},
+		{
+			name:        "int8_common_overflow_300",
+			field:       "Int8Field",
+			input:       "300",
+			expectError: true,
+			description: "300 is a common value that overflows int8",
+		},
+		{
+			name:        "int16_common_overflow_50000",
+			field:       "Int16Field",
+			input:       "50000",
+			expectError: true,
+			description: "50000 is a common value that overflows int16",
+		},
+
+		// Empty string and whitespace
+		{
+			name:        "empty_string",
+			field:       "Int8Field",
+			input:       "",
+			expectError: false,
+			description: "Empty string should result in zero value",
+		},
+
+		// Very large numbers
+		{
+			name:        "very_large_number",
+			field:       "Int8Field",
+			input:       "999999999999999999",
+			expectError: true,
+			description: "Very large number should overflow any int type",
+		},
+
+		// Numbers with leading zeros that aren't octal
+		{
+			name:        "leading_zeros_decimal",
+			field:       "Int8Field",
+			input:       "007",
+			expectError: false,
+			description: "Leading zeros in decimal should parse correctly (octal 007 = 7 decimal)",
+		},
+		{
+			name:        "leading_zeros_overflow",
+			field:       "Int8Field",
+			input:       "0200", // Octal 200 = 128 decimal, which overflows int8
+			expectError: true,
+			description: "Leading zeros causing octal interpretation that overflows should error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var testObj TestStruct
+			val := reflect.ValueOf(&testObj).Elem()
+			field := val.FieldByName(tc.field)
+			require.True(t, field.IsValid(), "Field %s not found", tc.field)
+
+			err := SetString(field, tc.input)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+			} else {
+				assert.NoError(t, err, "Should not error for %s with input '%s': %s", tc.field, tc.input, tc.description)
+			}
 		})
 	}
 }

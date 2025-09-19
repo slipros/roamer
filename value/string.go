@@ -2,6 +2,7 @@ package value
 
 import (
 	"encoding"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -161,9 +162,36 @@ func setIntFromString(field reflect.Value, str string, bitSize int) error {
 		for i := 0; i < len(str); i++ {
 			val = val*10 + int64(str[i]-'0')
 		}
+
+		// Check for overflow before setting the value
+		if bitSize > 0 {
+			// Get the valid range for the target type
+			var minVal, maxVal int64
+			switch bitSize {
+			case 8:
+				minVal, maxVal = math.MinInt8, math.MaxInt8
+			case 16:
+				minVal, maxVal = math.MinInt16, math.MaxInt16
+			case 32:
+				minVal, maxVal = math.MinInt32, math.MaxInt32
+			case 64:
+				minVal, maxVal = math.MinInt64, math.MaxInt64
+			default:
+				// For int (bitSize 0), fall back to strconv for proper handling
+				goto useStrconv
+			}
+
+			// Check if the parsed value is within the valid range
+			if val < minVal || val > maxVal {
+				return errors.Errorf("cannot convert string '%s' to int: value %d out of range for %d-bit integer", str, val, bitSize)
+			}
+		}
+
 		field.SetInt(val)
 		return nil
 	}
+
+useStrconv:
 
 	// Fall back to strconv for complex cases
 	parsed, err := strconv.ParseInt(str, base, bitSize)
