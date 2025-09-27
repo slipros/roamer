@@ -110,3 +110,36 @@ func WithSkipFilled(skip bool) OptionsFunc {
 		r.skipFilled = skip
 	}
 }
+
+// WithAssignExtensions registers additional assignment extension functions.
+// These extensions provide custom value assignment capabilities for specific types
+// that require special handling beyond standard type conversions.
+//
+// Assignment extensions are functions that take a value and return an assignment
+// function if they can handle that value type. This allows for sophisticated
+// type handling and custom conversion logic.
+//
+// Example:
+//
+//	customExtension := func(value any) (func(to reflect.Value) error, bool) {
+//	    if customType, ok := value.(MyCustomType); ok {
+//	        return func(to reflect.Value) error {
+//	            // Custom assignment logic
+//	            return assign.String(to, customType.String())
+//	        }, true
+//	    }
+//	    return nil, false
+//	}
+//
+//	r := roamer.NewRoamer(
+//	    roamer.WithAssignExtensions(customExtension),
+//	)
+//
+// Note: Extensions from parsers and decoders that implement AssignExtensions
+// interface are automatically registered. Use this function for standalone
+// extension functions that are not tied to specific parsers or decoders.
+func WithAssignExtensions(extensions ...assign.ExtensionFunc) OptionsFunc {
+	return func(r *Roamer) {
+		r.assignExtensions = append(r.assignExtensions, extensions...)
+	}
+}
