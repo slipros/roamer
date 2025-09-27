@@ -1,5 +1,9 @@
 package roamer
 
+import (
+	"github.com/slipros/assign"
+)
+
 // OptionsFunc is a function type for configuring a Roamer instance.
 // It follows the functional options pattern to provide a clean and
 // extensible API for customizing the behavior of the parser.
@@ -19,8 +23,17 @@ type OptionsFunc func(*Roamer)
 //	)
 func WithParsers(parsers ...Parser) OptionsFunc {
 	return func(r *Roamer) {
+		assignExtensions := make([]assign.ExtensionFunc, 0, len(parsers))
 		for _, p := range parsers {
 			r.parsers[p.Tag()] = p
+
+			if ext, ok := p.(AssignExtensions); ok {
+				assignExtensions = append(assignExtensions, ext.AssignExtensions()...)
+			}
+		}
+
+		if len(assignExtensions) > 0 {
+			r.assignExtensions = append(r.assignExtensions, assignExtensions...)
 		}
 	}
 }
@@ -39,8 +52,17 @@ func WithParsers(parsers ...Parser) OptionsFunc {
 //	)
 func WithDecoders(decoders ...Decoder) OptionsFunc {
 	return func(r *Roamer) {
+		assignExtensions := make([]assign.ExtensionFunc, 0, len(decoders))
 		for _, d := range decoders {
 			r.decoders[d.ContentType()] = d
+
+			if ext, ok := d.(AssignExtensions); ok {
+				assignExtensions = append(assignExtensions, ext.AssignExtensions()...)
+			}
+		}
+
+		if len(assignExtensions) > 0 {
+			r.assignExtensions = append(r.assignExtensions, assignExtensions...)
 		}
 	}
 }
@@ -86,5 +108,38 @@ func WithFormatters(formatters ...Formatter) OptionsFunc {
 func WithSkipFilled(skip bool) OptionsFunc {
 	return func(r *Roamer) {
 		r.skipFilled = skip
+	}
+}
+
+// WithAssignExtensions registers additional assignment extension functions.
+// These extensions provide custom value assignment capabilities for specific types
+// that require special handling beyond standard type conversions.
+//
+// Assignment extensions are functions that take a value and return an assignment
+// function if they can handle that value type. This allows for sophisticated
+// type handling and custom conversion logic.
+//
+// Example:
+//
+//	customExtension := func(value any) (func(to reflect.Value) error, bool) {
+//	    if customType, ok := value.(MyCustomType); ok {
+//	        return func(to reflect.Value) error {
+//	            // Custom assignment logic
+//	            return assign.String(to, customType.String())
+//	        }, true
+//	    }
+//	    return nil, false
+//	}
+//
+//	r := roamer.NewRoamer(
+//	    roamer.WithAssignExtensions(customExtension),
+//	)
+//
+// Note: Extensions from parsers and decoders that implement AssignExtensions
+// interface are automatically registered. Use this function for standalone
+// extension functions that are not tied to specific parsers or decoders.
+func WithAssignExtensions(extensions ...assign.ExtensionFunc) OptionsFunc {
+	return func(r *Roamer) {
+		r.assignExtensions = append(r.assignExtensions, extensions...)
 	}
 }

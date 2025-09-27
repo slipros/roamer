@@ -3,6 +3,8 @@ package parser
 import (
 	"net/http"
 	"reflect"
+
+	"github.com/slipros/assign"
 )
 
 const (
@@ -58,4 +60,33 @@ func (c *Cookie) Parse(r *http.Request, tag reflect.StructTag, _ Cache) (any, bo
 // For the Cookie parser, this is "cookie".
 func (c *Cookie) Tag() string {
 	return TagCookie
+}
+
+// AssignExtensions implements the AssignExtensions interface to provide
+// custom assignment capabilities for HTTP cookies.
+//
+// This method returns extension functions that enable direct assignment of
+// *http.Cookie values to struct fields. When a cookie is assigned, the
+// extension extracts the cookie's Value field and assigns it as a string
+// to the target field.
+//
+// This allows for more flexible cookie handling where you can work with
+// the full Cookie object rather than just its string value.
+//
+// Returns:
+//
+//	A slice containing the cookie assignment extension function.
+func (c *Cookie) AssignExtensions() []assign.ExtensionFunc {
+	return []assign.ExtensionFunc{
+		func(value any) (func(to reflect.Value) error, bool) {
+			cookie, ok := value.(*http.Cookie)
+			if !ok {
+				return nil, false
+			}
+
+			return func(to reflect.Value) error {
+				return assign.String(to, cookie.Value)
+			}, true
+		},
+	}
 }
