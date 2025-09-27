@@ -272,11 +272,15 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	for i := range fields {
 		f := &fields[i]
 
+		if !f.HasFormatters && !f.HasParsers && !f.HasDefault {
+			continue
+		}
+
 		fieldValue := v.Field(f.Index)
 		isZero := fieldValue.IsZero()
 
 		if r.skipFilled && !isZero {
-			if r.hasFormatters && len(f.Formatters) > 0 {
+			if f.HasFormatters {
 				if err := r.applyFormatters(f, fieldValue); err != nil {
 					return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
 				}
@@ -286,7 +290,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		}
 
 		var parsedSuccessfully bool
-		if r.hasParsers {
+		if f.HasParsers {
 			for _, parserName := range f.Parsers {
 				p, ok := r.parsers[parserName]
 				if !ok {
@@ -315,7 +319,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 			}
 		}
 
-		if r.hasFormatters && len(f.Formatters) > 0 {
+		if f.HasFormatters {
 			if err := r.applyFormatters(f, fieldValue); err != nil {
 				return errors.WithMessagef(err, "format field `%s` in struct `%T`", f.Name, ptr)
 			}
@@ -359,7 +363,7 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 // parseBody extracts data from the HTTP request body into the provided pointer
 // using the appropriate decoder based on the request's Content-Type header.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
-	if !r.hasDecoders || req.ContentLength == 0 || req.Method == http.MethodGet || req.Body == nil {
+	if !r.hasDecoders || req.Body == nil || req.ContentLength == 0 || req.Method == http.MethodGet {
 		return nil
 	}
 

@@ -848,102 +848,6 @@ The architecture is robust, modular, and designed for performance and extensibil
 
 Roamer is designed to be easily extended with custom parsers, decoders, and formatters. Here are examples of how to create each type of extension.
 
-### Custom Value Assignment Extensions
-
-Parsers and decoders can implement the `AssignExtensions` interface to provide custom value assignment capabilities for complex types. This allows for specialized handling during the assignment process beyond the standard type conversions.
-
-```go
-package main
-
-import (
-	"net/http"
-	"reflect"
-
-	"github.com/slipros/assign"
-	"github.com/slipros/roamer"
-	"github.com/slipros/roamer/parser"
-)
-
-// Custom type that needs special handling
-type UserRole struct {
-	Name        string
-	Permissions []string
-}
-
-// String method for UserRole
-func (ur UserRole) String() string {
-	return ur.Name
-}
-
-// Custom parser that implements AssignExtensions
-type RoleParser struct{}
-
-func (p *RoleParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
-	roleValue, ok := tag.Lookup("role")
-	if !ok {
-		return nil, false
-	}
-
-	// Return a UserRole object instead of just a string
-	return &UserRole{
-		Name:        roleValue,
-		Permissions: []string{"read", "write"}, // Example permissions
-	}, true
-}
-
-func (p *RoleParser) Tag() string {
-	return "role"
-}
-
-// Implement AssignExtensions to handle UserRole assignment
-func (p *RoleParser) AssignExtensions() []assign.ExtensionFunc {
-	return []assign.ExtensionFunc{
-		func(value any) (func(to reflect.Value) error, bool) {
-			// Handle UserRole pointer assignment
-			if role, ok := value.(*UserRole); ok {
-				return func(to reflect.Value) error {
-					// Can assign to string field (use role name)
-					if to.Kind() == reflect.String {
-						to.SetString(role.String())
-						return nil
-					}
-					// Can assign to UserRole field directly
-					if to.Type() == reflect.TypeOf(UserRole{}) {
-						to.Set(reflect.ValueOf(*role))
-						return nil
-					}
-					return assign.String(to, role.String())
-				}, true
-			}
-			return nil, false
-		},
-	}
-}
-
-// Usage example
-type RequestWithRole struct {
-	UserRole   UserRole `role:"admin"`     // Will receive full UserRole object
-	RoleName   string   `role:"moderator"` // Will receive just the role name as string
-}
-
-func main() {
-	r := roamer.NewRoamer(
-		roamer.WithParsers(&RoleParser{}),
-	)
-
-	// The parser will now handle both UserRole and string assignments automatically
-}
-```
-
-When a parser or decoder implements `AssignExtensions`, the extension functions are automatically registered during Roamer initialization. This enables:
-
-- **Custom type conversions** beyond standard string-to-type assignments
-- **Complex object handling** where you need to work with structured data
-- **Flexible field assignment** where the same source can populate different target field types
-- **Extended compatibility** with third-party types and custom business objects
-
-The extension functions are called during the assignment phase, allowing you to handle specific types that require special processing or conversion logic.
-
 ### Creating a Custom Parser
 
 A parser extracts data from an HTTP request based on a struct tag. Here's an example of a custom parser that extracts data from a custom HTTP header:
@@ -1160,6 +1064,102 @@ func main() {
 	// }
 }
 ```
+
+### Custom Value Assignment Extensions
+
+Parsers and decoders can implement the `AssignExtensions` interface to provide custom value assignment capabilities for complex types. This allows for specialized handling during the assignment process beyond the standard type conversions.
+
+```go
+package main
+
+import (
+	"net/http"
+	"reflect"
+
+	"github.com/slipros/assign"
+	"github.com/slipros/roamer"
+	"github.com/slipros/roamer/parser"
+)
+
+// Custom type that needs special handling
+type UserRole struct {
+	Name        string
+	Permissions []string
+}
+
+// String method for UserRole
+func (ur UserRole) String() string {
+	return ur.Name
+}
+
+// Custom parser that implements AssignExtensions
+type RoleParser struct{}
+
+func (p *RoleParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+	roleValue, ok := tag.Lookup("role")
+	if !ok {
+		return nil, false
+	}
+
+	// Return a UserRole object instead of just a string
+	return &UserRole{
+		Name:        roleValue,
+		Permissions: []string{"read", "write"}, // Example permissions
+	}, true
+}
+
+func (p *RoleParser) Tag() string {
+	return "role"
+}
+
+// Implement AssignExtensions to handle UserRole assignment
+func (p *RoleParser) AssignExtensions() []assign.ExtensionFunc {
+	return []assign.ExtensionFunc{
+		func(value any) (func(to reflect.Value) error, bool) {
+			// Handle UserRole pointer assignment
+			if role, ok := value.(*UserRole); ok {
+				return func(to reflect.Value) error {
+					// Can assign to string field (use role name)
+					if to.Kind() == reflect.String {
+						to.SetString(role.String())
+						return nil
+					}
+					// Can assign to UserRole field directly
+					if to.Type() == reflect.TypeOf(UserRole{}) {
+						to.Set(reflect.ValueOf(*role))
+						return nil
+					}
+					return assign.String(to, role.String())
+				}, true
+			}
+			return nil, false
+		},
+	}
+}
+
+// Usage example
+type RequestWithRole struct {
+	UserRole   UserRole `role:"admin"`     // Will receive full UserRole object
+	RoleName   string   `role:"moderator"` // Will receive just the role name as string
+}
+
+func main() {
+	r := roamer.NewRoamer(
+		roamer.WithParsers(&RoleParser{}),
+	)
+
+	// The parser will now handle both UserRole and string assignments automatically
+}
+```
+
+When a parser or decoder implements `AssignExtensions`, the extension functions are automatically registered during Roamer initialization. This enables:
+
+- **Custom type conversions** beyond standard string-to-type assignments
+- **Complex object handling** where you need to work with structured data
+- **Flexible field assignment** where the same source can populate different target field types
+- **Extended compatibility** with third-party types and custom business objects
+
+The extension functions are called during the assignment phase, allowing you to handle specific types that require special processing or conversion logic.
 
 ## Performance Optimization
 

@@ -11,6 +11,8 @@ type Field struct {
 	Index                  int
 	Name                   string
 	StructField            reflect.StructField
+	HasParsers             bool
+	HasFormatters          bool
 	HasDefault             bool
 	DefaultValue           string
 	Decoders               []string
@@ -59,7 +61,6 @@ func (s *Structure) Fields(t reflect.Type) []Field {
 // to extract field metadata and applicable tags.
 func (s *Structure) analyzeStruct(t reflect.Type) []Field {
 	fields := make([]Field, 0, t.NumField())
-
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
@@ -68,17 +69,23 @@ func (s *Structure) analyzeStruct(t reflect.Type) []Field {
 		}
 
 		defaultValue, hasDefault := f.Tag.Lookup("default")
+		decoders := s.tagLookup(f.Tag, s.decoders)
+		parsers := s.tagLookup(f.Tag, s.parsers)
+		formatters := s.tagLookup(f.Tag, s.formatters)
+		reflectValueFormatters := s.tagLookup(f.Tag, s.reflectValueFormatters)
 
 		fields = append(fields, Field{
 			Index:                  i,
 			Name:                   f.Name,
 			StructField:            f,
+			HasParsers:             len(parsers) > 0,
+			HasFormatters:          len(formatters) > 0 || len(reflectValueFormatters) > 0,
 			HasDefault:             hasDefault,
 			DefaultValue:           defaultValue,
-			Decoders:               s.tagLookup(f.Tag, s.decoders),
-			Parsers:                s.tagLookup(f.Tag, s.parsers),
-			Formatters:             s.tagLookup(f.Tag, s.formatters),
-			ReflectValueFormatters: s.tagLookup(f.Tag, s.reflectValueFormatters),
+			Decoders:               decoders,
+			Parsers:                parsers,
+			Formatters:             formatters,
+			ReflectValueFormatters: reflectValueFormatters,
 		})
 	}
 
