@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/slipros/assign"
 	rerr "github.com/slipros/roamer/err"
-	"github.com/slipros/roamer/value"
 )
 
 const (
@@ -208,7 +208,7 @@ func (f *FormURL) parseStruct(v *reflect.Value, t reflect.Type, form url.Values)
 			continue
 		}
 
-		if err := value.Set(fieldValue, formValue); err != nil {
+		if err := assign.Value(fieldValue, formValue); err != nil {
 			return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldType.Name)
 		}
 	}

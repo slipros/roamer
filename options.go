@@ -1,5 +1,9 @@
 package roamer
 
+import (
+	"github.com/slipros/assign"
+)
+
 // OptionsFunc is a function type for configuring a Roamer instance.
 // It follows the functional options pattern to provide a clean and
 // extensible API for customizing the behavior of the parser.
@@ -19,8 +23,17 @@ type OptionsFunc func(*Roamer)
 //	)
 func WithParsers(parsers ...Parser) OptionsFunc {
 	return func(r *Roamer) {
+		assignExtensions := make([]assign.ExtensionFunc, 0, len(parsers))
 		for _, p := range parsers {
 			r.parsers[p.Tag()] = p
+
+			if ext, ok := p.(AssignExtensions); ok {
+				assignExtensions = append(assignExtensions, ext.AssignExtensions()...)
+			}
+		}
+
+		if len(assignExtensions) > 0 {
+			r.assignExtensions = append(r.assignExtensions, assignExtensions...)
 		}
 	}
 }
@@ -39,8 +52,17 @@ func WithParsers(parsers ...Parser) OptionsFunc {
 //	)
 func WithDecoders(decoders ...Decoder) OptionsFunc {
 	return func(r *Roamer) {
+		assignExtensions := make([]assign.ExtensionFunc, 0, len(decoders))
 		for _, d := range decoders {
 			r.decoders[d.ContentType()] = d
+
+			if ext, ok := d.(AssignExtensions); ok {
+				assignExtensions = append(assignExtensions, ext.AssignExtensions()...)
+			}
+		}
+
+		if len(assignExtensions) > 0 {
+			r.assignExtensions = append(r.assignExtensions, assignExtensions...)
 		}
 	}
 }

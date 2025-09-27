@@ -12,6 +12,7 @@ Roamer is designed to be easily extended with custom parsers, decoders, and form
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
+- [Custom Value Assignment Extensions](#custom-value-assignment-extensions)
 - [Creating Custom Parsers](#creating-custom-parsers)
 - [Creating Custom Decoders](#creating-custom-decoders)
 - [Creating Custom Formatters](#creating-custom-formatters)
@@ -27,6 +28,297 @@ Roamer's extensible architecture is built around three main interfaces:
 - **Formatter** - Post-process parsed values before setting them on struct fields
 
 Each component works independently and can be combined with built-in or other custom components.
+
+## Custom Value Assignment Extensions
+
+Parsers and decoders can implement the `AssignExtensions` interface to provide custom value assignment capabilities for complex types. This powerful feature allows for specialized handling during the assignment process beyond the standard type conversions.
+
+### AssignExtensions Interface
+
+```go
+type AssignExtensions interface {
+    AssignExtensions() []assign.ExtensionFunc
+}
+```
+
+### When to Use Assignment Extensions
+
+Assignment extensions are useful when:
+
+- You need to handle complex custom types that require special conversion logic
+- Your parser returns structured objects that need to be assigned to different field types
+- You want to provide multiple assignment strategies for the same parsed value
+- You're working with third-party types that require custom handling
+
+### Basic Example
+
+Here's a simple example showing how to implement assignment extensions:
+
+```go
+package main
+
+import (
+    "net/http"
+    "reflect"
+
+    "github.com/slipros/assign"
+    "github.com/slipros/roamer"
+    "github.com/slipros/roamer/parser"
+)
+
+// Custom type that needs special handling
+type UserRole struct {
+    Name        string
+    Permissions []string
+}
+
+func (ur UserRole) String() string {
+    return ur.Name
+}
+
+// Custom parser that implements AssignExtensions
+type RoleParser struct{}
+
+func (p *RoleParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+    roleValue, ok := tag.Lookup("role")
+    if !ok {
+        return nil, false
+    }
+
+    // Return a UserRole object instead of just a string
+    return &UserRole{
+        Name:        roleValue,
+        Permissions: []string{"read", "write"}, // Example permissions
+    }, true
+}
+
+func (p *RoleParser) Tag() string {
+    return "role"
+}
+
+// Implement AssignExtensions to handle UserRole assignment
+func (p *RoleParser) AssignExtensions() []assign.ExtensionFunc {
+    return []assign.ExtensionFunc{
+        func(value any) (func(to reflect.Value) error, bool) {
+            // Handle UserRole pointer assignment
+            if role, ok := value.(*UserRole); ok {
+                return func(to reflect.Value) error {
+                    // Can assign to string field (use role name)
+                    if to.Kind() == reflect.String {
+                        to.SetString(role.String())
+                        return nil
+                    }
+                    // Can assign to UserRole field directly
+                    if to.Type() == reflect.TypeOf(UserRole{}) {
+                        to.Set(reflect.ValueOf(*role))
+                        return nil
+                    }
+                    // Fallback to standard string assignment
+                    return assign.String(to, role.String())
+                }, true
+            }
+            return nil, false
+        },
+    }
+}
+
+// Usage example
+type RequestWithRole struct {
+    UserRole   UserRole `role:"admin"`     // Will receive full UserRole object
+    RoleName   string   `role:"moderator"` // Will receive just the role name as string
+}
+
+func main() {
+    r := roamer.NewRoamer(
+        roamer.WithParsers(&RoleParser{}),
+    )
+
+    // The parser will now handle both UserRole and string assignments automatically
+}
+```
+
+### Advanced Example with HTTP Cookies
+
+The built-in Cookie parser demonstrates a real-world use of assignment extensions:
+
+```go
+// From parser/cookie.go
+func (c *Cookie) AssignExtensions() []assign.ExtensionFunc {
+    return []assign.ExtensionFunc{
+        func(value any) (func(to reflect.Value) error, bool) {
+            cookie, ok := value.(*http.Cookie)
+            if !ok {
+                return nil, false
+            }
+
+            return func(to reflect.Value) error {
+                return assign.String(to, cookie.Value)
+            }, true
+        },
+    }
+}
+```
+
+This allows the cookie parser to work with both `*http.Cookie` objects and string fields seamlessly.
+
+### Complex Example with Multiple Types
+
+Here's a more sophisticated example that handles multiple related types:
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "net/http"
+    "reflect"
+    "strconv"
+    "time"
+
+    "github.com/slipros/assign"
+    "github.com/slipros/roamer"
+    "github.com/slipros/roamer/parser"
+)
+
+// Complex data structure from external API
+type APIResponse struct {
+    UserID    int       `json:"user_id"`
+    Username  string    `json:"username"`
+    CreatedAt time.Time `json:"created_at"`
+    Status    string    `json:"status"`
+}
+
+// Parser that fetches data from external API
+type APIParser struct{}
+
+func (p *APIParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+    userID, ok := tag.Lookup("api_user")
+    if !ok {
+        return nil, false
+    }
+
+    // Simulate API call (in real code, you'd make HTTP request)
+    apiResp := &APIResponse{
+        UserID:    parseInt(userID),
+        Username:  "user_" + userID,
+        CreatedAt: time.Now(),
+        Status:    "active",
+    }
+
+    return apiResp, true
+}
+
+func (p *APIParser) Tag() string {
+    return "api_user"
+}
+
+// Implement AssignExtensions for flexible assignment
+func (p *APIParser) AssignExtensions() []assign.ExtensionFunc {
+    return []assign.ExtensionFunc{
+        func(value any) (func(to reflect.Value) error, bool) {
+            apiResp, ok := value.(*APIResponse)
+            if !ok {
+                return nil, false
+            }
+
+            return func(to reflect.Value) error {
+                switch to.Kind() {
+                case reflect.String:
+                    // Assign username to string fields
+                    to.SetString(apiResp.Username)
+                    return nil
+                case reflect.Int, reflect.Int64:
+                    // Assign user ID to integer fields
+                    to.SetInt(int64(apiResp.UserID))
+                    return nil
+                case reflect.Struct:
+                    if to.Type() == reflect.TypeOf(time.Time{}) {
+                        // Assign creation time to time fields
+                        to.Set(reflect.ValueOf(apiResp.CreatedAt))
+                        return nil
+                    }
+                    if to.Type() == reflect.TypeOf(APIResponse{}) {
+                        // Assign full response to APIResponse fields
+                        to.Set(reflect.ValueOf(*apiResp))
+                        return nil
+                    }
+                }
+
+                // Fallback: convert to JSON string
+                jsonData, err := json.Marshal(apiResp)
+                if err != nil {
+                    return err
+                }
+                return assign.String(to, string(jsonData))
+            }, true
+        },
+    }
+}
+
+func parseInt(s string) int {
+    i, _ := strconv.Atoi(s)
+    return i
+}
+
+// Request struct demonstrating flexible assignment
+type UserDataRequest struct {
+    // Different fields can receive different parts of the API response
+    UserID       int         `api_user:"123"`      // Gets UserID field
+    Username     string      `api_user:"123"`      // Gets Username field
+    FullResponse APIResponse `api_user:"123"`      // Gets full APIResponse
+    JSONData     string      `api_user:"123"`      // Gets JSON representation
+}
+
+func main() {
+    r := roamer.NewRoamer(
+        roamer.WithParsers(&APIParser{}),
+    )
+
+    // All fields will be populated from the same API response
+    // but with different assignment strategies
+}
+```
+
+### Best Practices for Assignment Extensions
+
+1. **Type Safety**: Always check types before attempting assignment
+2. **Fallback Strategy**: Provide sensible fallbacks when direct assignment isn't possible
+3. **Error Handling**: Return clear errors for unsupported assignment combinations
+4. **Performance**: Keep assignment logic lightweight since it's called for every field
+5. **Documentation**: Document what types your extensions support
+
+```go
+func (p *MyParser) AssignExtensions() []assign.ExtensionFunc {
+    return []assign.ExtensionFunc{
+        func(value any) (func(to reflect.Value) error, bool) {
+            myType, ok := value.(*MyCustomType)
+            if !ok {
+                return nil, false // Not our type, let other extensions handle it
+            }
+
+            return func(to reflect.Value) error {
+                // Check supported target types
+                switch to.Kind() {
+                case reflect.String:
+                    to.SetString(myType.String())
+                    return nil
+                case reflect.Int:
+                    if myType.IntValue != nil {
+                        to.SetInt(int64(*myType.IntValue))
+                        return nil
+                    }
+                    return fmt.Errorf("no integer value available")
+                default:
+                    return fmt.Errorf("unsupported assignment from %T to %s",
+                        myType, to.Type())
+                }
+            }, true
+        },
+    }
+}
+```
+
+Assignment extensions provide a powerful way to bridge the gap between complex parsed data and the variety of field types in your request structs, making Roamer extremely flexible for handling sophisticated data transformation scenarios.
 
 ## Creating Custom Parsers
 

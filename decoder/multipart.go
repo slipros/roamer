@@ -6,9 +6,9 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"github.com/slipros/assign"
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/internal/cache"
-	"github.com/slipros/roamer/value"
 	"golang.org/x/exp/slices"
 )
 
@@ -200,7 +200,7 @@ func (m *MultipartFormData) parseField(
 				return nil
 			}
 
-			if err := value.Set(fieldValue, formValue); err != nil {
+			if err := assign.Value(fieldValue, formValue); err != nil {
 				return errors.WithMessagef(err, "set `%s` value to field `%s`", formValue, fieldName)
 			}
 

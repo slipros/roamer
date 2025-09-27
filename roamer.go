@@ -10,10 +10,10 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/slipros/assign"
 	rerr "github.com/slipros/roamer/err"
 	"github.com/slipros/roamer/internal/cache"
 	"github.com/slipros/roamer/parser"
-	"github.com/slipros/roamer/value"
 	"golang.org/x/exp/maps"
 )
 
@@ -45,6 +45,45 @@ type RequireStructureCache interface {
 	// Parameters:
 	//   - cache: The structure cache instance for storing field metadata.
 	SetStructureCache(cache *cache.Structure)
+}
+
+// AssignExtensions is an optional interface that can be implemented by parsers and decoders
+// to provide custom value assignment extensions. These extensions allow for specialized
+// handling of complex types during the assignment process.
+//
+// When a parser or decoder implements this interface, its extension functions are
+// automatically registered with the assignment system during Roamer initialization.
+// This enables custom type conversions and value transformations beyond the standard
+// assignment capabilities.
+//
+// Example implementation:
+//
+//	func (p *CustomParser) AssignExtensions() []assign.ExtensionFunc {
+//	    return []assign.ExtensionFunc{
+//	        func(value any) (func(to reflect.Value) error, bool) {
+//	            // Custom assignment logic for specific types
+//	            if customType, ok := value.(MyCustomType); ok {
+//	                return func(to reflect.Value) error {
+//	                    // Convert and assign the custom type
+//	                    return assign.String(to, customType.String())
+//	                }, true
+//	            }
+//	            return nil, false
+//	        },
+//	    }
+//	}
+type AssignExtensions interface {
+	// AssignExtensions returns a slice of extension functions that provide
+	// custom value assignment capabilities for specific types.
+	//
+	// Each ExtensionFunc takes a value and returns:
+	//   - An assignment function that handles the conversion, if the extension
+	//     can process the given value type
+	//   - A boolean indicating whether this extension can handle the value
+	//
+	// Returns:
+	//   A slice of extension functions for custom type assignments.
+	AssignExtensions() []assign.ExtensionFunc
 }
 
 // Parse is a generic function that extracts data from an HTTP request into a value of type T.
@@ -97,6 +136,8 @@ type Roamer struct {
 
 	parserCachePool sync.Pool
 	structureCache  *cache.Structure
+
+	assignExtensions []assign.ExtensionFunc
 }
 
 // NewRoamer creates a configured Roamer instance with optional configuration.
@@ -257,7 +298,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 					continue
 				}
 
-				if err := value.Set(fieldValue, parsedValue); err != nil {
+				if err := assign.Value(fieldValue, parsedValue, r.assignExtensions...); err != nil {
 					return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
 						parsedValue, f.Name, parserName, ptr)
 				}
@@ -269,7 +310,7 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 		}
 
 		if !parsedSuccessfully && f.HasDefault && isZero {
-			if err := value.Set(fieldValue, f.DefaultValue); err != nil {
+			if err := assign.Value(fieldValue, f.DefaultValue, r.assignExtensions...); err != nil {
 				return errors.Wrapf(err, "set default value for field `%s`", f.Name)
 			}
 		}
@@ -296,7 +337,7 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 		}
 	}
 
-	ptr, ok := value.Pointer(fieldValue)
+	ptr, ok := assign.Pointer(fieldValue)
 	if !ok {
 		return nil
 	}
