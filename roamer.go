@@ -17,6 +17,11 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+const (
+	parserCacheCapacity = 5
+	maxParserCacheLen   = parserCacheCapacity * 6
+)
+
 // AfterParser is an interface that can be implemented by the target struct
 // to execute custom logic after the HTTP request has been parsed.
 //
@@ -116,6 +121,11 @@ type AssignExtensions interface {
 //   - T: The parsed data structure of the specified type.
 //   - error: An error if parsing fails, or nil if successful.
 func Parse[T any](r *Roamer, req *http.Request) (T, error) {
+	if r == nil {
+		var result T
+		return result, errors.Wrap(rerr.NilValue, "roamer")
+	}
+
 	var result T
 	err := r.Parse(req, &result)
 	return result, err
@@ -166,8 +176,7 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 		skipFilled:             true,
 		parserCachePool: sync.Pool{
 			New: func() any {
-				const capacity = 5
-				return make(map[string]any, capacity)
+				return make(map[string]any, parserCacheCapacity)
 			},
 		},
 	}
@@ -263,7 +272,12 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 
 	parserCache := r.parserCachePool.Get().(parser.Cache)
 	defer func() {
-		clear(parserCache)
+		if len(parserCache) >= maxParserCacheLen {
+			parserCache = make(parser.Cache, parserCacheCapacity)
+		} else {
+			clear(parserCache)
+		}
+
 		r.parserCachePool.Put(parserCache)
 	}()
 
