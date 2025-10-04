@@ -15,15 +15,15 @@ import (
 func TestNewQuery(t *testing.T) {
 	q := NewQuery()
 	require.NotNil(t, q)
-	require.Equal(t, TagQuery, q.Tag())
+	assert.Equal(t, TagQuery, q.Tag())
 
 	q = NewQuery(WithDisabledSplit())
 	require.NotNil(t, q)
-	require.False(t, q.split)
+	assert.False(t, q.split)
 
 	q = NewQuery(WithSplitSymbol(";"))
 	require.NotNil(t, q)
-	require.Equal(t, ";", q.splitSymbol)
+	assert.Equal(t, ";", q.splitSymbol)
 }
 
 func TestQuery(t *testing.T) {
@@ -198,21 +198,23 @@ func TestQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			args := tt.args()
 
 			q := NewQuery()
 
 			value, exists := q.Parse(args.req, args.tag, args.cache)
-			if tt.notExists && exists {
-				t.Errorf("Parse() want not exists, but value exists")
+			if tt.notExists {
+				assert.False(t, exists, "Parse() want not exists, but value exists")
 			}
 
-			if tt.want == nil && exists {
-				t.Errorf("Parse() want is nil, but value exists")
+			if tt.want == nil {
+				assert.False(t, exists, "Parse() want is nil, but value exists")
 			}
 
 			if !tt.notExists {
-				require.Equal(t, tt.want, value)
+				assert.Equal(t, tt.want, value)
 			}
 		})
 	}
@@ -371,6 +373,8 @@ func TestQuery_parseQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			q := NewQuery()
 
 			// Test custom parseQuery implementation
@@ -422,6 +426,8 @@ func TestQuery_parseQuery_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			q := NewQuery()
 
 			// Should not panic
@@ -459,6 +465,8 @@ func TestQuery_parseQuery_Performance(t *testing.T) {
 
 	for _, q := range queries {
 		t.Run(q.name, func(t *testing.T) {
+			// Note: Cannot use t.Parallel() here because testing.AllocsPerRun is not compatible with parallel tests
+
 			parser := NewQuery()
 
 			// Measure memory allocations

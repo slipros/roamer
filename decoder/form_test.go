@@ -15,26 +15,26 @@ import (
 func TestNewFormURL(t *testing.T) {
 	f := NewFormURL()
 	require.NotNil(t, f)
-	require.Equal(t, ContentTypeFormURL, f.ContentType())
-	require.Equal(t, f.splitSymbol, SplitSymbol)
+	assert.Equal(t, ContentTypeFormURL, f.ContentType())
+	assert.Equal(t, f.splitSymbol, SplitSymbol)
 
 	f = NewFormURL(WithDisabledSplit())
 	require.NotNil(t, f)
-	require.Equal(t, ContentTypeFormURL, f.ContentType())
-	require.False(t, f.split)
+	assert.Equal(t, ContentTypeFormURL, f.ContentType())
+	assert.False(t, f.split)
 
 	f = NewFormURL(WithSplitSymbol("="))
 	require.NotNil(t, f)
-	require.Equal(t, ContentTypeFormURL, f.ContentType())
-	require.Equal(t, "=", f.splitSymbol)
+	assert.Equal(t, ContentTypeFormURL, f.ContentType())
+	assert.Equal(t, "=", f.splitSymbol)
 
 	f = NewFormURL(WithContentType[*FormURL]("test"))
 	require.NotNil(t, f)
-	require.Equal(t, "test", f.ContentType())
+	assert.Equal(t, "test", f.ContentType())
 
 	f = NewFormURL(WithSkipFilled[*FormURL](false))
 	require.NotNil(t, f)
-	require.Equal(t, false, f.skipFilled)
+	assert.Equal(t, false, f.skipFilled)
 }
 
 func TestFormURL_Tag(t *testing.T) {
@@ -613,6 +613,8 @@ func TestFormURL_Decode_Successfully(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			args := tt.args()
 			var f *FormURL
 			if tt.fields.disabledSplit {
@@ -622,14 +624,14 @@ func TestFormURL_Decode_Successfully(t *testing.T) {
 			}
 
 			err := f.Decode(args.req, args.ptr)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			if tt.wantNotEqual {
-				require.NotEqualValues(t, args.want, args.ptr)
+				assert.NotEqualValues(t, args.want, args.ptr)
 				return
 			}
 
-			require.EqualValues(t, args.want, args.ptr)
+			assert.EqualValues(t, args.want, args.ptr)
 		})
 	}
 }
@@ -740,11 +742,16 @@ func TestFormURL_Decode_Failure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			args := tt.args()
 			f := NewFormURL()
 
 			err := f.Decode(args.req, args.ptr)
-			require.Error(t, err)
+			assert.Error(t, err)
+			if err != nil {
+				assert.NotEmpty(t, err.Error(), "Error message should not be empty")
+			}
 		})
 	}
 }

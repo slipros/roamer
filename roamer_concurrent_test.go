@@ -16,7 +16,6 @@ import (
 	"github.com/slipros/roamer/formatter"
 	"github.com/slipros/roamer/parser"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestRoamer_Parse_Concurrent_Basic tests basic concurrent parsing safety
@@ -92,7 +91,7 @@ func TestRoamer_Parse_Concurrent_Basic(t *testing.T) {
 		errorList = append(errorList, err)
 	}
 
-	require.Empty(t, errorList, "Concurrent parsing should not produce errors")
+	assert.Empty(t, errorList, "Concurrent parsing should not produce errors")
 }
 
 // TestRoamer_Parse_Concurrent_RaceConditions tests for race conditions using -race detector

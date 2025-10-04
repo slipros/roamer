@@ -12,11 +12,11 @@ import (
 func TestNewXML(t *testing.T) {
 	x := NewXML()
 	require.NotNil(t, x)
-	require.Equal(t, ContentTypeXML, x.ContentType())
+	assert.Equal(t, ContentTypeXML, x.ContentType())
 
 	x = NewXML(WithContentType[*XML]("test"))
 	require.NotNil(t, x)
-	require.Equal(t, "test", x.ContentType())
+	assert.Equal(t, "test", x.ContentType())
 }
 
 func TestXML_Tag(t *testing.T) {
@@ -43,8 +43,8 @@ func TestXML_Decode_Successfully(t *testing.T) {
 	ptr := &Data{}
 	err = x.Decode(req, ptr)
 
-	require.NoError(t, err)
-	require.Equal(t, &data, ptr)
+	assert.NoError(t, err)
+	assert.Equal(t, &data, ptr)
 }
 
 func TestXML_Decode_Failure(t *testing.T) {
@@ -82,11 +82,16 @@ func TestXML_Decode_Failure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			x := NewXML()
 			args := tt.args()
 
 			err := x.Decode(args.req, args.ptr)
-			require.Error(t, err)
+			assert.Error(t, err)
+			if err != nil {
+				assert.NotEmpty(t, err.Error(), "Error message should not be empty")
+			}
 		})
 	}
 }

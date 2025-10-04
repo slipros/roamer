@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ const requestURL = "test.com"
 func TestNewHeader(t *testing.T) {
 	h := NewHeader()
 	require.NotNil(t, h)
-	require.Equal(t, TagHeader, h.Tag())
+	assert.Equal(t, TagHeader, h.Tag())
 }
 
 func TestHeader(t *testing.T) {
@@ -167,16 +168,18 @@ func TestHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			args := tt.args()
 
 			h := NewHeader()
 			value, exists := h.Parse(args.req, args.tag, nil)
 
-			if tt.want == nil && exists {
-				t.Errorf("Parse() want is nil, but value exists")
+			if tt.want == nil {
+				assert.False(t, exists, "Parse() want is nil, but value exists")
 			}
 
-			require.Equal(t, tt.want, value)
+			assert.Equal(t, tt.want, value)
 		})
 	}
 }
@@ -234,8 +237,8 @@ func TestHeader_EdgeCases(t *testing.T) {
 			// Should not panic
 			value, exists := h.Parse(req, tag, nil)
 
-			require.Equal(t, tt.wantExists, exists)
-			require.Equal(t, tt.wantValue, value)
+			assert.Equal(t, tt.wantExists, exists)
+			assert.Equal(t, tt.wantValue, value)
 		})
 	}
 }
