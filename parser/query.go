@@ -174,20 +174,28 @@ func (q *Query) parseQuery(query string) url.Values {
 			key, value = param[:i], param[i+1:]
 
 			// URL decode only if necessary (contains %)
+			// If decoding fails due to malformed escape sequences,
+			// leave the value as-is for security and correctness
 			if strings.IndexByte(value, '%') >= 0 {
 				if decoded, err := url.QueryUnescape(value); err == nil {
 					value = decoded
 				}
+				// Silently keep original value on error to prevent
+				// malformed URLs from bypassing validation
 			}
 		} else {
 			key = param
 		}
 
 		// URL decode key only if necessary
+		// If decoding fails due to malformed escape sequences,
+		// leave the key as-is for security and correctness
 		if strings.IndexByte(key, '%') >= 0 {
 			if decoded, err := url.QueryUnescape(key); err == nil {
 				key = decoded
 			}
+			// Silently keep original key on error to prevent
+			// malformed URLs from bypassing validation
 		}
 
 		result[key] = append(result[key], value)
