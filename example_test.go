@@ -3,6 +3,7 @@ package roamer_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -144,6 +145,58 @@ func ExampleMiddleware() {
 
 	// Output:
 	// Action: update, User ID: 456
+}
+
+// ExampleWithPreserveBody demonstrates how to preserve the request body
+// after parsing so downstream handlers can read it again.
+func ExampleWithPreserveBody() {
+	type RequestData struct {
+		Message string `json:"message"`
+		UserID  int    `json:"user_id"`
+	}
+
+	// Create roamer with body preservation enabled
+	r := roamer.NewRoamer(
+		roamer.WithDecoders(decoder.NewJSON()),
+		roamer.WithPreserveBody(), // Enable body preservation
+	)
+
+	// Create a sample request with JSON body
+	jsonBody := `{"message": "Hello, World!", "user_id": 123}`
+	req := &http.Request{
+		Method: "POST",
+		URL: &url.URL{
+			Path: "/api/data",
+		},
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body:          &readCloser{bytes.NewBufferString(jsonBody)},
+		ContentLength: int64(len(jsonBody)),
+	}
+
+	// Parse the request (this normally consumes the body)
+	var data RequestData
+	err := r.Parse(req, &data)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Parsed: Message=%s, UserID=%d\n", data.Message, data.UserID)
+
+	// Read the body again - this works because preservation is enabled
+	bodyBytes, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Printf("Error reading body: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Body still available: %s\n", string(bodyBytes))
+
+	// Output:
+	// Parsed: Message=Hello, World!, UserID=123
+	// Body still available: {"message": "Hello, World!", "user_id": 123}
 }
 
 // Helper functions for examples

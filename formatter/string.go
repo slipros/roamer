@@ -170,7 +170,9 @@ func trimSuffix(s string, arg string) (string, error) {
 	return strings.TrimSuffix(s, arg), nil
 }
 
-// truncate shortens the string to the specified length
+// truncate shortens the string to the specified length in runes (characters).
+// This ensures proper handling of multi-byte UTF-8 characters and prevents
+// splitting them, which would corrupt the string.
 func truncate(s string, arg string) (string, error) {
 	if arg == "" {
 		return "", errors.New("truncate requires one argument: length")
@@ -185,8 +187,10 @@ func truncate(s string, arg string) (string, error) {
 		return "", errors.New("truncate length cannot be negative")
 	}
 
-	if len(s) > length {
-		return s[:length], nil
+	// Convert to runes to handle multi-byte UTF-8 characters correctly
+	runes := []rune(s)
+	if len(runes) > length {
+		return string(runes[:length]), nil
 	}
 
 	return s, nil

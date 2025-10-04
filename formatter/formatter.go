@@ -1,9 +1,58 @@
 // Package formatter provides value formatters for post-processing parsed data.
-// Formatters allow transforming values after they have been parsed from HTTP requests,
-// such as trimming strings, converting case, or applying other transformations.
 //
-// The package is designed to be extensible, allowing users to create custom formatters
-// for specific needs.
+// Formatters transform values after they have been extracted from HTTP requests,
+// enabling data normalization, validation, and transformation. The package provides
+// built-in formatters for common operations and supports custom formatter creation.
+//
+// # Built-in Formatters
+//
+//   - String: Text transformations (trim, case conversion, encoding, etc.)
+//   - Numeric: Number constraints and operations (min, max, abs, round, etc.)
+//   - Time: Time zone conversion and manipulation (timezone, truncate, etc.)
+//   - Slice: Collection operations (unique, sort, limit, compact, etc.)
+//
+// # Basic Usage
+//
+//	type UserRequest struct {
+//	    Email  string    `json:"email" string:"trim_space,lower"`
+//	    Age    int       `query:"age" numeric:"min=0,max=120"`
+//	    Tags   []string  `query:"tags" slice:"unique,sort"`
+//	    Start  time.Time `json:"start" time:"timezone=UTC"`
+//	}
+//
+//	r := roamer.NewRoamer(
+//	    roamer.WithFormatters(
+//	        formatter.NewString(),
+//	        formatter.NewNumeric(),
+//	        formatter.NewTime(),
+//	        formatter.NewSlice(),
+//	    ),
+//	)
+//
+// # Formatter Chaining
+//
+// Multiple formatters can be chained using comma-separated values:
+//
+//	Email string `json:"email" string:"trim_space,lower,trim_suffix=@example.com"`
+//
+// Formatters are applied in the order they appear in the tag.
+//
+// # Custom Formatters
+//
+// Extend built-in formatters or create new ones:
+//
+//	customFormatter := func(s string, arg string) (string, error) {
+//	    return strings.ReplaceAll(s, arg, "***"), nil
+//	}
+//
+//	strFormatter := formatter.NewString(
+//	    formatter.WithStringFormatter("redact", customFormatter),
+//	)
+//
+// # Thread Safety
+//
+// All built-in formatters are safe for concurrent use and should be reused
+// across multiple requests for optimal performance.
 package formatter
 
 import (

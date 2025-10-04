@@ -12,11 +12,11 @@ import (
 func TestNewJSON(t *testing.T) {
 	j := NewJSON()
 	require.NotNil(t, j)
-	require.Equal(t, ContentTypeJSON, j.ContentType())
+	assert.Equal(t, ContentTypeJSON, j.ContentType())
 
 	j = NewJSON(WithContentType[*JSON]("test"))
 	require.NotNil(t, j)
-	require.Equal(t, "test", j.ContentType())
+	assert.Equal(t, "test", j.ContentType())
 }
 
 func TestJSON_Tag(t *testing.T) {
@@ -78,12 +78,14 @@ func TestJSON_Decode_Successfully(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			j := NewJSON()
 			args := tt.args()
 
 			err := j.Decode(args.req, args.ptr)
-			require.NoError(t, err)
-			require.Equal(t, args.want, args.ptr)
+			assert.NoError(t, err)
+			assert.Equal(t, args.want, args.ptr)
 		})
 	}
 }
@@ -123,11 +125,16 @@ func TestJSON_Decode_Failure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			j := NewJSON()
 			args := tt.args()
 
 			err := j.Decode(args.req, args.ptr)
-			require.Error(t, err)
+			assert.Error(t, err)
+			if err != nil {
+				assert.NotEmpty(t, err.Error(), "Error message should not be empty")
+			}
 		})
 	}
 }

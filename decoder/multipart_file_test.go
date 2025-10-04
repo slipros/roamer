@@ -261,3 +261,80 @@ func TestMultipartFiles_Close_Failure(t *testing.T) {
 		})
 	}
 }
+
+// TestMultipartFile_Copy_Successfully tests successful copying of MultipartFile
+func TestMultipartFile_Copy_Successfully(t *testing.T) {
+	// Create a real multipart file header with actual file content
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	// Create a form file
+	fileWriter, err := writer.CreateFormFile("testfile", "test.txt")
+	require.NoError(t, err)
+
+	testContent := []byte("test file content")
+	_, err = fileWriter.Write(testContent)
+	require.NoError(t, err)
+
+	require.NoError(t, writer.Close())
+
+	// Parse the multipart form
+	reader := multipart.NewReader(&buf, writer.Boundary())
+	form, err := reader.ReadForm(1024 * 1024)
+	require.NoError(t, err)
+	defer form.RemoveAll()
+
+	// Get the file header
+	require.NotEmpty(t, form.File["testfile"])
+	fileHeader := form.File["testfile"][0]
+
+	// Open the original file
+	originalFile, err := fileHeader.Open()
+	require.NoError(t, err)
+	defer originalFile.Close()
+
+	// Create MultipartFile
+	mf := MultipartFile{
+		Key:    "testfile",
+		File:   originalFile,
+		Header: fileHeader,
+	}
+
+	// Copy the file
+	copy, err := mf.Copy()
+	require.NoError(t, err)
+	require.NotNil(t, copy.File)
+	defer copy.File.Close()
+
+	// Verify the copy has the same metadata
+	assert.Equal(t, mf.Key, copy.Key)
+	assert.Equal(t, mf.Header, copy.Header)
+
+	// Verify the copy can read the content
+	copiedContent, err := io.ReadAll(copy.File)
+	require.NoError(t, err)
+	assert.Equal(t, testContent, copiedContent)
+}
+
+// TestMultipartFile_Copy_Failure tests failure scenarios when copying MultipartFile
+func TestMultipartFile_Copy_Failure(t *testing.T) {
+	// Create a file header that will fail to open
+	header := &multipart.FileHeader{
+		Filename: "nonexistent.txt",
+		Header:   make(textproto.MIMEHeader),
+		Size:     0,
+	}
+
+	// Create MultipartFile with a header that can't be reopened
+	mf := MultipartFile{
+		Key:    "testfile",
+		File:   &mockMultipartFile{content: []byte("test")},
+		Header: header,
+	}
+
+	// Attempt to copy - should fail because Header.Open() will fail
+	copy, err := mf.Copy()
+	assert.Error(t, err)
+	assert.Empty(t, copy.Key)
+	assert.Nil(t, copy.File)
+}

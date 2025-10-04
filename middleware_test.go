@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/slipros/roamer/decoder"
 	"github.com/slipros/roamer/mockroamer"
 	"github.com/slipros/roamer/parser"
@@ -21,6 +20,8 @@ type testData struct {
 }
 
 func TestMiddleware_Successfully(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		setupRequest  func() *http.Request
@@ -85,7 +86,10 @@ func TestMiddleware_Successfully(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			callCount := 0
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +111,8 @@ func TestMiddleware_Successfully(t *testing.T) {
 }
 
 func TestMiddleware_Failure(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		setupRequest  func() *http.Request
@@ -138,8 +144,8 @@ func TestMiddleware_Failure(t *testing.T) {
 			validateCtx: func(t *testing.T, ctx context.Context) {
 				var data testData
 				err := ParsedDataFromContext(ctx, &data)
-				require.Error(t, err)
-				assert.True(t, errors.Is(err, errBigBad))
+				assert.Error(t, err, "should have parsing error in context")
+				assert.ErrorIs(t, err, errBigBad, "should be wrapped errBigBad")
 			},
 			expectedCalls: 1,
 		},
@@ -162,7 +168,10 @@ func TestMiddleware_Failure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			callCount := 0
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -184,6 +193,8 @@ func TestMiddleware_Failure(t *testing.T) {
 }
 
 func TestSliceMiddleware_Successfully(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		setupRequest  func() *http.Request
@@ -230,7 +241,10 @@ func TestSliceMiddleware_Successfully(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			callCount := 0
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -252,6 +266,8 @@ func TestSliceMiddleware_Successfully(t *testing.T) {
 }
 
 func TestSliceMiddleware_Failure(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		setupRequest  func() *http.Request
@@ -284,8 +300,8 @@ func TestSliceMiddleware_Failure(t *testing.T) {
 			validateCtx: func(t *testing.T, ctx context.Context) {
 				var data []string
 				err := ParsedDataFromContext(ctx, &data)
-				require.Error(t, err)
-				assert.True(t, errors.Is(err, errBigBad))
+				assert.Error(t, err, "should have parsing error in context")
+				assert.ErrorIs(t, err, errBigBad, "should be wrapped errBigBad")
 			},
 			expectedCalls: 1,
 		},
@@ -308,7 +324,10 @@ func TestSliceMiddleware_Failure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			callCount := 0
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

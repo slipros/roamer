@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/slipros/roamer/badge.svg)](https://coveralls.io/github/slipros/roamer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/slipros/roamer)](https://github.com/slipros/roamer)
-[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
+[![GitHub release](https://img.shields.io/github/v/release/slipros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 Roamer is a flexible, extensible HTTP request parser for Go that makes handling and extracting data from HTTP requests effortless. It provides a declarative way to map HTTP request data to Go structs using struct tags, with support for multiple data sources and content types.
 
@@ -57,13 +57,14 @@ graph TD
 
 - **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, path variables, and custom sources (including request context)
 - **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
-- **Default Values**: Set default values for fields using the `default` tag if no value is found in the request.
+- **Default Values**: Set default values for fields using the `default` tag if no value is found in the request
 - **Formatters**: Format parsed data (e.g., trim spaces from strings, apply numeric constraints, handle time zones, manipulate slices)
 - **Router integration**: Built-in support for popular routers (Chi, Gorilla Mux, HttpRouter)
 - **Type conversion**: Automatic conversion of string values to appropriate Go types
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
 - **Middleware support**: Convenient middleware for integrating with HTTP handlers
 - **Performance optimizations**: Efficient reflection techniques and caching for improved performance
+- **Body preservation**: Read request body multiple times when needed with `WithPreserveBody()` option
 
 ## Installation
 
@@ -113,7 +114,7 @@ type CreateUserRequest struct {
 	
 	// From headers
 	UserAgent string `header:"User-Agent"`
-	Referer   string `header:"Referer,X-Referer"`
+	Referer   string `header:"Referer,X-Referer"` // Tries Referer first, then X-Referer as fallback
 }
 
 // Response struct is separate from request parsing
@@ -695,12 +696,13 @@ r := roamer.NewRoamer(
 
 Available string operations:
 - `trim_space` - Remove leading and trailing whitespace
-- `lower` - Convert to lowercase 
+- `lower` - Convert to lowercase
 - `upper` - Convert to uppercase
 - `title` - Convert to title case (capitalize first letter of each word)
 - `snake` - Convert to snake_case format
 - `camel` - Convert to camelCase format
 - `kebab` - Convert to kebab-case format
+- `slug` - Convert to URL-friendly slug (lowercase with hyphens)
 - `base64_encode` - Encode string to base64
 - `base64_decode` - Decode base64 string
 - `url_encode` - URL encode string
@@ -1081,74 +1083,76 @@ import (
 	"github.com/slipros/roamer/parser"
 )
 
-// Custom type that needs special handling
-type UserRole struct {
-	Name        string
-	Permissions []string
-}
+// Custom API token parser that returns structured token data
+type APITokenParser struct{}
 
-// String method for UserRole
-func (ur UserRole) String() string {
-	return ur.Name
-}
-
-// Custom parser that implements AssignExtensions
-type RoleParser struct{}
-
-func (p *RoleParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
-	roleValue, ok := tag.Lookup("role")
+func (p *APITokenParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+	tokenType, ok := tag.Lookup("api_token")
 	if !ok {
 		return nil, false
 	}
 
-	// Return a UserRole object instead of just a string
-	return &UserRole{
-		Name:        roleValue,
-		Permissions: []string{"read", "write"}, // Example permissions
+	// Get the raw token from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, false
+	}
+
+	// Return a structured Token object instead of just a string
+	// This allows us to provide metadata along with the token value
+	return &APIToken{
+		Value:     authHeader,
+		Type:      tokenType, // Use the tag value to specify token type
+		ExpiresIn: 3600,      // Example metadata
+		Scope:     "read:user write:user",
 	}, true
 }
 
-func (p *RoleParser) Tag() string {
-	return "role"
+func (p *APITokenParser) Tag() string {
+	return "api_token"
 }
 
-// Implement AssignExtensions to handle UserRole assignment
-func (p *RoleParser) AssignExtensions() []assign.ExtensionFunc {
+// Custom token type that contains more than just the token value
+type APIToken struct {
+	Value     string
+	Type      string
+	ExpiresIn int
+	Scope     string
+}
+
+// This is where AssignExtensions becomes necessary - the assign library
+// doesn't know how to extract the string value from our APIToken struct
+func (p *APITokenParser) AssignExtensions() []assign.ExtensionFunc {
 	return []assign.ExtensionFunc{
 		func(value any) (func(to reflect.Value) error, bool) {
-			// Handle UserRole pointer assignment
-			if role, ok := value.(*UserRole); ok {
-				return func(to reflect.Value) error {
-					// Can assign to string field (use role name)
-					if to.Kind() == reflect.String {
-						to.SetString(role.String())
-						return nil
-					}
-					// Can assign to UserRole field directly
-					if to.Type() == reflect.TypeOf(UserRole{}) {
-						to.Set(reflect.ValueOf(*role))
-						return nil
-					}
-					return assign.String(to, role.String())
-				}, true
+			token, ok := value.(*APIToken)
+			if !ok {
+				return nil, false
 			}
-			return nil, false
+
+			return func(to reflect.Value) error {
+				// Extract just the token value for string fields
+				return assign.String(to, token.Value)
+			}, true
 		},
 	}
 }
 
-// Usage example
-type RequestWithRole struct {
-	UserRole   UserRole `role:"admin"`     // Will receive full UserRole object
-	RoleName   string   `role:"moderator"` // Will receive just the role name as string
+// Usage example - demonstrates why this extension is needed
+type AuthRequest struct {
+	// This field will receive just the token string value
+	// WITHOUT the extension, this assignment would fail because
+	// assign library doesn't know how to convert *APIToken to string
+	TokenValue string `api_token:"access"`
 }
 
 func main() {
 	r := roamer.NewRoamer(
-		roamer.WithParsers(&RoleParser{}),
+		roamer.WithParsers(&APITokenParser{}),
 	)
 
-	// The parser will now handle both UserRole and string assignments automatically
+	// The extension enables automatic conversion from *APIToken to string
+	// for fields that need just the token value
 }
 ```
 
@@ -1168,6 +1172,44 @@ Roamer is designed with performance in mind, using efficient reflection techniqu
 - Use request structs that only include fields needed for specific endpoints
 - Consider the performance implications of heavy reflection usage
 - Benchmark your specific use case to identify bottlenecks
+
+### Body Preservation
+
+When you need to read the request body multiple times (e.g., for logging or validation before parsing), use the `WithPreserveBody()` option:
+
+```go
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithPreserveBody(), // Enable body preservation
+)
+```
+
+**Important**: Body preservation reads the entire body into memory, which may impact performance for large request bodies. Use it only when necessary.
+
+### Advanced Parsing with Custom Pools
+
+For high-throughput applications, you can use custom `sync.Pool` for parsing:
+
+```go
+import "github.com/slipros/roamer"
+
+// Create a custom pool for your request type
+pool := &sync.Pool{
+    New: func() any {
+        return &MyRequest{}
+    },
+}
+
+// Use the pool-aware parsing function
+req := pool.Get().(*MyRequest)
+defer pool.Put(req)
+
+if err := roamer.NewParseWithPool(r, httpReq, req, pool); err != nil {
+    // Handle error
+}
+```
+
+This approach reduces allocations by reusing request struct instances across requests.
 
 ## Best Practices for Using Roamer
 
@@ -1501,6 +1543,7 @@ Roamer is licensed under the MIT License. See the LICENSE file for details.
 - [Go Documentation](https://pkg.go.dev/github.com/slipros/roamer)
 - [GitHub Repository](https://github.com/slipros/roamer)
 - [Issue Tracker](https://github.com/slipros/roamer/issues)
+- [Changelog](CHANGELOG.md) - See what's new in each version
 
 ---
 

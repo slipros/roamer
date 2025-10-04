@@ -69,6 +69,8 @@ type multiSourceStruct struct {
 
 // TestRoamer_Parse_Successfully tests successful parsing scenarios
 func TestRoamer_Parse_Successfully(t *testing.T) {
+	t.Parallel()
+
 	// Create test JSON
 	testJSON, _ := json.Marshal(testStruct{
 		String: "test",
@@ -103,9 +105,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testStruct)
-				require.True(t, ok)
-				assert.Equal(t, "test", target.String)
-				assert.Equal(t, 123, target.Int)
+				require.True(t, ok, "result should be *testStruct")
+				assert.Equal(t, "test", target.String, "String field should match")
+				assert.Equal(t, 123, target.Int, "Int field should match")
 			},
 		},
 		{
@@ -129,9 +131,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testStruct)
-				require.True(t, ok)
-				assert.Equal(t, "queryValue", target.String)
-				assert.Equal(t, 456, target.Int)
+				require.True(t, ok, "result should be *testStruct")
+				assert.Equal(t, "queryValue", target.String, "String should be parsed from query")
+				assert.Equal(t, 456, target.Int, "Int should be parsed from query")
 			},
 		},
 		{
@@ -157,9 +159,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testStruct)
-				require.True(t, ok)
-				assert.Equal(t, "headerValue", target.String)
-				assert.Equal(t, 789, target.Int)
+				require.True(t, ok, "result should be *testStruct")
+				assert.Equal(t, "headerValue", target.String, "String should be parsed from header")
+				assert.Equal(t, 789, target.Int, "Int should be parsed from header")
 			},
 		},
 		{
@@ -197,7 +199,7 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*multiSourceStruct)
-				require.True(t, ok)
+				require.True(t, ok, "result should be *multiSourceStruct")
 
 				// Each field should be filled from its specific source
 				assert.Equal(t, "jsonValue", target.JSONString, "JSON field should be filled from JSON body")
@@ -233,9 +235,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*map[string]any)
-				require.True(t, ok)
-				assert.Equal(t, "test", (*target)["string"])
-				assert.Equal(t, float64(123), (*target)["int"]) // JSON numbers are decoded to float64
+				require.True(t, ok, "result should be *map[string]any")
+				assert.Equal(t, "test", (*target)["string"], "string field should match")
+				assert.Equal(t, float64(123), (*target)["int"], "int field should match (JSON decodes to float64)")
 			},
 		},
 		{
@@ -265,8 +267,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*[]string)
-				require.True(t, ok)
-				assert.Equal(t, []string{"item1", "item2", "item3"}, *target)
+				require.True(t, ok, "result should be *[]string")
+				assert.Equal(t, []string{"item1", "item2", "item3"}, *target, "slice should match")
 			},
 		},
 		{
@@ -296,8 +298,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 				target, ok := result.(*struct {
 					String string `header:"X-String" string:"trim_space"`
 				})
-				require.True(t, ok)
-				assert.Equal(t, "headerValue", target.String) // spaces should be removed
+				require.True(t, ok, "result should be expected struct type")
+				assert.Equal(t, "headerValue", target.String, "spaces should be trimmed by formatter")
 			},
 		},
 		{
@@ -316,8 +318,8 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testAfterParser)
-				require.True(t, ok)
-				assert.Equal(t, "processed", target.Value)
+				require.True(t, ok, "result should be *testAfterParser")
+				assert.Equal(t, "processed", target.Value, "AfterParse should have set Value to 'processed'")
 			},
 		},
 		{
@@ -344,9 +346,9 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testStruct)
-				require.True(t, ok)
-				assert.Equal(t, "prefilled", target.String) // Value should not change
-				assert.Equal(t, 456, target.Int)
+				require.True(t, ok, "result should be *testStruct")
+				assert.Equal(t, "prefilled", target.String, "prefilled value should not be overwritten with skipFilled=true")
+				assert.Equal(t, 456, target.Int, "empty Int should be filled from query")
 			},
 		},
 		{
@@ -373,15 +375,18 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 			},
 			verify: func(t *testing.T, result any) {
 				target, ok := result.(*testStruct)
-				require.True(t, ok)
-				assert.Equal(t, "queryValue", target.String) // Value should be overwritten
-				assert.Equal(t, 456, target.Int)
+				require.True(t, ok, "result should be *testStruct")
+				assert.Equal(t, "queryValue", target.String, "prefilled value should be overwritten with skipFilled=false")
+				assert.Equal(t, 456, target.Int, "Int should be filled from query")
 			},
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Setup test scenario
 			f, a := tt.setup()
 
@@ -399,10 +404,13 @@ func TestRoamer_Parse_Successfully(t *testing.T) {
 
 // TestRoamer_Parse_Failure tests parsing scenarios that result in errors
 func TestRoamer_Parse_Failure(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
 		setup         func() (fields, args)
-		expectedError error // Optional: to check specific error types
+		expectedError error  // Optional: to check specific error types
+		errorContains string // Optional: to check error message content
 	}{
 		{
 			name: "nil pointer",
@@ -412,6 +420,7 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 					ptr: nil,
 				}
 			},
+			errorContains: "nil",
 		},
 		{
 			name: "not a pointer",
@@ -421,6 +430,7 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 					ptr: testStruct{},
 				}
 			},
+			errorContains: "ptr",
 		},
 		{
 			name: "unsupported target type",
@@ -431,6 +441,7 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 					ptr: &unsupportedType,
 				}
 			},
+			errorContains: "not supported",
 		},
 		{
 			name: "AfterParser returns error",
@@ -451,18 +462,26 @@ func TestRoamer_Parse_Failure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Setup test scenario
 			f, a := tt.setup()
 
 			r := NewRoamer(f.opts...)
 			err := r.Parse(a.req, a.ptr)
 			// In failure tests we expect errors
-			require.Error(t, err, "Parse() should return an error")
+			assert.Error(t, err, "Parse() should return an error")
 
 			// If a specific error is expected, check it
 			if tt.expectedError != nil {
-				assert.ErrorIs(t, err, tt.expectedError, "Wrong error type returned")
+				assert.ErrorIs(t, err, tt.expectedError, "should wrap expected error")
+			}
+
+			// Check error message content if specified
+			if tt.errorContains != "" {
+				assert.Contains(t, err.Error(), tt.errorContains, "error message should contain expected text")
 			}
 		})
 	}
@@ -740,6 +759,8 @@ func BenchmarkParse_SkipFilled(b *testing.B) {
 }
 
 func TestRoamer_Parse_DefaultValue_Successfully(t *testing.T) {
+	t.Parallel()
+
 	type validDefaultStruct struct {
 		String      string   `query:"s" default:"default string"`
 		Int         int      `query:"i" default:"123"`
@@ -824,19 +845,24 @@ func TestRoamer_Parse_DefaultValue_Successfully(t *testing.T) {
 	r := NewRoamer(WithParsers(parser.NewQuery()))
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			req, err := http.NewRequest(http.MethodGet, tt.url, nil)
-			require.NoError(t, err)
+			require.NoError(t, err, "should create request")
 
 			err = r.Parse(req, tt.ptr)
 
-			require.NoError(t, err)
-			require.Equal(t, tt.want, tt.ptr)
+			assert.NoError(t, err, "should parse successfully")
+			assert.Equal(t, tt.want, tt.ptr, "parsed result should match expected")
 		})
 	}
 }
 
 func TestRoamer_Parse_DefaultValue_Failure(t *testing.T) {
+	t.Parallel()
+
 	type invalidDefaultStruct struct {
 		InvalidInt int `query:"invalid" default:"abc"`
 	}
@@ -856,13 +882,17 @@ func TestRoamer_Parse_DefaultValue_Failure(t *testing.T) {
 	r := NewRoamer(WithParsers(parser.NewQuery()))
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			req, err := http.NewRequest(http.MethodGet, tt.url, nil)
-			require.NoError(t, err)
+			require.NoError(t, err, "should create request")
 
 			err = r.Parse(req, tt.ptr)
 
-			require.Error(t, err)
+			assert.Error(t, err, "should return error for invalid default value")
+			assert.Contains(t, err.Error(), "default", "error should mention default value issue")
 		})
 	}
 }

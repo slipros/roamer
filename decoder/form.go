@@ -48,9 +48,29 @@ func WithSplitSymbol(splitSymbol string) FormURLOptionsFunc {
 	}
 }
 
-// FormURL is a decoder for handling URL-encoded form data.
-// It can parse form data into structs and maps, handling both
-// single values and multiple values.
+// FormURL is a decoder for handling URL-encoded form data (application/x-www-form-urlencoded).
+//
+// This decoder processes HTML form submissions and parses them into Go structures.
+// It supports both single and multiple values for the same form field, with automatic
+// splitting of comma-separated values.
+//
+// # Value Splitting
+//
+// By default, comma-separated form values are split into slices:
+//   - "tags=foo,bar,baz" -> []string{"foo", "bar", "baz"}
+//
+// This behavior can be disabled using WithDisabledSplit().
+//
+// # Supported Target Types
+//
+//   - Structs with "form" tags
+//   - map[string]string
+//   - map[string]any
+//   - map[string][]string
+//
+// # Thread Safety
+//
+// The FormURL decoder is safe for concurrent use across multiple goroutines.
 type FormURL struct {
 	contentType string // The Content-Type header value that this decoder handles
 	skipFilled  bool   // Whether to skip fields that are already filled

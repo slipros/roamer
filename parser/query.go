@@ -60,8 +60,31 @@ func WithSplitSymbol(splitSymbol string) QueryOptionsFunc {
 }
 
 // Query is a parser for extracting URL query parameters from HTTP requests.
-// It can handle single values, multiple values (using repeated parameters),
-// and comma-separated values.
+//
+// The parser processes URL query strings and extracts values based on the "query" struct tag.
+// It supports single values, multiple values (using repeated parameters like ?tag=foo&tag=bar),
+// and automatic splitting of comma-separated values.
+//
+// # Value Handling
+//
+//   - Single value: ?name=John -> "John"
+//   - Multiple values: ?tag=foo&tag=bar -> []string{"foo", "bar"}
+//   - Comma-separated: ?tags=foo,bar,baz -> []string{"foo", "bar", "baz"} (if split enabled)
+//
+// # Performance Optimization
+//
+// The parser caches parsed query parameters to avoid re-parsing the same query string
+// for each struct field. This provides significant performance benefits when parsing
+// structs with many query-tagged fields.
+//
+// # Custom Split Symbol
+//
+// By default, values are split on commas. This can be changed using WithSplitSymbol()
+// or disabled entirely using WithDisabledSplit().
+//
+// # Thread Safety
+//
+// The Query parser is safe for concurrent use across multiple goroutines.
 type Query struct {
 	split       bool   // Whether to split comma-separated values
 	splitSymbol string // The character to use when splitting values
@@ -174,20 +197,28 @@ func (q *Query) parseQuery(query string) url.Values {
 			key, value = param[:i], param[i+1:]
 
 			// URL decode only if necessary (contains %)
+			// If decoding fails due to malformed escape sequences,
+			// leave the value as-is for security and correctness
 			if strings.IndexByte(value, '%') >= 0 {
 				if decoded, err := url.QueryUnescape(value); err == nil {
 					value = decoded
 				}
+				// Silently keep original value on error to prevent
+				// malformed URLs from bypassing validation
 			}
 		} else {
 			key = param
 		}
 
 		// URL decode key only if necessary
+		// If decoding fails due to malformed escape sequences,
+		// leave the key as-is for security and correctness
 		if strings.IndexByte(key, '%') >= 0 {
 			if decoded, err := url.QueryUnescape(key); err == nil {
 				key = decoded
 			}
+			// Silently keep original key on error to prevent
+			// malformed URLs from bypassing validation
 		}
 
 		result[key] = append(result[key], value)

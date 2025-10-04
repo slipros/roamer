@@ -1,10 +1,12 @@
 package roamer
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/slipros/assign"
+	"github.com/slipros/roamer/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -391,4 +393,257 @@ func TestWithAssignExtensions_NilRoamer(t *testing.T) {
 			option(nil)
 		})
 	})
+}
+
+// mockParserWithExtensions is a mock parser that implements AssignExtensions
+type mockParserWithExtensions struct {
+	tag        string
+	extensions []assign.ExtensionFunc
+}
+
+func (m *mockParserWithExtensions) Parse(r *http.Request, tag reflect.StructTag, cache parser.Cache) (any, bool) {
+	return nil, false
+}
+
+func (m *mockParserWithExtensions) Tag() string {
+	return m.tag
+}
+
+func (m *mockParserWithExtensions) AssignExtensions() []assign.ExtensionFunc {
+	return m.extensions
+}
+
+// mockParserWithoutExtensions is a mock parser that does not implement AssignExtensions
+type mockParserWithoutExtensions struct {
+	tag string
+}
+
+func (m *mockParserWithoutExtensions) Parse(r *http.Request, tag reflect.StructTag, cache parser.Cache) (any, bool) {
+	return nil, false
+}
+
+func (m *mockParserWithoutExtensions) Tag() string {
+	return m.tag
+}
+
+// mockDecoderWithExtensions is a mock decoder that implements AssignExtensions
+type mockDecoderWithExtensions struct {
+	contentType string
+	tag         string
+	extensions  []assign.ExtensionFunc
+}
+
+func (m *mockDecoderWithExtensions) Decode(r *http.Request, ptr any) error {
+	return nil
+}
+
+func (m *mockDecoderWithExtensions) ContentType() string {
+	return m.contentType
+}
+
+func (m *mockDecoderWithExtensions) Tag() string {
+	return m.tag
+}
+
+func (m *mockDecoderWithExtensions) AssignExtensions() []assign.ExtensionFunc {
+	return m.extensions
+}
+
+// mockDecoderWithoutExtensions is a mock decoder that does not implement AssignExtensions
+type mockDecoderWithoutExtensions struct {
+	contentType string
+	tag         string
+}
+
+func (m *mockDecoderWithoutExtensions) Decode(r *http.Request, ptr any) error {
+	return nil
+}
+
+func (m *mockDecoderWithoutExtensions) ContentType() string {
+	return m.contentType
+}
+
+func (m *mockDecoderWithoutExtensions) Tag() string {
+	return m.tag
+}
+
+// TestWithParsers tests WithParsers option function
+func TestWithParsers(t *testing.T) {
+	tests := []struct {
+		name                    string
+		parsers                 []Parser
+		expectedParsersCount    int
+		expectedExtensionsCount int
+		description             string
+	}{
+		{
+			name: "add parser without extensions",
+			parsers: []Parser{
+				&mockParserWithoutExtensions{tag: "test"},
+			},
+			expectedParsersCount:    1,
+			expectedExtensionsCount: 0,
+			description:             "should add parser without assign extensions",
+		},
+		{
+			name: "add parser with extensions",
+			parsers: []Parser{
+				&mockParserWithExtensions{
+					tag:        "test",
+					extensions: []assign.ExtensionFunc{stringExtension},
+				},
+			},
+			expectedParsersCount:    1,
+			expectedExtensionsCount: 1,
+			description:             "should add parser with assign extensions",
+		},
+		{
+			name: "add multiple parsers with and without extensions",
+			parsers: []Parser{
+				&mockParserWithoutExtensions{tag: "test1"},
+				&mockParserWithExtensions{
+					tag:        "test2",
+					extensions: []assign.ExtensionFunc{stringExtension, intExtension},
+				},
+				&mockParserWithoutExtensions{tag: "test3"},
+			},
+			expectedParsersCount:    3,
+			expectedExtensionsCount: 2,
+			description:             "should add all parsers and collect extensions from those that have them",
+		},
+		{
+			name: "add multiple parsers all with extensions",
+			parsers: []Parser{
+				&mockParserWithExtensions{
+					tag:        "test1",
+					extensions: []assign.ExtensionFunc{stringExtension},
+				},
+				&mockParserWithExtensions{
+					tag:        "test2",
+					extensions: []assign.ExtensionFunc{intExtension, customTypeExtension},
+				},
+			},
+			expectedParsersCount:    2,
+			expectedExtensionsCount: 3,
+			description:             "should add all parsers and collect all extensions",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roamer := NewRoamer()
+
+			option := WithParsers(tt.parsers...)
+			option(roamer)
+
+			assert.Len(t, roamer.parsers, tt.expectedParsersCount,
+				"parsers count should match expected count")
+			assert.Len(t, roamer.assignExtensions, tt.expectedExtensionsCount,
+				"assignExtensions count should match expected count")
+
+			// Verify parsers are correctly registered by tag
+			for _, p := range tt.parsers {
+				registeredParser, exists := roamer.parsers[p.Tag()]
+				assert.True(t, exists, "parser with tag %s should be registered", p.Tag())
+				assert.Equal(t, p, registeredParser, "registered parser should match original")
+			}
+		})
+	}
+}
+
+// TestWithDecoders tests WithDecoders option function
+func TestWithDecoders(t *testing.T) {
+	tests := []struct {
+		name                    string
+		decoders                []Decoder
+		expectedDecodersCount   int
+		expectedExtensionsCount int
+		description             string
+	}{
+		{
+			name: "add decoder without extensions",
+			decoders: []Decoder{
+				&mockDecoderWithoutExtensions{
+					contentType: "application/test",
+					tag:         "test",
+				},
+			},
+			expectedDecodersCount:   1,
+			expectedExtensionsCount: 0,
+			description:             "should add decoder without assign extensions",
+		},
+		{
+			name: "add decoder with extensions",
+			decoders: []Decoder{
+				&mockDecoderWithExtensions{
+					contentType: "application/test",
+					tag:         "test",
+					extensions:  []assign.ExtensionFunc{stringExtension},
+				},
+			},
+			expectedDecodersCount:   1,
+			expectedExtensionsCount: 1,
+			description:             "should add decoder with assign extensions",
+		},
+		{
+			name: "add multiple decoders with and without extensions",
+			decoders: []Decoder{
+				&mockDecoderWithoutExtensions{
+					contentType: "application/test1",
+					tag:         "test1",
+				},
+				&mockDecoderWithExtensions{
+					contentType: "application/test2",
+					tag:         "test2",
+					extensions:  []assign.ExtensionFunc{stringExtension, intExtension},
+				},
+				&mockDecoderWithoutExtensions{
+					contentType: "application/test3",
+					tag:         "test3",
+				},
+			},
+			expectedDecodersCount:   3,
+			expectedExtensionsCount: 2,
+			description:             "should add all decoders and collect extensions from those that have them",
+		},
+		{
+			name: "add multiple decoders all with extensions",
+			decoders: []Decoder{
+				&mockDecoderWithExtensions{
+					contentType: "application/test1",
+					tag:         "test1",
+					extensions:  []assign.ExtensionFunc{stringExtension},
+				},
+				&mockDecoderWithExtensions{
+					contentType: "application/test2",
+					tag:         "test2",
+					extensions:  []assign.ExtensionFunc{intExtension, customTypeExtension},
+				},
+			},
+			expectedDecodersCount:   2,
+			expectedExtensionsCount: 3,
+			description:             "should add all decoders and collect all extensions",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roamer := NewRoamer()
+
+			option := WithDecoders(tt.decoders...)
+			option(roamer)
+
+			assert.Len(t, roamer.decoders, tt.expectedDecodersCount,
+				"decoders count should match expected count")
+			assert.Len(t, roamer.assignExtensions, tt.expectedExtensionsCount,
+				"assignExtensions count should match expected count")
+
+			// Verify decoders are correctly registered by content type
+			for _, d := range tt.decoders {
+				registeredDecoder, exists := roamer.decoders[d.ContentType()]
+				assert.True(t, exists, "decoder with content type %s should be registered", d.ContentType())
+				assert.Equal(t, d, registeredDecoder, "registered decoder should match original")
+			}
+		})
+	}
 }

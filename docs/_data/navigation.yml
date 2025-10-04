@@ -19,11 +19,15 @@ social:
   - title: "GitHub"
     url: "https://github.com/slipros/roamer"
     icon: "github"
-  
+
   - title: "Go Package"
     url: "https://pkg.go.dev/github.com/slipros/roamer"
     icon: "golang"
-  
+
   - title: "Issues"
     url: "https://github.com/slipros/roamer/issues"
     icon: "bug"
+
+  - title: "Changelog"
+    url: "https://github.com/slipros/roamer/blob/main/CHANGELOG.md"
+    icon: "list"

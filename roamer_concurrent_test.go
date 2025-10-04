@@ -16,7 +16,6 @@ import (
 	"github.com/slipros/roamer/formatter"
 	"github.com/slipros/roamer/parser"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestRoamer_Parse_Concurrent_Basic tests basic concurrent parsing safety
@@ -92,7 +91,7 @@ func TestRoamer_Parse_Concurrent_Basic(t *testing.T) {
 		errorList = append(errorList, err)
 	}
 
-	require.Empty(t, errorList, "Concurrent parsing should not produce errors")
+	assert.Empty(t, errorList, "Concurrent parsing should not produce errors")
 }
 
 // TestRoamer_Parse_Concurrent_RaceConditions tests for race conditions using -race detector
@@ -223,15 +222,20 @@ func TestRoamer_Parse_Concurrent_MemoryLeaks(t *testing.T) {
 	runtime.ReadMemStats(&finalStats)
 
 	// Check for significant memory growth (allowing for some variance)
-	memoryGrowth := finalStats.HeapAlloc - initialStats.HeapAlloc
 	maxAcceptableGrowth := uint64(10 * 1024 * 1024) // 10MB threshold
 
-	t.Logf("Memory growth: %d bytes", memoryGrowth)
 	t.Logf("Initial heap: %d bytes", initialStats.HeapAlloc)
 	t.Logf("Final heap: %d bytes", finalStats.HeapAlloc)
 
-	assert.Less(t, memoryGrowth, maxAcceptableGrowth,
-		"Memory growth should not exceed %d bytes, but grew by %d bytes", maxAcceptableGrowth, memoryGrowth)
+	// Handle potential underflow when finalStats.HeapAlloc < initialStats.HeapAlloc
+	if finalStats.HeapAlloc >= initialStats.HeapAlloc {
+		memoryGrowth := finalStats.HeapAlloc - initialStats.HeapAlloc
+		t.Logf("Memory growth: %d bytes", memoryGrowth)
+		assert.Less(t, memoryGrowth, maxAcceptableGrowth,
+			"Memory growth should not exceed %d bytes, but grew by %d bytes", maxAcceptableGrowth, memoryGrowth)
+	} else {
+		t.Logf("Memory decreased by %d bytes (GC was effective)", initialStats.HeapAlloc-finalStats.HeapAlloc)
+	}
 }
 
 // TestRoamer_Parse_Concurrent_ContextCancellation tests behavior with context cancellation

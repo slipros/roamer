@@ -6,13 +6,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewCookie(t *testing.T) {
 	h := NewCookie()
 	require.NotNil(t, h)
-	require.Equal(t, TagCookie, h.Tag())
+	assert.Equal(t, TagCookie, h.Tag())
 }
 
 func TestCookie(t *testing.T) {
@@ -71,16 +72,18 @@ func TestCookie(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			args := tt.args()
 
 			h := NewCookie()
 			value, exists := h.Parse(args.req, args.tag, nil)
 
-			if tt.want == nil && exists {
-				t.Errorf("Parse() want is nil, but value exists")
+			if tt.want == nil {
+				assert.False(t, exists, "Parse() want is nil, but value exists")
 			}
 
-			require.Equal(t, tt.want, value)
+			assert.Equal(t, tt.want, value)
 		})
 	}
 }
@@ -96,7 +99,7 @@ func TestCookieAssignExtensions(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				c := NewCookie()
 				extensions := c.AssignExtensions()
-				require.Len(t, extensions, 1, "Should return exactly one extension function")
+				assert.Len(t, extensions, 1, "Should return exactly one extension function")
 			},
 		},
 		{
@@ -157,16 +160,16 @@ func TestCookieAssignExtensions(t *testing.T) {
 
 						// Test extension function with cookie
 						assignFunc, ok := extensions[0](cookie)
-						require.True(t, ok, "Extension should accept *http.Cookie")
-						require.NotNil(t, assignFunc, "Should return assignment function")
+						assert.True(t, ok, "Extension should accept *http.Cookie")
+						assert.NotNil(t, assignFunc, "Should return assignment function")
 
 						// Test assignment to string field
 						var result string
 						target := reflect.ValueOf(&result).Elem()
 
 						err := assignFunc(target)
-						require.NoError(t, err, "Assignment should succeed")
-						require.Equal(t, tc.expectValue, result, "Should assign cookie.Value to target field")
+						assert.NoError(t, err, "Assignment should succeed")
+						assert.Equal(t, tc.expectValue, result, "Should assign cookie.Value to target field")
 					})
 				}
 			},
@@ -184,8 +187,8 @@ func TestCookieAssignExtensions(t *testing.T) {
 				}
 
 				assignFunc, ok := extensions[0](cookie)
-				require.True(t, ok)
-				require.NotNil(t, assignFunc)
+				assert.True(t, ok)
+				assert.NotNil(t, assignFunc)
 
 				testCases := []struct {
 					name        string
@@ -199,7 +202,7 @@ func TestCookieAssignExtensions(t *testing.T) {
 							return reflect.ValueOf(&str).Elem()
 						},
 						verify: func(t *testing.T, target reflect.Value) {
-							require.Equal(t, "123", target.String())
+							assert.Equal(t, "123", target.String())
 						},
 					},
 					{
@@ -209,7 +212,7 @@ func TestCookieAssignExtensions(t *testing.T) {
 							return reflect.ValueOf(&iface).Elem()
 						},
 						verify: func(t *testing.T, target reflect.Value) {
-							require.Equal(t, "123", target.Interface())
+							assert.Equal(t, "123", target.Interface())
 						},
 					},
 				}
@@ -218,7 +221,7 @@ func TestCookieAssignExtensions(t *testing.T) {
 					t.Run(tc.name, func(t *testing.T) {
 						target := tc.setupTarget()
 						err := assignFunc(target)
-						require.NoError(t, err, "Assignment should succeed")
+						assert.NoError(t, err, "Assignment should succeed")
 						tc.verify(t, target)
 					})
 				}
@@ -280,8 +283,8 @@ func TestCookieAssignExtensions(t *testing.T) {
 				for _, tc := range testCases {
 					t.Run(tc.name, func(t *testing.T) {
 						assignFunc, ok := extensions[0](tc.value)
-						require.False(t, ok, "Extension should reject non-cookie value: %T", tc.value)
-						require.Nil(t, assignFunc, "Should return nil assignment function for non-cookie value")
+						assert.False(t, ok, "Extension should reject non-cookie value: %T", tc.value)
+						assert.Nil(t, assignFunc, "Should return nil assignment function for non-cookie value")
 					})
 				}
 			},
@@ -299,8 +302,8 @@ func TestCookieAssignExtensions(t *testing.T) {
 				}
 
 				assignFunc, ok := extensions[0](cookie)
-				require.True(t, ok)
-				require.NotNil(t, assignFunc)
+				assert.True(t, ok)
+				assert.NotNil(t, assignFunc)
 
 				// Test assignment to incompatible types that might cause errors
 				testCases := []struct {
@@ -332,9 +335,9 @@ func TestCookieAssignExtensions(t *testing.T) {
 						err := assignFunc(target)
 
 						if tc.expectError {
-							require.Error(t, err, "Assignment should fail for incompatible type")
+							assert.Error(t, err, "Assignment should fail for incompatible type")
 						} else {
-							require.NoError(t, err, "Assignment should succeed")
+							assert.NoError(t, err, "Assignment should succeed")
 						}
 					})
 				}
@@ -360,15 +363,15 @@ func TestCookieAssignExtensions(t *testing.T) {
 				}
 
 				assignFunc, ok := extensions[0](cookie)
-				require.True(t, ok, "Extension should accept cookie with all fields")
-				require.NotNil(t, assignFunc, "Should return assignment function")
+				assert.True(t, ok, "Extension should accept cookie with all fields")
+				assert.NotNil(t, assignFunc, "Should return assignment function")
 
 				var result string
 				target := reflect.ValueOf(&result).Elem()
 
 				err := assignFunc(target)
-				require.NoError(t, err, "Assignment should succeed")
-				require.Equal(t, "abc123xyz", result, "Should extract only the Value field, ignoring other cookie attributes")
+				assert.NoError(t, err, "Assignment should succeed")
+				assert.Equal(t, "abc123xyz", result, "Should extract only the Value field, ignoring other cookie attributes")
 			},
 		},
 		{
@@ -384,15 +387,15 @@ func TestCookieAssignExtensions(t *testing.T) {
 				}
 
 				assignFunc, ok := extensions[0](cookie)
-				require.True(t, ok)
-				require.NotNil(t, assignFunc)
+				assert.True(t, ok)
+				assert.NotNil(t, assignFunc)
 
 				// Test assignment to zero Value should cause panic/error
 				// We expect this to panic since assign.String checks target.Type() on zero Value
 				defer func() {
 					r := recover()
-					require.NotNil(t, r, "Assignment to zero Value should panic")
-					require.Contains(t, fmt.Sprintf("%v", r), "zero Value", "Panic should mention zero Value")
+					assert.NotNil(t, r, "Assignment to zero Value should panic")
+					assert.Contains(t, fmt.Sprintf("%v", r), "zero Value", "Panic should mention zero Value")
 				}()
 
 				// This should panic
@@ -407,6 +410,8 @@ func TestCookieAssignExtensions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tt.testFunc(t)
 		})
 	}
