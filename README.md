@@ -1081,74 +1081,76 @@ import (
 	"github.com/slipros/roamer/parser"
 )
 
-// Custom type that needs special handling
-type UserRole struct {
-	Name        string
-	Permissions []string
-}
+// Custom API token parser that returns structured token data
+type APITokenParser struct{}
 
-// String method for UserRole
-func (ur UserRole) String() string {
-	return ur.Name
-}
-
-// Custom parser that implements AssignExtensions
-type RoleParser struct{}
-
-func (p *RoleParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
-	roleValue, ok := tag.Lookup("role")
+func (p *APITokenParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+	tokenType, ok := tag.Lookup("api_token")
 	if !ok {
 		return nil, false
 	}
 
-	// Return a UserRole object instead of just a string
-	return &UserRole{
-		Name:        roleValue,
-		Permissions: []string{"read", "write"}, // Example permissions
+	// Get the raw token from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, false
+	}
+
+	// Return a structured Token object instead of just a string
+	// This allows us to provide metadata along with the token value
+	return &APIToken{
+		Value:     authHeader,
+		Type:      tokenType, // Use the tag value to specify token type
+		ExpiresIn: 3600,      // Example metadata
+		Scope:     "read:user write:user",
 	}, true
 }
 
-func (p *RoleParser) Tag() string {
-	return "role"
+func (p *APITokenParser) Tag() string {
+	return "api_token"
 }
 
-// Implement AssignExtensions to handle UserRole assignment
-func (p *RoleParser) AssignExtensions() []assign.ExtensionFunc {
+// Custom token type that contains more than just the token value
+type APIToken struct {
+	Value     string
+	Type      string
+	ExpiresIn int
+	Scope     string
+}
+
+// This is where AssignExtensions becomes necessary - the assign library
+// doesn't know how to extract the string value from our APIToken struct
+func (p *APITokenParser) AssignExtensions() []assign.ExtensionFunc {
 	return []assign.ExtensionFunc{
 		func(value any) (func(to reflect.Value) error, bool) {
-			// Handle UserRole pointer assignment
-			if role, ok := value.(*UserRole); ok {
-				return func(to reflect.Value) error {
-					// Can assign to string field (use role name)
-					if to.Kind() == reflect.String {
-						to.SetString(role.String())
-						return nil
-					}
-					// Can assign to UserRole field directly
-					if to.Type() == reflect.TypeOf(UserRole{}) {
-						to.Set(reflect.ValueOf(*role))
-						return nil
-					}
-					return assign.String(to, role.String())
-				}, true
+			token, ok := value.(*APIToken)
+			if !ok {
+				return nil, false
 			}
-			return nil, false
+
+			return func(to reflect.Value) error {
+				// Extract just the token value for string fields
+				return assign.String(to, token.Value)
+			}, true
 		},
 	}
 }
 
-// Usage example
-type RequestWithRole struct {
-	UserRole   UserRole `role:"admin"`     // Will receive full UserRole object
-	RoleName   string   `role:"moderator"` // Will receive just the role name as string
+// Usage example - demonstrates why this extension is needed
+type AuthRequest struct {
+	// This field will receive just the token string value
+	// WITHOUT the extension, this assignment would fail because
+	// assign library doesn't know how to convert *APIToken to string
+	TokenValue string `api_token:"access"`
 }
 
 func main() {
 	r := roamer.NewRoamer(
-		roamer.WithParsers(&RoleParser{}),
+		roamer.WithParsers(&APITokenParser{}),
 	)
 
-	// The parser will now handle both UserRole and string assignments automatically
+	// The extension enables automatic conversion from *APIToken to string
+	// for fields that need just the token value
 }
 ```
 
