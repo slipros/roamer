@@ -38,7 +38,9 @@ Create a new Roamer instance with the specified options.
 - `WithFormatters(formatters ...Formatter)` - Add formatters for post-processing
 - `WithSkipFilled(skip bool)` - Control whether to skip fields with non-zero values (default: true)
 - `WithAssignExtensions(extensions ...assign.ExtensionFunc)` - Register custom assignment extensions
-- `WithPreserveBody()` - Enable request body preservation for multiple reads (see below)
+- `WithPreserveBody()` - Enable request body preservation for multiple reads
+
+**Note on `WithPreserveBody()`**: When enabled, the request body is read into memory and can be read multiple times. This is useful for logging, validation, or when multiple parsers/decoders need to access the body. However, it may impact performance for large request bodies as the entire body is stored in memory.
 
 #### Methods
 
@@ -245,7 +247,24 @@ func NewString() *String
 - `trim_space` - Remove leading and trailing whitespace
 - `lower` - Convert to lowercase
 - `upper` - Convert to uppercase
-- `slug` - Convert to URL-friendly slug
+- `title` - Convert to title case (capitalize first letter of each word)
+- `snake` - Convert to snake_case format
+- `camel` - Convert to camelCase format
+- `kebab` - Convert to kebab-case format
+- `slug` - Convert to URL-friendly slug (lowercase with hyphens)
+- `base64_encode` - Encode string to base64
+- `base64_decode` - Decode base64 string
+- `url_encode` - URL encode string
+- `url_decode` - URL decode string
+- `sanitize_html` - Basic HTML sanitization (escape < and >)
+- `reverse` - Reverse string characters
+- `trim_prefix=PREFIX` - Remove specified prefix from string
+- `trim_suffix=SUFFIX` - Remove specified suffix from string
+- `truncate=N` - Truncate string to N characters
+- `replace=OLD:NEW` or `replace=OLD:NEW:COUNT` - Replace occurrences of OLD with NEW
+- `substring=START` or `substring=START:END` - Extract substring
+- `pad_left=LENGTH` or `pad_left=LENGTH:CHAR` - Pad string on the left
+- `pad_right=LENGTH` or `pad_right=LENGTH:CHAR` - Pad string on the right
 
 **Example:**
 ```go

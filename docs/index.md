@@ -10,14 +10,14 @@ title: Home
 [![Coverage Status](https://coveralls.io/repos/github/slipros/roamer/badge.svg)](https://coveralls.io/github/slipros/roamer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/slipros/roamer)](https://github.com/slipros/roamer)
-[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
+[![GitHub release](https://img.shields.io/github/v/release/slipros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 Roamer is a flexible, extensible HTTP request parser for Go that makes handling and extracting data from HTTP requests effortless. It provides a declarative way to map HTTP request data to Go structs using struct tags, with support for multiple data sources and content types.
 
 ## Key Features
 
 - **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, and path variables
-- **Content-type based decoding**: Automatically decode request bodies based on Content-Type header  
+- **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
 - **Default Values**: Set default values for fields using the `default` tag if no value is found in the request
 - **Formatters**: Format parsed data (trim spaces, apply numeric constraints, handle time zones, manipulate slices)
 - **Router integration**: Built-in support for popular routers (Chi, Gorilla Mux, HttpRouter)
@@ -25,6 +25,7 @@ Roamer is a flexible, extensible HTTP request parser for Go that makes handling 
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
 - **Middleware support**: Convenient middleware for integrating with HTTP handlers
 - **Performance optimizations**: Efficient reflection techniques and caching
+- **Body preservation**: Read request body multiple times when needed with `WithPreserveBody()` option
 
 ## Quick Start
 

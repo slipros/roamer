@@ -45,9 +45,40 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 	}
 }
 
-// MultipartFormData is a decoder for handling multipart form data,
-// including file uploads. It can parse both form fields and uploaded files
-// into struct fields based on struct tags.
+// MultipartFormData is a decoder for handling multipart form data (multipart/form-data),
+// including file uploads and mixed form fields.
+//
+// This decoder is specifically designed for handling HTML forms with file uploads,
+// allowing simultaneous processing of regular form fields and uploaded files. It uses
+// the "multipart" struct tag to map form fields to struct members.
+//
+// # File Upload Support
+//
+//   - Single file uploads using *MultipartFile
+//   - Multiple file uploads using MultipartFiles
+//   - Access to file metadata (name, size, content-type)
+//   - Automatic cleanup when files are properly closed
+//
+// # Special Tags
+//
+//   - multipart:",allfiles" - Captures all uploaded files into a MultipartFiles slice
+//   - multipart:"fieldname" - Maps to a specific form field or file input
+//
+// # Memory Management
+//
+// Files larger than maxMemory (default 32MB) are stored in temporary disk files.
+// Smaller files are kept in memory. The threshold can be configured using WithMaxMemory().
+//
+// # Thread Safety
+//
+// The MultipartFormData decoder requires a structure cache set via SetStructureCache
+// before use. After initialization, it is safe for concurrent use.
+//
+// # Important
+//
+// Always close uploaded files after processing to prevent resource leaks:
+//
+//	defer req.Files.Close()
 type MultipartFormData struct {
 	contentType string // The Content-Type header value that this decoder handles
 	skipFilled  bool   // Whether to skip fields that are already filled

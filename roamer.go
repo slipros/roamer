@@ -1,6 +1,77 @@
 // Package roamer provides a flexible HTTP request parser for Go applications.
+//
 // It extracts data from various parts of an HTTP request (headers, query parameters,
-// cookies, body) into Go structures using struct tags, simplifying API development.
+// cookies, path variables, request body) into Go structures using struct tags,
+// simplifying REST API development and request validation.
+//
+// # Key Features
+//
+//   - Declarative request parsing using struct tags
+//   - Support for multiple data sources (query, headers, cookies, path, body)
+//   - Pluggable parsers, decoders, and formatters
+//   - Built-in type conversion and validation
+//   - Thread-safe and reusable across requests
+//   - Memory-efficient with object pooling support
+//
+// # Basic Usage
+//
+// Define a request structure with tags:
+//
+//	type UserRequest struct {
+//	    ID        int    `query:"id"`           // From URL query parameters
+//	    Name      string `json:"name"`          // From JSON request body
+//	    UserAgent string `header:"User-Agent"`  // From HTTP headers
+//	    Session   string `cookie:"session_id"`  // From cookies
+//	}
+//
+// Create a Roamer instance with required components:
+//
+//	r := roamer.NewRoamer(
+//	    roamer.WithDecoders(decoder.NewJSON()),
+//	    roamer.WithParsers(
+//	        parser.NewQuery(),
+//	        parser.NewHeader(),
+//	        parser.NewCookie(),
+//	    ),
+//	)
+//
+// Parse an HTTP request:
+//
+//	var user UserRequest
+//	err := r.Parse(request, &user)
+//	if err != nil {
+//	    // Handle parsing error
+//	}
+//
+// # Advanced Features
+//
+// Value formatting after parsing:
+//
+//	type FormRequest struct {
+//	    Email string `json:"email" string:"trim_space,lower"`
+//	    Age   int    `query:"age" numeric:"min=0,max=120"`
+//	}
+//
+// Multiple content types:
+//
+//	r := roamer.NewRoamer(
+//	    roamer.WithDecoders(
+//	        decoder.NewJSON(),
+//	        decoder.NewXML(),
+//	        decoder.NewFormURL(),
+//	        decoder.NewMultipartFormData(),
+//	    ),
+//	)
+//
+// Generic parsing with type inference:
+//
+//	userData, err := roamer.Parse[UserRequest](r, request)
+//
+// Middleware integration:
+//
+//	http.Handle("/api/users", roamer.Middleware[UserRequest](r)(handler))
+//
+// For more examples and detailed documentation, see https://github.com/slipros/roamer
 package roamer
 
 import (
@@ -135,6 +206,43 @@ func Parse[T any](r *Roamer, req *http.Request) (T, error) {
 
 // Roamer is a flexible HTTP request parser that extracts data from various parts
 // of an HTTP request into Go structures using struct tags.
+//
+// It coordinates the work of parsers (for headers, query params, cookies, path),
+// decoders (for request body), and formatters (for post-processing values).
+//
+// # Thread Safety
+//
+// A Roamer instance is safe for concurrent use and should be reused across
+// multiple HTTP requests. Creating a Roamer is relatively expensive due to
+// reflection-based setup, so instances should be created once (typically during
+// application initialization) and reused.
+//
+// # Performance Considerations
+//
+//   - Roamer uses internal caching to optimize struct field analysis
+//   - Parser cache pools reduce allocations during request processing
+//   - Structure metadata is cached per type to avoid repeated reflection
+//
+// # Memory Management
+//
+// For high-throughput scenarios, consider using NewParseWithPool to further
+// reduce allocations by reusing request struct instances.
+//
+// Example:
+//
+//	// Create once at application startup
+//	var globalRoamer = roamer.NewRoamer(
+//	    roamer.WithDecoders(decoder.NewJSON()),
+//	    roamer.WithParsers(parser.NewQuery(), parser.NewHeader()),
+//	    roamer.WithFormatters(formatter.NewString()),
+//	)
+//
+//	// Reuse across all handlers
+//	func handler(w http.ResponseWriter, r *http.Request) {
+//	    var req MyRequest
+//	    err := globalRoamer.Parse(r, &req)
+//	    // ...
+//	}
 type Roamer struct {
 	parsers                Parsers                // Collection of registered parsers
 	decoders               Decoders               // Collection of registered decoders
@@ -155,6 +263,33 @@ type Roamer struct {
 
 // NewRoamer creates a configured Roamer instance with optional configuration.
 //
+// The function accepts variadic OptionsFunc parameters that configure parsers,
+// decoders, formatters, and other behavioral settings. The returned Roamer is
+// safe for concurrent use and should be reused across multiple requests for
+// optimal performance.
+//
+// # Configuration Options
+//
+//   - WithDecoders: Register decoders for handling different content types
+//   - WithParsers: Register parsers for extracting data from request parts
+//   - WithFormatters: Register formatters for post-processing parsed values
+//   - WithSkipFilled: Control whether to overwrite non-zero field values
+//   - WithAssignExtensions: Add custom type conversion logic
+//   - WithPreserveBody: Enable request body preservation for downstream handlers
+//
+// # Default Behavior
+//
+// By default, NewRoamer creates an instance that:
+//   - Skips already filled fields (skipFilled = true)
+//   - Has no parsers, decoders, or formatters (must be configured)
+//   - Uses internal caching for performance optimization
+//
+// Parameters:
+//   - opts: Optional configuration functions to customize the Roamer instance.
+//
+// Returns:
+//   - *Roamer: A configured Roamer instance ready for use.
+//
 // Example:
 //
 //	// Basic Roamer with JSON decoder and query parser
@@ -163,12 +298,24 @@ type Roamer struct {
 //	    roamer.WithParsers(parser.NewQuery()),
 //	)
 //
-//	// Roamer with multiple components
+//	// Roamer with multiple components and custom settings
 //	r := roamer.NewRoamer(
-//	    roamer.WithDecoders(decoder.NewJSON(), decoder.NewFormURL()),
-//	    roamer.WithParsers(parser.NewQuery(), parser.NewHeader()),
-//	    roamer.WithFormatters(formatter.NewString()),
-//	    roamer.WithSkipFilled(false), // Parse all fields, even if not zero
+//	    roamer.WithDecoders(
+//	        decoder.NewJSON(),
+//	        decoder.NewFormURL(),
+//	        decoder.NewMultipartFormData(),
+//	    ),
+//	    roamer.WithParsers(
+//	        parser.NewQuery(),
+//	        parser.NewHeader(),
+//	        parser.NewCookie(),
+//	    ),
+//	    roamer.WithFormatters(
+//	        formatter.NewString(),
+//	        formatter.NewNumeric(),
+//	    ),
+//	    roamer.WithSkipFilled(false),  // Overwrite even filled fields
+//	    roamer.WithPreserveBody(),     // Allow body re-reading
 //	)
 func NewRoamer(opts ...OptionsFunc) *Roamer {
 	r := Roamer{
@@ -208,22 +355,75 @@ func NewRoamer(opts ...OptionsFunc) *Roamer {
 	return &r
 }
 
-// Parse extracts data from an HTTP request into the provided pointer (struct, slice, array, or map).
-// For structs, it processes both the request body and other parts (headers, query parameters, cookies)
-// according to struct tags. For slices, arrays, and maps, only the request body is processed.
+// Parse extracts data from an HTTP request into the provided pointer.
 //
-// The target can implement AfterParser to execute custom logic after parsing is complete.
+// The method supports parsing into structs, slices, arrays, and maps:
+//   - Structs: Processes request body AND other parts (headers, query, cookies, path)
+//   - Slices/Arrays/Maps: Processes only the request body content
+//
+// # Parsing Process
+//
+// For struct targets, Parse performs the following steps:
+//  1. Decodes request body based on Content-Type (if decoder is registered)
+//  2. Extracts values from query parameters, headers, cookies, path (if parsers are registered)
+//  3. Applies formatters to post-process field values (if formatters are registered)
+//  4. Calls AfterParse() if the target implements the AfterParser interface
+//
+// # Field Processing Rules
+//
+//   - Fields are processed based on their struct tags (query, header, cookie, path, json, etc.)
+//   - By default, already filled (non-zero) fields are skipped (controlled by WithSkipFilled)
+//   - Default values can be specified using the "default" tag
+//   - Multiple formatters can be chained using comma-separated values
+//
+// # Error Handling
+//
+// Parse returns an error if:
+//   - req is nil (NilValue error)
+//   - ptr is nil (NilValue error)
+//   - ptr is not a pointer (NotPtr error)
+//   - The underlying type is not supported (NotSupported error)
+//   - Body decoding fails (DecodeError - check with IsDecodeError)
+//   - Field assignment fails (type conversion error)
+//   - Formatter application fails
+//   - AfterParse() returns an error
+//
+// Parameters:
+//   - req: The HTTP request to parse data from. Must not be nil.
+//   - ptr: A pointer to the destination (struct, slice, array, or map). Must not be nil.
+//
+// Returns:
+//   - error: An error if parsing fails, or nil if successful.
 //
 // Example:
 //
-//	type UserData struct {
-//	    ID        int       `query:"id"`
-//	    Name      string    `json:"name"`
-//	    UserAgent string    `header:"User-Agent"`
+//	type UserRequest struct {
+//	    ID        int    `query:"id"`
+//	    Name      string `json:"name"`
+//	    UserAgent string `header:"User-Agent"`
+//	    Email     string `json:"email" string:"trim_space,lower"`
 //	}
 //
-//	var userData UserData
-//	err := roamer.Parse(request, &userData)
+//	var userData UserRequest
+//	err := r.Parse(request, &userData)
+//	if err != nil {
+//	    if decodeErr, ok := roamer.IsDecodeError(err); ok {
+//	        // Handle body decoding error
+//	        return fmt.Errorf("invalid request body: %w", decodeErr)
+//	    }
+//	    return fmt.Errorf("request parsing failed: %w", err)
+//	}
+//
+// # AfterParser Interface
+//
+// Implement AfterParser to add custom validation or processing:
+//
+//	func (u *UserRequest) AfterParse(r *http.Request) error {
+//	    if u.ID <= 0 {
+//	        return errors.New("invalid user ID")
+//	    }
+//	    return nil
+//	}
 func (r *Roamer) Parse(req *http.Request, ptr any) error {
 	if req == nil {
 		return errors.Wrapf(rerr.NilValue, "request")
@@ -259,8 +459,18 @@ func (r *Roamer) Parse(req *http.Request, ptr any) error {
 }
 
 // parseStruct parses an HTTP request into a struct pointer by extracting data
-// from the request body and other parts of the request (headers, query parameters, cookies)
+// from the request body and other parts of the request (headers, query parameters, cookies, path)
 // according to the struct tags.
+//
+// The method first decodes the request body (if applicable), then iterates through struct fields
+// to extract values from parsers (query, header, cookie, path) and apply formatters.
+// It uses a parser cache pool to reduce allocations during processing.
+//
+// Field processing:
+//   - Only exported fields with struct tags are processed
+//   - Fields are skipped if already filled and skipFilled is true
+//   - Default values are applied to zero-value fields when no parser value is found
+//   - Formatters are applied to all matching fields (even if already filled)
 func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 	if err := r.parseBody(req, ptr); err != nil {
 		return err

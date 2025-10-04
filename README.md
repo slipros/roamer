@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/slipros/roamer/badge.svg)](https://coveralls.io/github/slipros/roamer)
 [![Go Reference](https://pkg.go.dev/badge/github.com/slipros/roamer.svg)](https://pkg.go.dev/github.com/slipros/roamer)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/slipros/roamer)](https://github.com/slipros/roamer)
-[![GitHub release](https://img.shields.io/github/v/release/SLIpros/roamer.svg)](https://github.com/slipros/roamer/releases)
+[![GitHub release](https://img.shields.io/github/v/release/slipros/roamer.svg)](https://github.com/slipros/roamer/releases)
 
 Roamer is a flexible, extensible HTTP request parser for Go that makes handling and extracting data from HTTP requests effortless. It provides a declarative way to map HTTP request data to Go structs using struct tags, with support for multiple data sources and content types.
 
@@ -57,13 +57,14 @@ graph TD
 
 - **Multiple data sources**: Parse data from HTTP headers, cookies, query parameters, path variables, and custom sources (including request context)
 - **Content-type based decoding**: Automatically decode request bodies based on Content-Type header
-- **Default Values**: Set default values for fields using the `default` tag if no value is found in the request.
+- **Default Values**: Set default values for fields using the `default` tag if no value is found in the request
 - **Formatters**: Format parsed data (e.g., trim spaces from strings, apply numeric constraints, handle time zones, manipulate slices)
 - **Router integration**: Built-in support for popular routers (Chi, Gorilla Mux, HttpRouter)
 - **Type conversion**: Automatic conversion of string values to appropriate Go types
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
 - **Middleware support**: Convenient middleware for integrating with HTTP handlers
 - **Performance optimizations**: Efficient reflection techniques and caching for improved performance
+- **Body preservation**: Read request body multiple times when needed with `WithPreserveBody()` option
 
 ## Installation
 
@@ -113,7 +114,7 @@ type CreateUserRequest struct {
 	
 	// From headers
 	UserAgent string `header:"User-Agent"`
-	Referer   string `header:"Referer,X-Referer"`
+	Referer   string `header:"Referer,X-Referer"` // Tries Referer first, then X-Referer as fallback
 }
 
 // Response struct is separate from request parsing
@@ -695,12 +696,13 @@ r := roamer.NewRoamer(
 
 Available string operations:
 - `trim_space` - Remove leading and trailing whitespace
-- `lower` - Convert to lowercase 
+- `lower` - Convert to lowercase
 - `upper` - Convert to uppercase
 - `title` - Convert to title case (capitalize first letter of each word)
 - `snake` - Convert to snake_case format
 - `camel` - Convert to camelCase format
 - `kebab` - Convert to kebab-case format
+- `slug` - Convert to URL-friendly slug (lowercase with hyphens)
 - `base64_encode` - Encode string to base64
 - `base64_decode` - Decode base64 string
 - `url_encode` - URL encode string
@@ -1170,6 +1172,44 @@ Roamer is designed with performance in mind, using efficient reflection techniqu
 - Use request structs that only include fields needed for specific endpoints
 - Consider the performance implications of heavy reflection usage
 - Benchmark your specific use case to identify bottlenecks
+
+### Body Preservation
+
+When you need to read the request body multiple times (e.g., for logging or validation before parsing), use the `WithPreserveBody()` option:
+
+```go
+r := roamer.NewRoamer(
+    roamer.WithDecoders(decoder.NewJSON()),
+    roamer.WithPreserveBody(), // Enable body preservation
+)
+```
+
+**Important**: Body preservation reads the entire body into memory, which may impact performance for large request bodies. Use it only when necessary.
+
+### Advanced Parsing with Custom Pools
+
+For high-throughput applications, you can use custom `sync.Pool` for parsing:
+
+```go
+import "github.com/slipros/roamer"
+
+// Create a custom pool for your request type
+pool := &sync.Pool{
+    New: func() any {
+        return &MyRequest{}
+    },
+}
+
+// Use the pool-aware parsing function
+req := pool.Get().(*MyRequest)
+defer pool.Put(req)
+
+if err := roamer.NewParseWithPool(r, httpReq, req, pool); err != nil {
+    // Handle error
+}
+```
+
+This approach reduces allocations by reusing request struct instances across requests.
 
 ## Best Practices for Using Roamer
 
