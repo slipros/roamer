@@ -1503,6 +1503,7 @@ Roamer is licensed under the MIT License. See the LICENSE file for details.
 - [Go Documentation](https://pkg.go.dev/github.com/slipros/roamer)
 - [GitHub Repository](https://github.com/slipros/roamer)
 - [Issue Tracker](https://github.com/slipros/roamer/issues)
+- [Changelog](CHANGELOG.md) - See what's new in each version
 
 ---
 

@@ -134,6 +134,7 @@ Ready to get started? Check out our detailed guides:
 - **GitHub Repository**: [github.com/slipros/roamer](https://github.com/slipros/roamer)
 - **Issues & Bug Reports**: [GitHub Issues](https://github.com/slipros/roamer/issues)
 - **Go Package Documentation**: [pkg.go.dev](https://pkg.go.dev/github.com/slipros/roamer)
+- **Changelog**: [View release history and changes](https://github.com/slipros/roamer/blob/main/CHANGELOG.md)
 
 ## License
 
