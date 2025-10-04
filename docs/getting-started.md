@@ -262,3 +262,7 @@ Now that you have Roamer working, explore more advanced features:
 **Performance issues**
 - Use request-specific structs instead of large generic ones
 - Consider caching roamer instances for reuse
+
+**Body cannot be read multiple times**
+- Enable `WithPreserveBody()` option if you need multiple reads
+- Be aware of memory implications for large request bodies

@@ -4,6 +4,8 @@
 package roamer
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -143,6 +145,7 @@ type Roamer struct {
 	hasParsers    bool // Whether any parsers are registered
 	hasDecoders   bool // Whether any decoders are registered
 	hasFormatters bool // Whether any formatters are registered
+	preserveBody  bool // Whether to preserve the request body after decoding
 
 	parserCachePool sync.Pool
 	structureCache  *cache.Structure
@@ -376,6 +379,8 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 
 // parseBody extracts data from the HTTP request body into the provided pointer
 // using the appropriate decoder based on the request's Content-Type header.
+// If preserveBody is enabled, it reads the entire body into memory and restores
+// it after decoding so downstream handlers can read it again.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	if !r.hasDecoders || req.Body == nil || req.ContentLength == 0 || req.Method == http.MethodGet {
 		return nil
@@ -391,6 +396,37 @@ func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 		return nil
 	}
 
+	// If body preservation is enabled, read the entire body into memory
+	// and restore it after decoding
+	if r.preserveBody {
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			return errors.Wrap(err, "read request body for preservation")
+		}
+
+		// Close the original body
+		_ = req.Body.Close()
+
+		// Replace body with a reader for decoding
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+		// Decode directly from the request
+		if err := d.Decode(req, ptr); err != nil {
+			// Restore the body even on error so it can be inspected
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+			return errors.WithStack(rerr.DecodeError{
+				Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),
+			})
+		}
+
+		// Restore the body for downstream handlers
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+		return nil
+	}
+
+	// Standard decoding without preservation
 	if err := d.Decode(req, ptr); err != nil {
 		return errors.WithStack(rerr.DecodeError{
 			Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),

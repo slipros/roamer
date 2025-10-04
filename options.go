@@ -143,3 +143,33 @@ func WithAssignExtensions(extensions ...assign.ExtensionFunc) OptionsFunc {
 		r.assignExtensions = append(r.assignExtensions, extensions...)
 	}
 }
+
+// WithPreserveBody enables preservation of the request body after decoding.
+// The decoder reads the entire body into memory, decodes it, and then
+// replaces http.Request.Body with a new io.ReadCloser containing the same data.
+// This allows downstream handlers to read the body again.
+//
+// WARNING: This option increases memory usage as the entire request body
+// is buffered in memory. Use with caution for large request bodies. Consider
+// implementing size limits in your HTTP server to prevent excessive memory consumption.
+//
+// Example:
+//
+//	// Enable body preservation for middleware that needs to read body multiple times
+//	r := roamer.NewRoamer(
+//	    roamer.WithDecoders(decoder.NewJSON()),
+//	    roamer.WithPreserveBody(),
+//	)
+//
+//	// Now downstream handlers can also read the body
+//	func handler(w http.ResponseWriter, r *http.Request) {
+//	    // Body was already read by roamer for parsing,
+//	    // but can be read again here thanks to preservation
+//	    body, _ := io.ReadAll(r.Body)
+//	    // ... use body ...
+//	}
+func WithPreserveBody() OptionsFunc {
+	return func(r *Roamer) {
+		r.preserveBody = true
+	}
+}

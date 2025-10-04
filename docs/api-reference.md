@@ -36,6 +36,9 @@ Create a new Roamer instance with the specified options.
 - `WithParsers(parsers ...Parser)` - Add parsers for different request parts
 - `WithDecoders(decoders ...Decoder)` - Add decoders for request bodies
 - `WithFormatters(formatters ...Formatter)` - Add formatters for post-processing
+- `WithSkipFilled(skip bool)` - Control whether to skip fields with non-zero values (default: true)
+- `WithAssignExtensions(extensions ...assign.ExtensionFunc)` - Register custom assignment extensions
+- `WithPreserveBody()` - Enable request body preservation for multiple reads (see below)
 
 #### Methods
 
