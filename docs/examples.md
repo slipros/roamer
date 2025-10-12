@@ -9,6 +9,8 @@ nav_order: 3
 
 This page contains comprehensive examples showing how to use Roamer in different scenarios.
 
+> **💡 Runnable Examples**: All examples on this page are also available as complete, runnable applications in the [examples/](https://github.com/slipros/roamer/tree/main/examples) directory of the repository.
+
 ## Table of Contents
 
 - [Basic Usage](#basic-usage)

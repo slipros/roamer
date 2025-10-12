@@ -335,9 +335,9 @@ type Parser interface {
 }
 ```
 
-### Custom Header Parser Example
+### Custom Context Parser Example
 
-Let's create a parser that extracts headers with a specific prefix:
+Let's create a parser that extracts member data from request context. This is a common pattern for authentication and authorization data:
 
 ```go
 package main
@@ -345,70 +345,88 @@ package main
 import (
     "net/http"
     "reflect"
-    "strings"
-    
+
+    "github.com/gofrs/uuid"
     "github.com/slipros/roamer"
     "github.com/slipros/roamer/parser"
 )
 
-const TagCustomHeader = "x-header"
+const TagMember = "member"
 
-type CustomHeaderParser struct {
-    prefix string
+type MemberParser struct{}
+
+func NewMemberParser() *MemberParser {
+    return &MemberParser{}
 }
 
-func NewCustomHeaderParser(prefix string) *CustomHeaderParser {
-    return &CustomHeaderParser{prefix: prefix}
-}
-
-// Parse implements the Parser interface
-func (p *CustomHeaderParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
-    tagValue, ok := tag.Lookup(TagCustomHeader)
+// Parse extracts member data from the request context based on the struct tag
+func (p *MemberParser) Parse(r *http.Request, tag reflect.StructTag, _ parser.Cache) (any, bool) {
+    tagValue, ok := tag.Lookup(TagMember)
     if !ok {
-        return "", false
+        return nil, false
     }
-    
-    // Look for header with the specified prefix
-    headerName := p.prefix + "-" + tagValue
-    headerValue := r.Header.Get(headerName)
-    if len(headerValue) == 0 {
-        return "", false
+
+    // Extract member from context (injected by middleware)
+    m, ok := MemberFromContext(r.Context())
+    if !ok {
+        return nil, false
     }
-    
-    return headerValue, true
+
+    // Return different parts of member data based on tag value
+    switch tagValue {
+    case "organization_id":
+        return m.OrganizationID, true
+    case "id":
+        return m.ID, true
+    case "member":
+        return m, true
+    default:
+        return nil, false
+    }
 }
 
 // Tag implements the Parser interface
-func (p *CustomHeaderParser) Tag() string {
-    return TagCustomHeader
+func (p *MemberParser) Tag() string {
+    return TagMember
 }
 
-// Usage example
+// Member represents user/member data
+type Member struct {
+    ID             uuid.UUID
+    OrganizationID uuid.UUID
+    Name           string
+    Role           string
+}
+
+// Usage example showing different field types
 type APIRequest struct {
-    UserID    string `x-header:"user-id"`    // Looks for X-App-user-id
-    TenantID  string `x-header:"tenant-id"`  // Looks for X-App-tenant-id
-    RequestID string `x-header:"request-id"` // Looks for X-App-request-id
+    MemberID       string        `member:"id"`      // As string
+    MemberIDAsUUID uuid.UUID     `member:"id"`      // As UUID
+    Member         *Member       `member:"member"`  // As pointer
+    MemberAsStruct Member        `member:"member"`  // As struct
 }
 
 func main() {
     r := roamer.NewRoamer(
-        roamer.WithParsers(NewCustomHeaderParser("X-App")),
+        roamer.WithParsers(NewMemberParser()),
     )
-    
-    // Now you can use the x-header tag in your structs
-    http.HandleFunc("/api", func(w http.ResponseWriter, req *http.Request) {
+
+    // Use with middleware that injects member into context
+    http.HandleFunc("/api", memberMiddleware(func(w http.ResponseWriter, req *http.Request) {
         var apiReq APIRequest
-        
+
         if err := r.Parse(req, &apiReq); err != nil {
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
-        
-        // Process request with extracted headers
+
+        // apiReq.MemberID, apiReq.Member, etc. are now populated
         w.WriteHeader(http.StatusOK)
-    })
+    }))
 }
 ```
+
+For a complete working example, see [examples/custom_parser](https://github.com/slipros/roamer/tree/main/examples/custom_parser).
 
 ### Environment Variable Parser
 

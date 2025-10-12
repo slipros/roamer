@@ -4,3 +4,4 @@ json_path: coverage.json
 
 skip_files:
   - "mockroamer/*"
+  - "examples/*"
