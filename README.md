@@ -199,21 +199,6 @@ See the [examples README](examples/README.md) for a complete list and how to run
 | `time` | `timezone=TZ`, `truncate=UNIT`, `start_of_day`, `end_of_day` | `time:"timezone=UTC"` |
 | `slice` | `unique`, `sort`, `sort_desc`, `compact`, `limit=N` | `slice:"unique,sort"` |
 
-## Architecture
-
-Roamer follows a modular, interface-based architecture:
-
-- **Parsers** - Extract data from request parts (headers, query, cookies, path)
-- **Decoders** - Decode request body based on Content-Type
-- **Formatters** - Post-process parsed values
-
-This design provides:
-- Clear separation of concerns
-- High extensibility through interfaces
-- Concurrency safety with `sync.Map` and `sync.Pool`
-- Router independence
-- Flexible configuration via functional options
-
 ## Creating Extensions
 
 ### Custom Parser
