@@ -126,10 +126,10 @@ The diagram above illustrates how Roamer processes HTTP requests through a simpl
 
 Ready to get started? Check out our detailed guides:
 
-- [**Getting Started**](getting-started.html) - Installation and basic usage
-- [**Examples**](examples.html) - Comprehensive examples for different use cases  
-- [**API Reference**](api-reference.html) - Complete API documentation
-- [**Extending Roamer**](extending.html) - Create custom parsers, decoders, and formatters
+- [**Getting Started**](getting-started/) - Installation and basic usage
+- [**Examples**](examples/) - Comprehensive examples for different use cases
+- [**API Reference**](api-reference/) - Complete API documentation
+- [**Extending Roamer**](extending/) - Create custom parsers, decoders, and formatters
 
 ## Community & Support
 

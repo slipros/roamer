@@ -196,10 +196,10 @@ func (q *Query) parseQuery(query string) url.Values {
 		if i := strings.IndexByte(param, '='); i >= 0 {
 			key, value = param[:i], param[i+1:]
 
-			// URL decode only if necessary (contains %)
+			// URL decode if value contains % or + (both require decoding)
 			// If decoding fails due to malformed escape sequences,
 			// leave the value as-is for security and correctness
-			if strings.IndexByte(value, '%') >= 0 {
+			if strings.IndexByte(value, '%') >= 0 || strings.IndexByte(value, '+') >= 0 {
 				if decoded, err := url.QueryUnescape(value); err == nil {
 					value = decoded
 				}
@@ -210,10 +210,10 @@ func (q *Query) parseQuery(query string) url.Values {
 			key = param
 		}
 
-		// URL decode key only if necessary
+		// URL decode key if it contains % or + (both require decoding)
 		// If decoding fails due to malformed escape sequences,
 		// leave the key as-is for security and correctness
-		if strings.IndexByte(key, '%') >= 0 {
+		if strings.IndexByte(key, '%') >= 0 || strings.IndexByte(key, '+') >= 0 {
 			if decoded, err := url.QueryUnescape(key); err == nil {
 				key = decoded
 			}
