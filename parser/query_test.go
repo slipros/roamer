@@ -346,6 +346,30 @@ func TestQuery_parseQuery(t *testing.T) {
 			description: "Percent signs and valid percent encoding",
 		},
 		{
+			name:        "Plus sign as space in value",
+			query:       "name=John+Doe&city=New+York",
+			expected:    url.Values{"name": {"John Doe"}, "city": {"New York"}},
+			description: "Plus signs in values should be decoded as spaces",
+		},
+		{
+			name:        "Plus sign as space in key",
+			query:       "hello+world=test&foo+bar=value",
+			expected:    url.Values{"hello world": {"test"}, "foo bar": {"value"}},
+			description: "Plus signs in keys should be decoded as spaces",
+		},
+		{
+			name:        "Mixed plus and percent encoding",
+			query:       "text=hello+world%21&name=John+Doe%27s",
+			expected:    url.Values{"text": {"hello world!"}, "name": {"John Doe's"}},
+			description: "Plus signs and percent encoding should work together",
+		},
+		{
+			name:        "Plus signs without percent encoding",
+			query:       "query=search+term+here&filter=active+users",
+			expected:    url.Values{"query": {"search term here"}, "filter": {"active users"}},
+			description: "Multiple plus signs should all be decoded as spaces",
+		},
+		{
 			name:        "Complex query with all features",
 			query:       "name=John%20Doe&tags=go,web&tags=programming&empty=&flag&encoded=hello%2Bworld",
 			expected:    url.Values{"name": {"John Doe"}, "tags": {"go,web", "programming"}, "empty": {""}, "flag": {""}, "encoded": {"hello+world"}},
@@ -368,6 +392,372 @@ func TestQuery_parseQuery(t *testing.T) {
 			query:       generateManyParams(50),
 			expected:    generateExpectedManyParams(50),
 			description: "Large number of parameters",
+		},
+
+		// ===== Whitespace Edge Cases =====
+		{
+			name:        "Tab character in key",
+			query:       "hello%09world=test",
+			expected:    url.Values{"hello\tworld": {"test"}},
+			description: "Tab character (%09) in key should be decoded to tab",
+		},
+		{
+			name:        "Tab character in value",
+			query:       "test=hello%09world",
+			expected:    url.Values{"test": {"hello\tworld"}},
+			description: "Tab character (%09) in value should be decoded to tab",
+		},
+		{
+			name:        "Newline LF in value",
+			query:       "text=line1%0Aline2",
+			expected:    url.Values{"text": {"line1\nline2"}},
+			description: "Newline LF (%0A) should be decoded to newline character",
+		},
+		{
+			name:        "Carriage return in value",
+			query:       "text=line1%0Dline2",
+			expected:    url.Values{"text": {"line1\rline2"}},
+			description: "Carriage return (%0D) should be decoded to CR character",
+		},
+		{
+			name:        "CRLF in value",
+			query:       "text=line1%0D%0Aline2",
+			expected:    url.Values{"text": {"line1\r\nline2"}},
+			description: "CRLF sequence should be decoded properly",
+		},
+		{
+			name:        "Multiple consecutive spaces encoded",
+			query:       "text=hello%20%20%20world",
+			expected:    url.Values{"text": {"hello   world"}},
+			description: "Multiple consecutive encoded spaces should all be decoded",
+		},
+		{
+			name:        "Multiple consecutive spaces as plus",
+			query:       "text=hello+++world",
+			expected:    url.Values{"text": {"hello   world"}},
+			description: "Multiple consecutive plus signs should all become spaces",
+		},
+		{
+			name:        "Non-breaking space",
+			query:       "text=hello%C2%A0world",
+			expected:    url.Values{"text": {"hello\u00A0world"}},
+			description: "Non-breaking space (U+00A0) should be decoded properly",
+		},
+		{
+			name:        "Leading spaces in key",
+			query:       "%20%20key=value",
+			expected:    url.Values{"  key": {"value"}},
+			description: "Leading spaces in key should be preserved",
+		},
+		{
+			name:        "Trailing spaces in value",
+			query:       "key=value%20%20",
+			expected:    url.Values{"key": {"value  "}},
+			description: "Trailing spaces in value should be preserved",
+		},
+		{
+			name:        "Leading and trailing spaces using plus",
+			query:       "key=+++value+++",
+			expected:    url.Values{"key": {"   value   "}},
+			description: "Leading and trailing plus signs should become spaces",
+		},
+		{
+			name:        "Zero-width space",
+			query:       "text=hello%E2%80%8Bworld",
+			expected:    url.Values{"text": {"hello\u200Bworld"}},
+			description: "Zero-width space (U+200B) should be decoded properly",
+		},
+		{
+			name:        "Mixed whitespace types",
+			query:       "text=space%20tab%09newline%0Aplus+end",
+			expected:    url.Values{"text": {"space tab\tnewline\nplus end"}},
+			description: "Different whitespace types should all be decoded correctly",
+		},
+
+		// ===== Escaped Plus vs Regular Plus =====
+		{
+			name:        "Escaped plus in value",
+			query:       "math=1%2B1",
+			expected:    url.Values{"math": {"1+1"}},
+			description: "Escaped plus (%2B) should become literal plus sign",
+		},
+		{
+			name:        "Regular plus in value",
+			query:       "text=hello+world",
+			expected:    url.Values{"text": {"hello world"}},
+			description: "Regular plus should become space",
+		},
+		{
+			name:        "Mixed escaped and regular plus",
+			query:       "expr=a+b%2Bc",
+			expected:    url.Values{"expr": {"a b+c"}},
+			description: "Mixed plus: regular (+) becomes space, escaped (%2B) becomes literal plus",
+		},
+		{
+			name:        "Leading plus",
+			query:       "value=+test",
+			expected:    url.Values{"value": {" test"}},
+			description: "Leading plus should become space",
+		},
+		{
+			name:        "Trailing plus",
+			query:       "value=test+",
+			expected:    url.Values{"value": {"test "}},
+			description: "Trailing plus should become space",
+		},
+		{
+			name:        "Multiple consecutive pluses",
+			query:       "text=a++b",
+			expected:    url.Values{"text": {"a  b"}},
+			description: "Multiple consecutive pluses should become multiple spaces",
+		},
+		{
+			name:        "Only plus signs",
+			query:       "spaces=+++",
+			expected:    url.Values{"spaces": {"   "}},
+			description: "Only plus signs should become only spaces",
+		},
+		{
+			name:        "Escaped plus at boundaries",
+			query:       "expr=%2Ba%2B",
+			expected:    url.Values{"expr": {"+a+"}},
+			description: "Escaped plus signs at start and end should remain literal",
+		},
+		{
+			name:        "Complex plus mixing",
+			query:       "calc=2%2B2+equals+4",
+			expected:    url.Values{"calc": {"2+2 equals 4"}},
+			description: "Complex mixing of escaped and regular plus signs",
+		},
+
+		// ===== Repeated Keys with Empty Values =====
+		{
+			name:        "Repeated key with trailing empties",
+			query:       "key=&key=&key=value",
+			expected:    url.Values{"key": {"", "", "value"}},
+			description: "Repeated key with empty values followed by actual value",
+		},
+		{
+			name:        "Repeated key with interleaved empties",
+			query:       "key=value1&key=&key=value2",
+			expected:    url.Values{"key": {"value1", "", "value2"}},
+			description: "Repeated key with empty value in the middle",
+		},
+		{
+			name:        "Repeated flag without values",
+			query:       "flag&flag&flag",
+			expected:    url.Values{"flag": {"", "", ""}},
+			description: "Same key repeated without equals sign should create multiple empty values",
+		},
+		{
+			name:        "Mixed empty and non-empty repeated values",
+			query:       "key=value1&key&key=&key=value2&key",
+			expected:    url.Values{"key": {"value1", "", "", "value2", ""}},
+			description: "Complex mix of empty values with and without equals sign",
+		},
+		{
+			name:        "All empty values for key",
+			query:       "key=&key=&key=",
+			expected:    url.Values{"key": {"", "", ""}},
+			description: "All occurrences of key with empty values",
+		},
+
+		// ===== Multiple Equals Signs =====
+		{
+			name:        "Equals in value",
+			query:       "equation=a=b=c",
+			expected:    url.Values{"equation": {"a=b=c"}},
+			description: "Multiple equals signs: first is delimiter, rest are part of value",
+		},
+		{
+			name:        "Multiple equals in different params",
+			query:       "data=key=value&other=test",
+			expected:    url.Values{"data": {"key=value"}, "other": {"test"}},
+			description: "Equals signs in one parameter shouldn't affect others",
+		},
+		{
+			name:        "Double equals",
+			query:       "empty==value",
+			expected:    url.Values{"empty": {"=value"}},
+			description: "Double equals: first is delimiter, second starts the value",
+		},
+		{
+			name:        "Triple equals",
+			query:       "triple===value",
+			expected:    url.Values{"triple": {"==value"}},
+			description: "Triple equals: first is delimiter, others are part of value",
+		},
+		{
+			name:        "Equals at end",
+			query:       "key=value=",
+			expected:    url.Values{"key": {"value="}},
+			description: "Trailing equals should be part of the value",
+		},
+		{
+			name:        "Only equals sign",
+			query:       "key======",
+			expected:    url.Values{"key": {"====="}},
+			description: "Multiple equals: first is delimiter, rest are value",
+		},
+		{
+			name:        "Encoded equals in value",
+			query:       "eq=a%3Db%3Dc",
+			expected:    url.Values{"eq": {"a=b=c"}},
+			description: "URL-encoded equals signs should be decoded to literal equals",
+		},
+
+		// ===== Semicolon Handling (Not a Standard Delimiter) =====
+		{
+			name:        "Semicolon in value",
+			query:       "data=a;b;c",
+			expected:    url.Values{"data": {"a;b;c"}},
+			description: "Semicolon should be treated as part of value, not delimiter",
+		},
+		{
+			name:        "Semicolons with ampersands",
+			query:       "mixed=a;b&key=value",
+			expected:    url.Values{"mixed": {"a;b"}, "key": {"value"}},
+			description: "Semicolons in value with ampersand delimiters should work correctly",
+		},
+		{
+			name:        "Multiple semicolons",
+			query:       "path=a;b;c;d&x=1",
+			expected:    url.Values{"path": {"a;b;c;d"}, "x": {"1"}},
+			description: "Multiple semicolons should all be preserved in value",
+		},
+		{
+			name:        "Encoded semicolon",
+			query:       "data=a%3Bb%3Bc",
+			expected:    url.Values{"data": {"a;b;c"}},
+			description: "Encoded semicolon should decode to literal semicolon",
+		},
+
+		// ===== PHP-Style Arrays (Brackets in Keys) =====
+		{
+			name:        "PHP array style",
+			query:       "items[]=1&items[]=2",
+			expected:    url.Values{"items[]": {"1", "2"}},
+			description: "Brackets should be treated as part of key name",
+		},
+		{
+			name:        "PHP nested array style",
+			query:       "user[name]=John&user[age]=30",
+			expected:    url.Values{"user[name]": {"John"}, "user[age]": {"30"}},
+			description: "Nested bracket notation should preserve brackets in key names",
+		},
+		{
+			name:        "PHP indexed array",
+			query:       "data[0]=first&data[1]=second",
+			expected:    url.Values{"data[0]": {"first"}, "data[1]": {"second"}},
+			description: "Indexed array notation should preserve indices in key names",
+		},
+		{
+			name:        "Encoded brackets",
+			query:       "items%5B%5D=value",
+			expected:    url.Values{"items[]": {"value"}},
+			description: "URL-encoded brackets (%5B %5D) should decode to literal brackets",
+		},
+		{
+			name:        "Mixed bracket styles",
+			query:       "a[]=1&b[x]=2&c[0]=3&d=4",
+			expected:    url.Values{"a[]": {"1"}, "b[x]": {"2"}, "c[0]": {"3"}, "d": {"4"}},
+			description: "Different bracket styles should all be preserved in keys",
+		},
+
+		// ===== Special Encoding Edge Cases =====
+		{
+			name:        "Encoded forward slash",
+			query:       "path=api%2Fusers%2F123",
+			expected:    url.Values{"path": {"api/users/123"}},
+			description: "Encoded forward slashes should decode to literal slashes",
+		},
+		{
+			name:        "Encoded question mark",
+			query:       "query=what%3F",
+			expected:    url.Values{"query": {"what?"}},
+			description: "Encoded question mark should decode to literal question mark",
+		},
+		{
+			name:        "Encoded hash",
+			query:       "tag=%23important",
+			expected:    url.Values{"tag": {"#important"}},
+			description: "Encoded hash should decode to literal hash symbol",
+		},
+		{
+			name:        "Encoded ampersand",
+			query:       "text=rock%26roll",
+			expected:    url.Values{"text": {"rock&roll"}},
+			description: "Encoded ampersand should decode to literal ampersand",
+		},
+		{
+			name:        "Mixed encoded and plus spaces",
+			query:       "text=%20+%20",
+			expected:    url.Values{"text": {"   "}},
+			description: "Mix of %20 and + should all become spaces (three total)",
+		},
+		{
+			name:        "All special URL characters encoded",
+			query:       "special=%21%40%23%24%25%5E%26%2A",
+			expected:    url.Values{"special": {"!@#$%^&*"}},
+			description: "Various special characters should all decode correctly",
+		},
+		{
+			name:        "Encoded colon and slash",
+			query:       "url=http%3A%2F%2Fexample.com",
+			expected:    url.Values{"url": {"http://example.com"}},
+			description: "Encoded URL should decode correctly",
+		},
+
+		// ===== Case Sensitivity =====
+		{
+			name:        "Case sensitive keys",
+			query:       "Key=value1&key=value2&KEY=value3",
+			expected:    url.Values{"Key": {"value1"}, "key": {"value2"}, "KEY": {"value3"}},
+			description: "Keys with different cases should be treated as separate parameters",
+		},
+		{
+			name:        "Mixed case keys with values",
+			query:       "UserID=1&userId=2&userid=3&USERID=4",
+			expected:    url.Values{"UserID": {"1"}, "userId": {"2"}, "userid": {"3"}, "USERID": {"4"}},
+			description: "All case variations of same word should be separate keys",
+		},
+		{
+			name:        "Case sensitive with repeated keys",
+			query:       "id=1&ID=2&id=3",
+			expected:    url.Values{"id": {"1", "3"}, "ID": {"2"}},
+			description: "Case-sensitive keys: lowercase 'id' appears twice, uppercase 'ID' once",
+		},
+
+		// ===== Additional Complex Edge Cases =====
+		{
+			name:        "Empty string after equals for multiple keys",
+			query:       "a=&b=&c=",
+			expected:    url.Values{"a": {""}, "b": {""}, "c": {""}},
+			description: "Multiple keys with empty values after equals",
+		},
+		{
+			name:        "Mix of all edge cases",
+			query:       "normal=value&empty=&flag&plus=a+b&escaped=a%2Bb&spaces=%20%20&key=1&key=2",
+			expected:    url.Values{"normal": {"value"}, "empty": {""}, "flag": {""}, "plus": {"a b"}, "escaped": {"a+b"}, "spaces": {"  "}, "key": {"1", "2"}},
+			description: "Complex combination of various edge cases in one query",
+		},
+		{
+			name:        "Very long key with special chars",
+			query:       strings.Repeat("a", 50) + "%20" + strings.Repeat("b", 50) + "=value",
+			expected:    url.Values{strings.Repeat("a", 50) + " " + strings.Repeat("b", 50): {"value"}},
+			description: "Very long key with encoded space in the middle",
+		},
+		{
+			name:        "Unicode in keys and values",
+			query:       "名前=田中&city=東京&emoji=🎉",
+			expected:    url.Values{"名前": {"田中"}, "city": {"東京"}, "emoji": {"🎉"}},
+			description: "Unicode characters in both keys and values should be preserved",
+		},
+		{
+			name:        "Percent encoding edge - lowercase vs uppercase hex",
+			query:       "lower=%2b&upper=%2B",
+			expected:    url.Values{"lower": {"+"}, "upper": {"+"}},
+			description: "Both lowercase and uppercase hex in percent encoding should decode identically",
 		},
 	}
 
