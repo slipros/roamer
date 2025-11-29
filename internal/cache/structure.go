@@ -14,6 +14,7 @@ type Field struct {
 	HasParsers             bool
 	HasFormatters          bool
 	HasDefault             bool
+	IsBody                 bool
 	DefaultValue           string
 	Decoders               []string
 	Parsers                []string
@@ -69,6 +70,8 @@ func (s *Structure) analyzeStruct(t reflect.Type) []Field {
 		}
 
 		defaultValue, hasDefault := f.Tag.Lookup("default")
+		isBody := f.Tag.Get("decoder") == "body"
+
 		decoders := s.tagLookup(f.Tag, s.decoders)
 		parsers := s.tagLookup(f.Tag, s.parsers)
 		formatters := s.tagLookup(f.Tag, s.formatters)
@@ -81,6 +84,7 @@ func (s *Structure) analyzeStruct(t reflect.Type) []Field {
 			HasParsers:             len(parsers) > 0,
 			HasFormatters:          len(formatters) > 0 || len(reflectValueFormatters) > 0,
 			HasDefault:             hasDefault,
+			IsBody:                 isBody,
 			DefaultValue:           defaultValue,
 			Decoders:               decoders,
 			Parsers:                parsers,
