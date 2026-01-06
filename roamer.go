@@ -592,55 +592,95 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 // If preserveBody is enabled, it reads the entire body into memory and restores
 // it after decoding so downstream handlers can read it again.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
-	if !r.hasDecoders || req.Body == nil || req.ContentLength == 0 || req.Method == http.MethodGet {
+	if req.Body == nil {
 		return nil
 	}
 
-	contentType := req.Header.Get("Content-Type")
-	if idx := strings.IndexByte(contentType, ';'); idx != -1 {
-		contentType = contentType[:idx]
-	}
-
-	d, ok := r.decoders[contentType]
-	if !ok {
-		return nil
-	}
-
-	// If body preservation is enabled, read the entire body into memory
-	// and restore it after decoding
-	if r.preserveBody {
-		bodyBytes, err := io.ReadAll(req.Body)
-		if err != nil {
-			return errors.Wrap(err, "read request body for preservation")
+	// Check if the body needs to be preserved or if there are fields that require the raw body
+	needsBodyPreservation := r.preserveBody
+	if !needsBodyPreservation {
+		t := reflect.TypeOf(ptr)
+		if t.Kind() == reflect.Pointer && t.Elem().Kind() == reflect.Struct {
+			fields := r.structureCache.Fields(t.Elem())
+			for _, f := range fields {
+				if f.IsBody {
+					needsBodyPreservation = true
+					break
+				}
+			}
 		}
+	}
 
-		// Close the original body
+	// Read body if preservation is needed
+	var bodyBytes []byte
+	if needsBodyPreservation {
+		var err error
+		bodyBytes, err = io.ReadAll(req.Body)
+		if err != nil {
+			return errors.Wrap(err, "read request body")
+		}
 		_ = req.Body.Close()
 
-		// Replace body with a reader for decoding
+		// Restore body for decoding
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-		// Decode directly from the request
-		if err := d.Decode(req, ptr); err != nil {
-			// Restore the body even on error so it can be inspected
-			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-			return errors.WithStack(rerr.DecodeError{
-				Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),
-			})
-		}
-
-		// Restore the body for downstream handlers
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-		return nil
 	}
 
-	// Standard decoding without preservation
-	if err := d.Decode(req, ptr); err != nil {
-		return errors.WithStack(rerr.DecodeError{
-			Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),
-		})
+	// Perform decoding if applicable
+	if r.hasDecoders && req.ContentLength != 0 && req.Method != http.MethodGet {
+		contentType := req.Header.Get("Content-Type")
+		if idx := strings.IndexByte(contentType, ';'); idx != -1 {
+			contentType = contentType[:idx]
+		}
+
+		if d, ok := r.decoders[contentType]; ok {
+			if err := d.Decode(req, ptr); err != nil {
+				// If preservation was enabled, restore body before returning error
+				if needsBodyPreservation {
+					req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+				}
+				return errors.WithStack(rerr.DecodeError{
+					Err: errors.WithMessagef(err, "decode `%s` request body for `%T`", contentType, ptr),
+				})
+			}
+		}
+	}
+
+	// If body was read, handle body fields and restoration
+	if needsBodyPreservation {
+		// Fill body fields if it's a struct
+		v := reflect.Indirect(reflect.ValueOf(ptr))
+		if v.Kind() == reflect.Struct {
+			fields := r.structureCache.Fields(v.Type())
+			for _, f := range fields {
+				if !f.IsBody {
+					continue
+				}
+
+				fieldValue := v.Field(f.Index)
+				if r.skipFilled && !fieldValue.IsZero() {
+					continue
+				}
+
+				// Assign body content based on field type
+				if err := assign.Value(fieldValue, bodyBytes, r.assignExtensions...); err != nil {
+					// Try assigning as io.Reader
+					reader := bytes.NewReader(bodyBytes)
+					if fieldValue.Kind() == reflect.Interface && fieldValue.CanSet() && reflect.TypeOf(reader).Implements(fieldValue.Type()) {
+						fieldValue.Set(reflect.ValueOf(reader))
+						continue
+					}
+
+					if readerErr := assign.Value(fieldValue, reader, r.assignExtensions...); readerErr != nil {
+						return errors.Wrapf(err, "set `body` value to field `%s` in struct `%T`", f.Name, ptr)
+					}
+				}
+			}
+		}
+
+		// Restore body only if globally preserved, otherwise leave it closed/consumed
+		if r.preserveBody {
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
 	}
 
 	return nil
