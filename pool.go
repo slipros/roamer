@@ -1,6 +1,7 @@
 package roamer
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -41,10 +42,10 @@ import (
 //
 //	// Use in HTTP handler
 //	http.HandleFunc("/user", func(w http.ResponseWriter, req *http.Request) {
-//	    err := parseUser(req, func(user *UserRequest) error {
+//	    err := parseUser(req, func(ctx context.Context, user *UserRequest) error {
 //	        // Process the parsed user data
 //	        // The user instance will be automatically returned to pool
-//	        return processUser(user)
+//	        return processUser(ctx, user)
 //	    })
 //	    if err != nil {
 //	        http.Error(w, err.Error(), http.StatusBadRequest)
@@ -65,7 +66,7 @@ import (
 //     after returning, as it will be zeroed and returned to the pool.
 //   - If you need to keep the data, copy it to a new instance within the callback.
 //   - The pool grows dynamically based on concurrent usage patterns.
-func NewParseWithPool[T any](r *Roamer) func(req *http.Request, callback func(*T) error) error {
+func NewParseWithPool[T any](r *Roamer) func(req *http.Request, callback func(context.Context, *T) error) error {
 	pool := sync.Pool{
 		New: func() any {
 			return new(T)
@@ -78,7 +79,7 @@ func NewParseWithPool[T any](r *Roamer) func(req *http.Request, callback func(*T
 		pool.Put(ptr)
 	}
 
-	return func(req *http.Request, callback func(*T) error) error {
+	return func(req *http.Request, callback func(context.Context, *T) error) error {
 		if r == nil {
 			return errors.Wrap(rerr.NilValue, "roamer")
 		}
@@ -94,6 +95,6 @@ func NewParseWithPool[T any](r *Roamer) func(req *http.Request, callback func(*T
 			return err
 		}
 
-		return callback(result)
+		return callback(req.Context(), result)
 	}
 }

@@ -2,6 +2,7 @@ package roamer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		r := NewRoamer(WithDecoders(decoder.NewJSON()))
 		parseFunc := NewParseWithPool[TestStruct](r)
 
-		err := parseFunc(req, func(data *TestStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *TestStruct) error {
 			assert.Equal(t, "John Doe", data.Name)
 			assert.Equal(t, "john@example.com", data.Email)
 			assert.Equal(t, 30, data.Age)
@@ -71,7 +72,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		r := NewRoamer(WithParsers(parser.NewQuery()))
 		parseFunc := NewParseWithPool[QueryStruct](r)
 
-		err := parseFunc(req, func(data *QueryStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *QueryStruct) error {
 			assert.Equal(t, "123", data.UserID)
 			assert.Equal(t, "desc", data.Sort)
 			assert.Equal(t, 50, data.Limit)
@@ -98,7 +99,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		r := NewRoamer(WithParsers(parser.NewHeader()))
 		parseFunc := NewParseWithPool[HeaderStruct](r)
 
-		err := parseFunc(req, func(data *HeaderStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *HeaderStruct) error {
 			assert.Equal(t, "TestAgent/1.0", data.UserAgent)
 			assert.Equal(t, "Bearer token123", data.Authorization)
 			assert.Equal(t, "application/json", data.ContentType)
@@ -131,7 +132,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		)
 		parseFunc := NewParseWithPool[MultiSourceStruct](r)
 
-		err := parseFunc(req, func(data *MultiSourceStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *MultiSourceStruct) error {
 			assert.Equal(t, "Alice", data.Name)
 			assert.Equal(t, "456", data.UserID)
 			assert.Equal(t, "Bearer xyz", data.Token)
@@ -165,7 +166,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		)
 		parseFunc := NewParseWithPool[FormatterStruct](r)
 
-		err := parseFunc(req, func(data *FormatterStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *FormatterStruct) error {
 			assert.Equal(t, "john doe", data.Name)
 			assert.Equal(t, "john@example.com", data.Email)
 			return nil
@@ -192,7 +193,7 @@ func TestNewParseWithPool_Successfully(t *testing.T) {
 		parseFunc := NewParseWithPool[ModifyStruct](r)
 
 		var doubledValue int
-		err := parseFunc(req, func(data *ModifyStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *ModifyStruct) error {
 			assert.Equal(t, 5, data.Counter)
 			data.Counter *= 2
 			doubledValue = data.Counter
@@ -217,7 +218,7 @@ func TestNewParseWithPool_Failure(t *testing.T) {
 
 		req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 		parseFunc := NewParseWithPool[TestStruct](nil)
-		callback := func(data *TestStruct) error { return nil }
+		callback := func(_ context.Context, data *TestStruct) error { return nil }
 
 		err := parseFunc(req, callback)
 
@@ -260,7 +261,7 @@ func TestNewParseWithPool_Failure(t *testing.T) {
 		parseFunc := NewParseWithPool[TestStruct](r)
 
 		expectedErr := errors.New("callback error")
-		err := parseFunc(req, func(data *TestStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *TestStruct) error {
 			return expectedErr
 		})
 
@@ -283,7 +284,7 @@ func TestNewParseWithPool_Failure(t *testing.T) {
 		r := NewRoamer(WithDecoders(decoder.NewJSON()))
 		parseFunc := NewParseWithPool[TestStruct](r)
 
-		err := parseFunc(req, func(data *TestStruct) error {
+		err := parseFunc(req, func(_ context.Context, data *TestStruct) error {
 			return nil
 		})
 
@@ -315,7 +316,7 @@ func TestNewParseWithPool_FieldsZeroed(t *testing.T) {
 	req1.Header.Set("Content-Type", "application/json")
 	req1.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes1)))
 
-	err := parseFunc(req1, func(data *TestStruct) error {
+	err := parseFunc(req1, func(_ context.Context, data *TestStruct) error {
 		assert.Equal(t, "John Doe", data.Name)
 		assert.Equal(t, "john@example.com", data.Email)
 		assert.True(t, data.Active)
@@ -333,7 +334,7 @@ func TestNewParseWithPool_FieldsZeroed(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes2)))
 
-	err = parseFunc(req2, func(data *TestStruct) error {
+	err = parseFunc(req2, func(_ context.Context, data *TestStruct) error {
 		assert.Equal(t, "Jane Smith", data.Name)
 		assert.Empty(t, data.Email, "Email should be zero value, not remnant from previous use")
 		assert.False(t, data.Active, "Active should be zero value, not remnant from previous use")
@@ -378,7 +379,7 @@ func TestNewParseWithPool_Concurrent(t *testing.T) {
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-				err := parseFunc(req, func(data *TestStruct) error {
+				err := parseFunc(req, func(_ context.Context, data *TestStruct) error {
 					// Verify data integrity
 					expectedName := fmt.Sprintf("User%d_%d", goroutineID, i)
 					expectedID := goroutineID*1000 + i
@@ -468,7 +469,7 @@ func TestNewParseWithPool_HighContention(t *testing.T) {
 				req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 				req.Header.Set("X-Custom", fmt.Sprintf("header%d", i))
 
-				_ = parseFunc(req, func(data *ComplexStruct) error {
+				_ = parseFunc(req, func(_ context.Context, data *ComplexStruct) error {
 					// Verify some fields
 					assert.Equal(t, fmt.Sprintf("value%d", i), data.Field1)
 					assert.Equal(t, i, data.Field2)
@@ -507,7 +508,7 @@ func TestNewParseWithPool_NoDataLeakage(t *testing.T) {
 	req1.Header.Set("Content-Type", "application/json")
 	req1.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes1)))
 
-	err := parseFunc(req1, func(data *SensitiveStruct) error {
+	err := parseFunc(req1, func(_ context.Context, data *SensitiveStruct) error {
 		assert.Equal(t, "admin", data.Username)
 		assert.Equal(t, "super_secret_password", data.Password)
 		return nil
@@ -523,7 +524,7 @@ func TestNewParseWithPool_NoDataLeakage(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes2)))
 
-	err = parseFunc(req2, func(data *SensitiveStruct) error {
+	err = parseFunc(req2, func(_ context.Context, data *SensitiveStruct) error {
 		assert.Equal(t, "user123", data.Username)
 		assert.Empty(t, data.Password, "Password should be zeroed, not leaked from previous request")
 		assert.Empty(t, data.Token, "Token should be zeroed, not leaked from previous request")
@@ -563,7 +564,7 @@ func BenchmarkNewParseWithPool_vs_Parse(b *testing.B) {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-			_ = parseFunc(req, func(data *BenchStruct) error {
+			_ = parseFunc(req, func(_ context.Context, data *BenchStruct) error {
 				return nil
 			})
 		}
@@ -624,7 +625,7 @@ func BenchmarkNewParseWithPool_Concurrent(b *testing.B) {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-			_ = parseFunc(req, func(data *BenchStruct) error {
+			_ = parseFunc(req, func(_ context.Context, data *BenchStruct) error {
 				return nil
 			})
 		}
@@ -652,7 +653,7 @@ func BenchmarkNewParseWithPool_SmallStruct(b *testing.B) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-		_ = parseFunc(req, func(data *SmallStruct) error {
+		_ = parseFunc(req, func(_ context.Context, data *SmallStruct) error {
 			return nil
 		})
 	}
@@ -700,7 +701,7 @@ func BenchmarkNewParseWithPool_LargeStruct(b *testing.B) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-		_ = parseFunc(req, func(data *LargeStruct) error {
+		_ = parseFunc(req, func(_ context.Context, data *LargeStruct) error {
 			return nil
 		})
 	}
@@ -751,7 +752,7 @@ func BenchmarkNewParseWithPool_MemoryPressure(b *testing.B) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 
-		_ = parseFunc(req, func(data *MemoryStruct) error {
+		_ = parseFunc(req, func(_ context.Context, data *MemoryStruct) error {
 			return nil
 		})
 
