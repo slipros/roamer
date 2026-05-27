@@ -188,6 +188,11 @@ type AssignExtensions interface {
 // SkipBodyDecode provides explicit, application-controlled skipping on top of
 // these built-in conditions.
 //
+// When SkipBodyDecode returns true and body preservation (WithPreserveBody) is
+// enabled, the body is not buffered: it remains the original request stream and
+// can therefore be read only once by a downstream handler, unlike the normal
+// preservation path where the buffered body can be re-read multiple times.
+//
 // Example:
 //
 //	type Request struct {
@@ -200,9 +205,7 @@ type AssignExtensions interface {
 //	    return r.SkipBody
 //	}
 type BodyDecodeSkipper interface {
-	// SkipBodyDecode reports whether decoding of the request body should be
-	// skipped for the current request. Returning true leaves body-bound fields
-	// untouched while all other parsers still run.
+	// SkipBodyDecode returns true to suppress body decoding for the current request.
 	SkipBodyDecode() bool
 }
 

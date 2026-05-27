@@ -109,33 +109,55 @@ func TestRoamer_Parse_BodyDecodeSkipper_Failure(t *testing.T) {
 	assert.True(t, ok, "expected a decode error")
 }
 
-// TestRoamer_Parse_BodyDecodeSkipper_PreservesBody_Successfully verifies that a
-// skipped body is left fully intact and readable by downstream handlers, even
-// when body preservation is enabled.
+// TestRoamer_Parse_BodyDecodeSkipper_PreservesBody_Successfully verifies the
+// interaction between WithPreserveBody and BodyDecodeSkipper: when skipped the
+// body is left intact (and still readable once downstream), and when not skipped
+// the normal preserve-body path keeps the body readable.
 func TestRoamer_Parse_BodyDecodeSkipper_PreservesBody_Successfully(t *testing.T) {
-	// arrange
 	const body = `{"body_value":"fromBody"}`
 
-	req, err := http.NewRequest(http.MethodPost,
-		"http://example.com", bytes.NewReader([]byte(body)))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", decoder.ContentTypeJSON)
+	tests := []struct {
+		name         string
+		skip         bool
+		expectedBody string
+	}{
+		{
+			name:         "skip leaves body untouched and readable",
+			skip:         true,
+			expectedBody: "",
+		},
+		{
+			name:         "no skip decodes and preserves body",
+			skip:         false,
+			expectedBody: "fromBody",
+		},
+	}
 
-	r := NewRoamer(
-		WithDecoders(decoder.NewJSON()),
-		WithPreserveBody(),
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// arrange
+			req, err := http.NewRequest(http.MethodPost,
+				"http://example.com", bytes.NewReader([]byte(body)))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", decoder.ContentTypeJSON)
 
-	target := skipBodyStruct{skip: true}
+			r := NewRoamer(
+				WithDecoders(decoder.NewJSON()),
+				WithPreserveBody(),
+			)
 
-	// act
-	err = r.Parse(req, &target)
+			target := skipBodyStruct{skip: tt.skip}
 
-	// assert
-	require.NoError(t, err)
-	assert.Empty(t, target.BodyValue, "body must not be decoded when skipped")
+			// act
+			err = r.Parse(req, &target)
 
-	remaining, err := io.ReadAll(req.Body)
-	require.NoError(t, err)
-	assert.Equal(t, body, string(remaining), "body must remain readable downstream")
+			// assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedBody, target.BodyValue, "decoded body field")
+
+			remaining, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Equal(t, body, string(remaining), "body must remain readable downstream")
+		})
+	}
 }
