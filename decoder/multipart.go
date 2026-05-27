@@ -38,10 +38,31 @@ type MultipartFormDataOptionsFunc = func(*MultipartFormData)
 // Content beyond this limit will be stored in temporary files.
 // Default is 32 MB.
 //
+// Note that this only bounds the in-memory footprint; data exceeding it spills
+// to temporary disk files, so it does not cap the total request size. Use
+// WithMaxRequestSize to bound the overall upload.
+//
 // Example: decoder.WithMaxMemory(10 << 20) // 10 MB
 func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 	return func(m *MultipartFormData) {
 		m.maxMemory = maxMemory
+	}
+}
+
+// WithMaxRequestSize sets the maximum total size in bytes of the multipart
+// request body. When set to a positive value, the request body is wrapped with
+// http.MaxBytesReader before parsing, so oversized uploads fail instead of
+// being read to disk or memory — mitigating resource-exhaustion attacks.
+//
+// A non-positive value (the default) leaves the body unbounded, preserving
+// backward-compatible behavior. In that case bounding the request size remains
+// the caller's responsibility, typically via http.MaxBytesReader in middleware
+// or limits enforced by the HTTP server or a reverse proxy.
+//
+// Example: decoder.WithMaxRequestSize(50 << 20) // 50 MB
+func WithMaxRequestSize(maxRequestSize int64) MultipartFormDataOptionsFunc {
+	return func(m *MultipartFormData) {
+		m.maxRequestSize = maxRequestSize
 	}
 }
 
@@ -69,6 +90,11 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 // Files larger than maxMemory (default 32MB) are stored in temporary disk files.
 // Smaller files are kept in memory. The threshold can be configured using WithMaxMemory().
 //
+// maxMemory bounds only the in-memory footprint, not the total upload size.
+// To cap the overall request body and reject oversized uploads, use
+// WithMaxRequestSize(); by default the body size is unbounded and should be
+// limited by the caller (e.g. http.MaxBytesReader in middleware).
+//
 // # Thread Safety
 //
 // The MultipartFormData decoder requires a structure cache set via SetStructureCache
@@ -80,9 +106,10 @@ func WithMaxMemory(maxMemory int64) MultipartFormDataOptionsFunc {
 //
 //	defer req.Files.Close()
 type MultipartFormData struct {
-	contentType string // The Content-Type header value that this decoder handles
-	skipFilled  bool   // Whether to skip fields that are already filled
-	maxMemory   int64  // The maximum memory in bytes to use for parsing
+	contentType    string // The Content-Type header value that this decoder handles
+	skipFilled     bool   // Whether to skip fields that are already filled
+	maxMemory      int64  // The maximum memory in bytes to use for parsing
+	maxRequestSize int64  // The maximum total request body size in bytes (0 = unlimited)
 
 	structureCache *cache.Structure
 }
@@ -144,7 +171,15 @@ func (m *MultipartFormData) Decode(r *http.Request, ptr any) error {
 		return errors.WithStack(rerr.NotSupported)
 	}
 
-	if err := r.ParseMultipartForm(m.maxMemory); err != nil {
+	if m.maxRequestSize > 0 {
+		r.Body = http.MaxBytesReader(nil, r.Body, m.maxRequestSize)
+	}
+
+	// Total request-size limiting is opt-in via WithMaxRequestSize (applied above)
+	// or the caller's own http.MaxBytesReader; the decoder owns neither the
+	// ResponseWriter nor the server's body-size policy and must not silently
+	// truncate uploads by default. In-memory usage is bounded by maxMemory.
+	if err := r.ParseMultipartForm(m.maxMemory); err != nil { // #nosec G120 -- request size bounded by WithMaxRequestSize/caller (see comment above)
 		return errors.WithMessage(err, "parse multipart form")
 	}
 
