@@ -367,7 +367,8 @@ func TestRoamer_PreserveBody_WithParsers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create request with both JSON body and query parameters
-	req, err := http.NewRequest(http.MethodPost, "http://example.com?id=123", bytes.NewReader(jsonData))
+	req, err := http.NewRequest(http.MethodPost,
+		"http://example.com?id="+strconv.Itoa(inputData.ID), bytes.NewReader(jsonData))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Length", strconv.Itoa(len(jsonData)))
@@ -383,8 +384,8 @@ func TestRoamer_PreserveBody_WithParsers(t *testing.T) {
 	var result combinedData
 	err = r.Parse(req, &result)
 	require.NoError(t, err)
-	assert.Equal(t, "Test User", result.Name, "Name from JSON should be parsed")
-	assert.Equal(t, 123, result.ID, "ID from query should be parsed")
+	assert.Equal(t, inputData.Name, result.Name, "Name from JSON should be parsed")
+	assert.Equal(t, inputData.ID, result.ID, "ID from query should be parsed")
 
 	// Verify body is still preserved
 	bodyBytes, err := io.ReadAll(req.Body)

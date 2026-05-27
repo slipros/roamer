@@ -164,6 +164,48 @@ type AssignExtensions interface {
 	AssignExtensions() []assign.ExtensionFunc
 }
 
+// BodyDecodeSkipper is an optional interface that can be implemented by a target
+// struct to opt out of request body decoding on a per-request basis.
+//
+// Before decoding the request body, Parse checks whether the target implements
+// this interface. If SkipBodyDecode returns true, body decoding is skipped
+// entirely while all other request parts (query parameters, headers, cookies,
+// path variables) are still parsed as usual.
+//
+// This is useful when a single request struct is reused across endpoints where
+// some must ignore the body, or when the decision to read the body depends on a
+// field the caller sets before calling Parse. It avoids the cost of reading and
+// decoding the body when it is not needed and prevents decode errors for requests
+// whose body should be ignored.
+//
+// Because the request body is decoded before query, header, cookie and path
+// parsers run, SkipBodyDecode is evaluated before those values are populated.
+// The decision must therefore rely on static logic or on fields populated by the
+// caller prior to Parse, not on values extracted from the request itself.
+//
+// Note that body decoding is also skipped automatically when there are no
+// registered decoders, the body is nil or empty, or the request method is GET.
+// SkipBodyDecode provides explicit, application-controlled skipping on top of
+// these built-in conditions.
+//
+// Example:
+//
+//	type Request struct {
+//	    SkipBody bool            // set by the caller before Parse
+//	    ID       int             `query:"id"`
+//	    Payload  json.RawMessage `json:"payload"`
+//	}
+//
+//	func (r *Request) SkipBodyDecode() bool {
+//	    return r.SkipBody
+//	}
+type BodyDecodeSkipper interface {
+	// SkipBodyDecode reports whether decoding of the request body should be
+	// skipped for the current request. Returning true leaves body-bound fields
+	// untouched while all other parsers still run.
+	SkipBodyDecode() bool
+}
+
 // Parse is a generic function that extracts data from an HTTP request into a value of type T.
 // This is a convenience wrapper around the Roamer.Parse method that returns the parsed value
 // directly instead of requiring a pointer parameter.
@@ -593,6 +635,10 @@ func (r *Roamer) applyFormatters(field *cache.Field, fieldValue reflect.Value) e
 // it after decoding so downstream handlers can read it again.
 func (r *Roamer) parseBody(req *http.Request, ptr any) error {
 	if !r.hasDecoders || req.Body == nil || req.ContentLength == 0 || req.Method == http.MethodGet {
+		return nil
+	}
+
+	if s, ok := ptr.(BodyDecodeSkipper); ok && s.SkipBodyDecode() {
 		return nil
 	}
 
