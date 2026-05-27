@@ -1,6 +1,6 @@
 module github.com/slipros/roamer/examples/form
 
-go 1.22.0
+go 1.23.0
 
 require github.com/slipros/roamer v1.16.0
 

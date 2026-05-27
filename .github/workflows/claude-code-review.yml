@@ -18,6 +18,9 @@ jobs:
     #   github.event.pull_request.user.login == 'new-developer' ||
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
 
+    # Advisory job: a failed review (e.g. OIDC token exchange when the workflow
+    # file differs from the default branch on a PR) must not fail the pipeline.
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 

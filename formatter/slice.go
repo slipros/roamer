@@ -74,7 +74,7 @@ func (s *Slice) FormatReflectValue(tag reflect.StructTag, val reflect.Value) err
 // format applies slice formatters based on tag value to a reflect.Value.
 // This is a helper method used by both Format and FormatReflectValue.
 func (s *Slice) format(tagValue string, val reflect.Value) error {
-	if val.Kind() != reflect.Ptr || val.Elem().Kind() != reflect.Slice {
+	if val.Kind() != reflect.Pointer || val.Elem().Kind() != reflect.Slice {
 		return errors.Wrapf(rerr.NotSupported, "slice formatter for %s", val.Type().String())
 	}
 

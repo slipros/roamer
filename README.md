@@ -65,6 +65,7 @@ graph TD
 - **Extensibility**: Easily create custom parsers, decoders, and formatters
 - **Middleware support**: Convenient middleware for integrating with HTTP handlers
 - **Body preservation**: Read request body multiple times when needed
+- **Conditional body decoding**: Skip request body decoding per request via the `BodyDecodeSkipper` interface
 
 ## Installation
 
@@ -173,6 +174,41 @@ Comprehensive examples are available in the [examples/](examples/) directory:
 - [**body_preservation/**](examples/body_preservation/) - Reading request body multiple times
 
 See the [examples README](examples/README.md) for a complete list and how to run them.
+
+## Conditional Body Decoding
+
+By default, roamer decodes the request body whenever a matching decoder is
+registered and the request carries a non-empty body. To skip body decoding on a
+per-request basis, implement the `BodyDecodeSkipper` interface on the target
+struct:
+
+```go
+type BodyDecodeSkipper interface {
+    SkipBodyDecode() bool
+}
+```
+
+When `SkipBodyDecode` returns `true`, roamer skips body decoding entirely while
+still parsing all other request parts (query parameters, headers, cookies, path
+variables):
+
+```go
+type Request struct {
+    SkipBody bool            // set by the caller before Parse
+    ID       int             `query:"id"`
+    Payload  json.RawMessage `json:"payload"`
+}
+
+// SkipBodyDecode tells roamer whether to decode the request body.
+func (r *Request) SkipBodyDecode() bool {
+    return r.SkipBody
+}
+```
+
+The body is decoded before query, header, cookie and path parsers run, so
+`SkipBodyDecode` is evaluated before those values are populated. Base the
+decision on static logic or on fields the caller sets before calling `Parse`,
+not on values extracted from the request itself.
 
 ## Struct Tags Reference
 

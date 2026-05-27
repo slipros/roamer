@@ -1,6 +1,6 @@
 module github.com/slipros/roamer/examples/gorilla_router
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/gorilla/mux v1.8.1

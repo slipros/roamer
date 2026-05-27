@@ -754,3 +754,96 @@ func BenchmarkMultipartFormData_Decode_MapVsStruct(b *testing.B) {
 		}
 	})
 }
+
+// TestMultipartFormData_Decode_MaxRequestSize verifies that WithMaxRequestSize
+// rejects request bodies larger than the configured limit while leaving smaller
+// bodies (and the unlimited default) unaffected.
+func TestMultipartFormData_Decode_MaxRequestSize_Successfully(t *testing.T) {
+	type fileStruct struct {
+		File MultipartFile `multipart:"file"`
+	}
+
+	// Build the multipart payload once and reuse its bytes per case, since each
+	// Decode consumes the request body.
+	const fileContent = "payload-content-payload-content-payload-content\n" // 48 bytes/line
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	fileWriter, err := w.CreateFormFile("file", "data.txt")
+	require.NoError(t, err)
+	_, err = fileWriter.Write([]byte(strings.Repeat(fileContent, 1000))) // ~48 KB
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	payload := b.Bytes()
+	contentType := w.FormDataContentType()
+	bodyLen := int64(len(payload))
+
+	tests := []struct {
+		name           string
+		maxRequestSize int64
+	}{
+		{
+			name:           "unlimited by default",
+			maxRequestSize: 0,
+		},
+		{
+			name:           "limit larger than body",
+			maxRequestSize: bodyLen + 1024,
+		},
+		{
+			name:           "limit equal to body",
+			maxRequestSize: bodyLen,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// arrange
+			req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(payload))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", contentType)
+
+			m := injectStructureCache(NewMultipartFormData(WithMaxRequestSize(tt.maxRequestSize)))
+
+			// act
+			target := &fileStruct{}
+			err = m.Decode(req, target)
+
+			// assert
+			require.NoError(t, err)
+			assert.Equal(t, "data.txt", target.File.Header.Filename)
+		})
+	}
+}
+
+// TestMultipartFormData_Decode_MaxRequestSize_Failure verifies that a body
+// exceeding the configured limit is rejected instead of being read to memory or
+// disk.
+func TestMultipartFormData_Decode_MaxRequestSize_Failure(t *testing.T) {
+	type fileStruct struct {
+		File MultipartFile `multipart:"file"`
+	}
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	fileWriter, err := w.CreateFormFile("file", "data.txt")
+	require.NoError(t, err)
+	_, err = fileWriter.Write([]byte(strings.Repeat("a", 16*1024))) // 16 KB
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(b.Bytes()))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	// Limit well below the body size.
+	m := injectStructureCache(NewMultipartFormData(WithMaxRequestSize(1024)))
+
+	// act
+	target := &fileStruct{}
+	err = m.Decode(req, target)
+
+	// assert
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "too large", "expected an oversized-body error")
+}
