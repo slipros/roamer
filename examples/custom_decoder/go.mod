@@ -1,6 +1,6 @@
 module github.com/slipros/roamer/examples/custom_decoder
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/goccy/go-yaml v1.15.13

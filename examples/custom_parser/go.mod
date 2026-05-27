@@ -1,6 +1,6 @@
 module github.com/slipros/roamer/examples/custom_parser
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/gofrs/uuid v4.4.0+incompatible

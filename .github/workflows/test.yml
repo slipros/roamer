@@ -15,10 +15,10 @@ jobs:
       matrix:
         include:
           # govulncheck is pinned per Go version: v1.1.x is the last line that
-          # builds on go 1.22, while newer Go can use the latest release.
-          - go-version: "1.22"
+          # builds on go < 1.25, while newer Go can use the latest release.
+          - go-version: "1.23"
             govulncheck-version: v1.1.4
-          - go-version: "1.25"
+          - go-version: "1.26"
             govulncheck-version: latest
     runs-on: ubuntu-latest
     env:
