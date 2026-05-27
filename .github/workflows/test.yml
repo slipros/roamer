@@ -13,7 +13,13 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [ "1.22", "1.25" ]
+        include:
+          # govulncheck is pinned per Go version: v1.1.x is the last line that
+          # builds on go 1.22, while newer Go can use the latest release.
+          - go-version: "1.22"
+            govulncheck-version: v1.1.4
+          - go-version: "1.25"
+            govulncheck-version: latest
     runs-on: ubuntu-latest
     env:
       GOLANGCI_LINT_VERSION: v2.12.2
@@ -36,12 +42,14 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run govulncheck
-        # Install and run directly instead of golang/govulncheck-action, whose
+        # Installed and run directly instead of golang/govulncheck-action, whose
         # bundled actions/checkout@v4.1.1 fails on current runners with
-        # `Duplicate header: "Authorization"`. The repo is already checked out
-        # and Go is already set up by the steps above.
+        # `Duplicate header: "Authorization"`. Runs on every matrix Go version so
+        # version-specific stdlib vulnerabilities are caught for each; the
+        # govulncheck release is matched to the Go version (see matrix include).
+        # The repo and Go are already set up by the steps above.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@${{ matrix.govulncheck-version }}
           govulncheck ./...
 
       - name: Run linter
