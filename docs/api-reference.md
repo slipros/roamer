@@ -441,34 +441,37 @@ errors such as `*strconv.NumError`. Scalar and pointer fields use the same contr
 Body decoding, defaults, formatters, and `AfterParse` failures are not assignment
 errors; body failures remain detectable with `roamer.IsDecodeError`.
 
-### Error Context
-
 An assignment error does **not** automatically mean bad client input. Custom
 parsers can supply internal data, and unsupported destination types can indicate
-a programming error. Inspect both the parser tag and the cause. For example,
-using `errors` and `strconv`:
+a programming error. HTTP status mapping belongs to the application.
+
+For diagnostics, inspect the field, parser tag, and underlying error. This example
+uses `errors` and `log` inside a function that returns an error:
 
 ```go
 if err := r.Parse(req, &data); err != nil {
-    if _, ok := roamer.IsDecodeError(err); ok {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
+    if assignmentErr, ok := roamer.IsAssignmentError(err); ok {
+        log.Printf("Assignment failed: field=%s parser=%s cause=%v",
+            assignmentErr.Field, assignmentErr.Tag, errors.Unwrap(assignmentErr))
     }
-
-    assignmentErr, ok := roamer.IsAssignmentError(err)
-    var numberErr *strconv.NumError
-    if ok && (assignmentErr.Tag == "query" || assignmentErr.Tag == "path") &&
-        errors.As(assignmentErr.Err, &numberErr) {
-        http.Error(w, "Invalid request parameter", http.StatusBadRequest)
-        return
-    }
-
-    http.Error(w, "Internal server error", http.StatusInternalServerError)
-    return
+    return err
 }
 ```
 
-Error diagnostics can contain request values. Do not send raw errors to clients.
+### Error Context
+
+All parsing failures can be logged with their diagnostic context and returned to
+the caller, regardless of error type:
+
+```go
+if err := r.Parse(req, &data); err != nil {
+    log.Printf("Parsing failed: %v", err)
+    return err
+}
+```
+
+Error diagnostics can contain request values. Log them only where those values
+are safe to record, and do not send raw errors to clients.
 
 ## Type Support
 
