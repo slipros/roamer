@@ -575,8 +575,12 @@ func (r *Roamer) parseStruct(req *http.Request, ptr any) error {
 				}
 
 				if err := assign.Value(fieldValue, parsedValue, r.assignExtensions...); err != nil {
-					return errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
-						parsedValue, f.Name, parserName, ptr)
+					return rerr.AssignmentError{
+						Field: f.Name,
+						Tag:   parserName,
+						Err: errors.Wrapf(err, "set `%s` value to field `%s` from tag `%s` for struct `%T`",
+							parsedValue, f.Name, parserName, ptr),
+					}
 				}
 
 				parsedSuccessfully = true

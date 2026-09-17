@@ -59,6 +59,31 @@ func (d DecodeError) Unwrap() error {
 	return d.Err
 }
 
+// AssignmentError identifies a failure to assign a parser's value to a struct field.
+// It does not cover body decoding, default values, formatters, or AfterParse hooks.
+// Callers must inspect Tag and the underlying error before choosing how to handle it;
+// a custom parser may supply internal data rather than client input.
+type AssignmentError struct {
+	// Field is the Go struct field name, not the request parameter name.
+	Field string
+
+	// Tag identifies the parser that supplied the value, such as "query" or "path".
+	Tag string
+
+	// Err preserves the assignment error and its diagnostic context.
+	Err error
+}
+
+// Error preserves the underlying assignment diagnostic.
+func (a AssignmentError) Error() string {
+	return a.Err.Error()
+}
+
+// Unwrap allows errors.Is and errors.As to inspect the conversion failure.
+func (a AssignmentError) Unwrap() error {
+	return a.Err
+}
+
 // SliceIterationError occurs when processing a slice element fails.
 // Contains both the underlying error and the index where it occurred.
 //
