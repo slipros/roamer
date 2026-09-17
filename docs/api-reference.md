@@ -364,7 +364,7 @@ Create middleware that parses requests and stores results in context.
 
 **Usage:**
 ```go
-http.Handle("/endpoint", 
+http.Handle("/endpoint",
     roamer.Middleware[RequestStruct](r)(http.HandlerFunc(handler)))
 ```
 
@@ -426,17 +426,49 @@ Formatters are applied in the order they're registered with Roamer.
 - `FormatterNotFound` - Unknown formatter requested
 - Standard parsing errors for malformed data
 
+### Parser Assignment Errors
+
+When assigning a parser's value to a struct field fails, Roamer returns
+`err.AssignmentError`. Use `roamer.IsAssignmentError(err)` or `errors.As` to
+inspect it, including through additional wrapping:
+
+- `Field`: the Go struct field name, not the request parameter name.
+- `Tag`: the parser that supplied the value, such as `query`, `path`, or a custom tag.
+- `Err`: the underlying assignment failure with its existing diagnostic context.
+
+The error supports `Unwrap`, so `errors.Is` and `errors.As` still reach conversion
+errors such as `*strconv.NumError`. Scalar and pointer fields use the same contract.
+Body decoding, defaults, formatters, and `AfterParse` failures are not assignment
+errors; body failures remain detectable with `roamer.IsDecodeError`.
+
 ### Error Context
 
-Errors are wrapped with context information to help with debugging:
+An assignment error does **not** automatically mean bad client input. Custom
+parsers can supply internal data, and unsupported destination types can indicate
+a programming error. Inspect both the parser tag and the cause. For example,
+using `errors` and `strconv`:
 
 ```go
 if err := r.Parse(req, &data); err != nil {
-    log.Printf("Parsing failed: %+v", err) // Includes stack trace
-    http.Error(w, "Invalid request", http.StatusBadRequest)
+    if _, ok := roamer.IsDecodeError(err); ok {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    assignmentErr, ok := roamer.IsAssignmentError(err)
+    var numberErr *strconv.NumError
+    if ok && (assignmentErr.Tag == "query" || assignmentErr.Tag == "path") &&
+        errors.As(assignmentErr.Err, &numberErr) {
+        http.Error(w, "Invalid request parameter", http.StatusBadRequest)
+        return
+    }
+
+    http.Error(w, "Internal server error", http.StatusInternalServerError)
     return
 }
 ```
+
+Error diagnostics can contain request values. Do not send raw errors to clients.
 
 ## Type Support
 
@@ -471,16 +503,16 @@ Roamer supports automatic conversion to these Go types:
 type Request struct {
     // String to int
     Age int `query:"age"`
-    
+
     // String to bool (accepts: true/false, 1/0, yes/no)
     Active bool `query:"active"`
-    
+
     // String to time.Time
     CreatedAt time.Time `query:"created_at"`
-    
+
     // Comma-separated to slice
     Tags []string `query:"tags"`
-    
+
     // Optional values
     OptionalEmail *string `json:"email"`
 }
@@ -508,7 +540,7 @@ For performance-critical applications, benchmark your specific use cases:
 func BenchmarkRoamerParse(b *testing.B) {
     r := roamer.NewRoamer(/* configure */)
     req := /* create test request */
-    
+
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
         var data RequestStruct

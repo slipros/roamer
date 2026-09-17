@@ -23,6 +23,16 @@ func IsDecodeError(err error) (rerr.DecodeError, bool) {
 	return decodeErr, errors.As(err, &decodeErr)
 }
 
+// IsAssignmentError identifies parser-to-field assignment failures, including
+// wrapped errors. The returned Field and Tag identify the failing destination
+// and parser; they do not determine whether the failure is a client error.
+func IsAssignmentError(err error) (rerr.AssignmentError, bool) {
+	var assignmentErr rerr.AssignmentError
+	ok := errors.As(err, &assignmentErr)
+
+	return assignmentErr, ok
+}
+
 // IsSliceIterationError checks if an error occurred during slice iteration.
 // Provides access to the specific index where the error occurred.
 //
